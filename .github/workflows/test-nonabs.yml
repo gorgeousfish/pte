@@ -1,0 +1,179 @@
+# GitHub Actions CI for pte non-absorbing treatment tests (EPIC-009)
+# Runs Python/SymPy symbolic verification tests for nonabsorbing framework
+# Stata tests require a license and cannot run in CI
+
+name: PTE Non-absorbing Tests
+
+on:
+  push:
+    paths:
+      - 'tests/sympy/test_sv_nonabs_*.py'
+      - 'tests/symbolic/epic009/**'
+      - 'tests/unit/epic009/**'
+      - 'tests/unit/test_nonabs_*.do'
+      - 'tests/monte_carlo/epic009/**'
+      - 'tests/replication/epic009/**'
+      - 'tests/helpers/gen_nonabs_data.do'
+      - 'ado/_pte_switch_indicator.ado'
+      - 'ado/_pte_nonabsorbing.ado'
+      - 'ado/_pte_att_plus.ado'
+      - 'ado/_pte_att_minus.ado'
+      - 'ado/_pte_bootstrap_nonabs.ado'
+      - 'ado/_pte_detect_treatment_type.ado'
+      - 'ado/_pte_nonabs_ereturn.ado'
+      - 'ado/_pte_eps_bidirectional.ado'
+  pull_request:
+    paths:
+      - 'tests/sympy/test_sv_nonabs_*.py'
+      - 'tests/symbolic/epic009/**'
+      - 'tests/unit/epic009/**'
+      - 'tests/unit/test_nonabs_*.do'
+      - 'tests/monte_carlo/epic009/**'
+      - 'tests/replication/epic009/**'
+      - 'tests/helpers/gen_nonabs_data.do'
+      - 'ado/_pte_switch_indicator.ado'
+      - 'ado/_pte_nonabsorbing.ado'
+      - 'ado/_pte_att_plus.ado'
+      - 'ado/_pte_att_minus.ado'
+      - 'ado/_pte_bootstrap_nonabs.ado'
+      - 'ado/_pte_detect_treatment_type.ado'
+      - 'ado/_pte_nonabs_ereturn.ado'
+      - 'ado/_pte_eps_bidirectional.ado'
+
+jobs:
+  sympy-nonabs-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.11']
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: pip install sympy numpy
+
+      - name: Run legacy non-absorbing SymPy verification
+        run: |
+          cd tests/sympy
+          failed=0
+          total=0
+          for f in test_sv_nonabs_*.py; do
+            if [ -f "$f" ]; then
+              total=$((total + 1))
+              echo "=== Running $f ==="
+              if python "$f"; then
+                echo "  PASS: $f"
+              else
+                echo "  FAIL: $f"
+                failed=$((failed + 1))
+              fi
+            fi
+          done
+          echo ""
+          echo "=== Legacy SymPy: $((total - failed))/$total passed ==="
+          if [ $failed -gt 0 ]; then
+            exit 1
+          fi
+
+      - name: Run EPIC-009 SymPy verification
+        run: |
+          if [ -d "tests/symbolic/epic009" ]; then
+            cd tests/symbolic/epic009
+            failed=0
+            total=0
+            for f in *.py; do
+              if [ -f "$f" ]; then
+                total=$((total + 1))
+                echo "=== Running $f ==="
+                if python "$f"; then
+                  echo "  PASS: $f"
+                else
+                  echo "  FAIL: $f"
+                  failed=$((failed + 1))
+                fi
+              fi
+            done
+            echo ""
+            echo "=== EPIC-009 SymPy: $((total - failed))/$total passed ==="
+            if [ $failed -gt 0 ]; then
+              exit 1
+            fi
+          else
+            echo "No EPIC-009 symbolic tests found, skipping."
+          fi
+
+  lint-do-files:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check legacy do-file existence
+        run: |
+          echo "=== Checking legacy non-absorbing test do-files ==="
+          modules="ut ft bt nv pt rc nd pc mc sv"
+          missing=0
+          for mod in $modules; do
+            f="tests/unit/test_nonabs_${mod}.do"
+            if [ -f "$f" ]; then
+              echo "  OK: $f"
+            else
+              echo "  MISSING: $f"
+              missing=$((missing + 1))
+            fi
+          done
+          if [ $missing -gt 0 ]; then
+            echo "WARNING: $missing legacy files missing"
+          fi
+
+      - name: Check EPIC-009 test file existence
+        run: |
+          echo "=== Checking EPIC-009 unit test files ==="
+          missing=0
+          total=0
+          for f in tests/unit/epic009/test_*.do; do
+            if [ -f "$f" ]; then
+              total=$((total + 1))
+              echo "  OK: $f"
+            fi
+          done
+          echo "Found $total EPIC-009 unit test files"
+          echo ""
+          echo "=== Checking EPIC-009 MC test files ==="
+          mc_total=0
+          for f in tests/monte_carlo/epic009/test_*.do; do
+            if [ -f "$f" ]; then
+              mc_total=$((mc_total + 1))
+              echo "  OK: $f"
+            fi
+          done
+          echo "Found $mc_total EPIC-009 MC test files"
+          echo ""
+          echo "=== Checking EPIC-009 replication test files ==="
+          rep_total=0
+          for f in tests/replication/epic009/test_*.do; do
+            if [ -f "$f" ]; then
+              rep_total=$((rep_total + 1))
+              echo "  OK: $f"
+            fi
+          done
+          echo "Found $rep_total EPIC-009 replication test files"
+          echo ""
+          echo "=== Checking helper/utility files ==="
+          for f in tests/helpers/gen_nonabs_data.do \
+                   tests/unit/epic009/_test_utils_epic009.do \
+                   tests/unit/epic009/_load_test_data.do; do
+            if [ -f "$f" ]; then
+              echo "  OK: $f"
+            else
+              echo "  MISSING: $f"
+            fi
+          done
+          echo "=== EPIC-009 file check complete ==="

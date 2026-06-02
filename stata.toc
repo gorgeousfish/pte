@@ -1,0 +1,17 @@
+v 3
+d pte: Productivity Treatment Effects estimation in Stata
+d
+d Authors: Xuanyu Cai (xuanyuCAI@outlook.com)
+d          City University of Macau
+d
+d Semiparametric production function estimation with the CLK correction,
+d productivity recovery, ATT estimation via Monte Carlo counterfactual
+d simulation, and clustered bootstrap inference. Extensions include
+d non-absorbing treatment, treatment-dependent production functions,
+d cohort analysis, heterogeneity analysis, and method comparison.
+d
+d Requires: Stata 14.0+
+d
+d Distribution-Date: 20260531
+d
+p pte pte: Productivity Treatment Effects estimation in Stata
