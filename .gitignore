@@ -58,6 +58,7 @@ desktop.ini
 .idea/
 
 # Excluded from GitHub release
+.github/
 docs/
 tests/
 \$CODEX_HOME/
