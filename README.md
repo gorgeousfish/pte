@@ -54,39 +54,32 @@ A naive TWFE regression of recovered ω on treatment dummies produces biased est
 
 ## Core Method: The CLK Correction
 
-The following diagram illustrates how `pte` differs from standard approaches:
+The following illustrates how `pte` differs from standard approaches:
 
-```
-Standard approach:
-  All firms ──→ Single production function ──→ Pooled evolution law ──→ [Transition bias] ──→ Biased ATT
+**Standard approach:**
 
-pte approach:
-  ┌─────────────────────────────────────────────────────────────────────────────────────┐
-  │  Stage 1: Production Function Estimation (with CLK correction)                      │
-  │                                                                                     │
-  │    All firms → First-stage regression → φ (gross productivity)                      │
-  │                                         ↓                                           │
-  │    Exclude transitions (D_t ≠ D_{t-1}) from GMM moments                            │
-  │                                         ↓                                           │
-  │    GMM optimization → β (unbiased input elasticities)                               │
-  │                                         ↓                                           │
-  │  Stage 2: Productivity Recovery                                                     │
-  │                                                                                     │
-  │    ω = φ − f(k, l; β)  →  Separate estimation:                                     │
-  │                             h̄₀: ω_t = ρ₀ + ρ₁ω_{t-1} + ... (control path)         │
-  │                             h̄₁: ω_t = ρ₀ + ρ₁ω_{t-1} + ... + γD + δDω (treated)   │
-  │                                         ↓                                           │
-  │  Stage 3: ATT via Monte Carlo Counterfactual                                        │
-  │                                                                                     │
-  │    For each treated firm:                                                           │
-  │      Simulate N paths under h̄₀ (control evolution + ε⁰ shocks)                     │
-  │      ATT_i = ω_observed − E[ω_counterfactual]                                      │
-  │                                         ↓                                           │
-  │  Stage 4: Bootstrap Inference                                                       │
-  │                                                                                     │
-  │    Stratified cluster resampling → Repeat Stages 1-3 → SE and CI                   │
-  └─────────────────────────────────────────────────────────────────────────────────────┘
-```
+All firms → Single production function → Pooled evolution law → **Transition bias** → Biased ATT
+
+**`pte` approach (four stages):**
+
+**Stage 1: Production Function Estimation (with CLK correction)**
+- All firms → First-stage regression → φ (gross productivity)
+- Exclude transitions (D_t ≠ D_{t-1}) from GMM moments
+- GMM optimization → β (unbiased input elasticities)
+
+**Stage 2: Productivity Recovery**
+- ω = φ − f(k, l; β)
+- Separate estimation of evolution paths:
+  - h̄₀: ω_t = ρ₀ + ρ₁ω_{t-1} + ... (control path)
+  - h̄₁: ω_t = ρ₀ + ρ₁ω_{t-1} + ... + γD + δDω (treated path)
+
+**Stage 3: ATT via Monte Carlo Counterfactual**
+- For each treated firm:
+  - Simulate N paths under h̄₀ (control evolution + ε⁰ shocks)
+  - ATT_i = ω_observed − E[ω_counterfactual]
+
+**Stage 4: Bootstrap Inference**
+- Stratified cluster resampling → Repeat Stages 1–3 → SE and CI
 
 ## Requirements
 
