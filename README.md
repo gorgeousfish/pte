@@ -352,11 +352,28 @@ For complete syntax documentation, see `help pte` after installation.
 
 ## Roadmap
 
-The following features are planned for future releases:
+### v1.1.0 — Extensions Integration
 
-| Feature | Target | Description |
-|---------|--------|-------------|
-| Non-absorbing treatment | v1.1 | Support for reversible treatments where firms can exit treatment status |
+| Feature | Paper Reference | Description |
+|---------|----------------|-------------|
+| Treatment-dependent production function | Appendix C.1 | Support production functions that change with treatment status, via `treatdep(indexing\|benchmark)` option |
+| Conditional parallel trends test | Section 5, Assumption 4.1 | Formal empirical test for the conditional parallel trends assumption |
+| Counterfactual policy evaluation | Appendix D.3 | Evaluate treatment effects under phased policy rollouts |
+| AR(1) process shortcut | Appendix D.1.1 | Dedicated moment conditions for AR(1) productivity evolution via `prod_process(ar1)` |
+
+### v1.2.0 — Advanced Treatment Designs
+
+| Feature | Paper Reference | Description |
+|---------|----------------|-------------|
+| Non-absorbing treatment | Appendix C.3 | Support reversible treatments where firms can switch between treated and untreated states |
+| ATE identification | Appendix A.2 | Average Treatment Effect estimation under the Diverging Process model |
+
+### v2.0.0 — Generalization
+
+| Feature | Paper Reference | Description |
+|---------|----------------|-------------|
+| Built-in Monte Carlo validation | Section 7 | Internal simulation module reproducing the paper's MC design |
+| Continuous treatment extension | Conclusion | Generalize framework to continuous or multi-valued treatments |
 
 ## Citation
 
