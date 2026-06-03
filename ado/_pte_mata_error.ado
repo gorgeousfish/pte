@@ -34,7 +34,7 @@ program define _pte_mata_error
         }
         di as error ""
         di as error "  Recovery suggestions:"
-        di as error "    1. Reinstall pte: net install pte, replace from(https://raw.githubusercontent.com/gorgeousfish/pte/main)"
+        di as error `"    1. Reinstall pte: net install pte, replace from("https://raw.githubusercontent.com/gorgeousfish/pte/main")"'
         di as error "    2. Check adopath: adopath"
         di as error "    3. Verify file exists in mata/ directory"
         di as error "    4. See: help _pte_mata_init"
@@ -47,7 +47,7 @@ program define _pte_mata_error
         }
         di as error ""
         di as error "  Recovery suggestions:"
-        di as error "    1. Reinstall pte: net install pte, replace from(https://raw.githubusercontent.com/gorgeousfish/pte/main)"
+        di as error `"    1. Reinstall pte: net install pte, replace from("https://raw.githubusercontent.com/gorgeousfish/pte/main")"'
         di as error "    2. Check for corrupted .mata files"
         di as error "    3. Try: _pte_mata_init, force verbose"
         di as error "    4. See: help _pte_mata_init"
@@ -94,7 +94,7 @@ program define _pte_mata_error
         di as error "  Recovery suggestions:"
         di as error "    1. Try force recompile: _pte_mata_init, force verbose"
         di as error "    2. Check .mata file contents for correct function names"
-        di as error "    3. Reinstall pte: net install pte, replace from(https://raw.githubusercontent.com/gorgeousfish/pte/main)"
+        di as error `"    3. Reinstall pte: net install pte, replace from("https://raw.githubusercontent.com/gorgeousfish/pte/main")"'
         di as error "    4. See: help _pte_mata_init"
     }
     else {
@@ -103,7 +103,7 @@ program define _pte_mata_error
         di as error ""
         di as error "  Recovery suggestions:"
         di as error "    1. Try: _pte_mata_init, force verbose"
-        di as error "    2. Reinstall pte: net install pte, replace from(https://raw.githubusercontent.com/gorgeousfish/pte/main)"
+        di as error `"    2. Reinstall pte: net install pte, replace from("https://raw.githubusercontent.com/gorgeousfish/pte/main")"'
         di as error "    3. See: help _pte_mata_init"
     }
 

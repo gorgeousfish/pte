@@ -56,8 +56,6 @@ with their dates and changes.
 {phang}
 {opt check} displays update instructions for obtaining the latest version of {cmd:pte}
 from the GitHub repository.
-Requires an internet connection. If the connection fails, a friendly
-message is displayed and the command exits without error.
 
 
 {marker examples}{...}
