@@ -25,7 +25,7 @@
 {synopthdr}
 {synoptline}
 {synopt:{opt d:etail}}display release history{p_end}
-{synopt:{opt c:heck}}check SSC for updates{p_end}
+{synopt:{opt c:heck}}check for updates{p_end}
 {synoptline}
 
 {p 4 6 2}
@@ -43,7 +43,7 @@ release date, authors, and paper reference.
 {pstd}
 Without options, {cmd:pte_version} displays basic version information.
 With {opt detail}, it additionally shows the complete release history.
-With {opt check}, it queries SSC for the latest available version.
+With {opt check}, it displays update instructions for obtaining the latest version.
 
 
 {marker options}{...}
@@ -54,7 +54,8 @@ With {opt check}, it queries SSC for the latest available version.
 with their dates and changes.
 
 {phang}
-{opt check} checks the SSC archive for the latest version of {cmd:pte}.
+{opt check} displays update instructions for obtaining the latest version of {cmd:pte}
+from the GitHub repository.
 Requires an internet connection. If the connection fails, a friendly
 message is displayed and the command exits without error.
 
@@ -68,7 +69,7 @@ message is displayed and the command exits without error.
 {pstd}Display version with release history{p_end}
 {phang2}{cmd:. pte_version, detail}{p_end}
 
-{pstd}Check for updates on SSC{p_end}
+{pstd}Check for updates{p_end}
 {phang2}{cmd:. pte_version, check}{p_end}
 
 {pstd}Use version in a script{p_end}

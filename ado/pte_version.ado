@@ -85,31 +85,18 @@ program define pte_version, rclass
     }
     
     // =========================================================================
-    // check option: SSC update check
+    // check option: GitHub update check
     // =========================================================================
     if "`check'" != "" {
         di as text ""
-        di as text "Checking for updates on SSC..."
-        
-        capture quietly ssc describe pte
-        local ssc_rc = _rc
-        
-        if `ssc_rc' != 0 {
-            di as text ""
-            di as text "{bf:Note:} Unable to check for updates"
-            di as text "  Possible reasons:"
-            di as text "  - No internet connection"
-            di as text "  - Package not yet published on SSC"
-            di as text "  - SSC server temporarily unavailable"
-        }
-        else {
-            di as text ""
-            di as text "SSC check completed."
-            di as text "Your installed version: " as result "`version'"
-            di as text ""
-            di as text "To ensure you have the latest version, run:"
-            di as text `"  {stata "ssc install pte, replace"}"'
-        }
+        di as text "Checking for updates..."
+        di as text ""
+        di as text "Your installed version: " as result "`version'"
+        di as text ""
+        di as text "To update to the latest version, run:"
+        di as text `"  {stata `"net install pte, replace from("https://raw.githubusercontent.com/gorgeousfish/pte/main")"'}"'
+        di as text ""
+        di as text `"Release notes: {browse "https://github.com/gorgeousfish/pte"}"'
     }
     
     // =========================================================================

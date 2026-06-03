@@ -40,7 +40,7 @@
 {synopt:{opt treat:ment(name)}}binary numeric treatment indicator {it:D_it}; the variable name must match an existing column exactly, string variables are rejected with {cmd:rc=198}, and all-missing treatment columns are rejected with {cmd:rc=416}{p_end}
 {synopt:{opt firmid(varname)}}panel id variable; default is current {cmd:xtset} id; if the dataset is not already {cmd:xtset}, supply {cmd:firmid()} together with {cmd:timevar()}{p_end}
 {synopt:{opt timevar(varname)}}time variable; default is current {cmd:xtset} time variable; if the dataset is not already {cmd:xtset}, supply {cmd:timevar()} together with {cmd:firmid()}{p_end}
-{synopt:{opt check}}audit mode; skip creation of {cmd:_pte_*} helper variables ({cmd:nogenerate} path){p_end}
+{synopt:{opt check}}audit mode; skip creation of {cmd:_pte_*} helper variables in a non-mutating check path{p_end}
 {synopt:{opt absor:bing}}strict absorbing-treatment check; errors out if 1->0 transitions are found{p_end}
 {synopt:{opt report}}print an additional setup summary report{p_end}
 {synopt:{opt minthreshold(#)}}nonnegative minimum threshold used by summary identification checks; default is {cmd:100}{p_end}

@@ -262,9 +262,15 @@ program define pte, eclass sortpreserve
     }
     capture confirm numeric variable `treatment'
     if _rc != 0 {
-        _pte_error, errcode(111) ///
+        _pte_error, errcode(198) ///
             msg("treatment() variable '`treatment'' must be numeric") ///
             suggestion("Convert `treatment' to a numeric 0/1 treatment indicator before running pte")
+    }
+    quietly count if !missing(`treatment')
+    if r(N) == 0 {
+        _pte_error, errcode(416) ///
+            msg("treatment() is all missing") ///
+            suggestion("treatment() must contain at least one nonmissing 0/1 observation")
     }
 
     // Resolve compatibility aliases first so downstream validation sees one

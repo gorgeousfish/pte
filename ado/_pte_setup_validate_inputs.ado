@@ -13,6 +13,11 @@ program define _pte_setup_validate_inputs, rclass
 		[FREE(string)]     /// free input variable list (e.g. lnl lnm)
 		[STATe(string)]    /// state variable list (e.g. lnk)
 		[PROXy(string)]    /// proxy variable list (e.g. lnm)
+
+	local output : list uniq output
+	local free : list uniq free
+	local state : list uniq state
+	local proxy : list uniq proxy
 	
 	// Merge all roles into one validation surface, but keep duplicates from
 	// inflating counts when the same logged variable is passed through more
@@ -66,8 +71,8 @@ program define _pte_setup_validate_inputs, rclass
 	di as txt _n "Input Variable Validation:"
 	di as txt "{hline 60}"
 	
-	local total_nonpos = 0
-	local total_miss = 0
+	local display_total_nonpos = 0
+	local display_total_miss = 0
 	local n_vars = 0
 	
 	// Create tempvar to track unique invalid observations
@@ -110,18 +115,27 @@ program define _pte_setup_validate_inputs, rclass
 			di as txt "  `var': " as result "valid"
 		}
 		
-		local total_nonpos = `total_nonpos' + `n_nonpos'
-		local total_miss = `total_miss' + `n_miss'
+		local display_total_nonpos = `display_total_nonpos' + `n_nonpos'
+		local display_total_miss = `display_total_miss' + `n_miss'
 	}
 	
 	di as txt "{hline 60}"
+	local total_nonpos = 0
+	local total_miss = 0
+	foreach var of local all_vars {
+		local n_nonpos = 0
+		qui count if missing(`var')
+		local n_miss = r(N)
+		local total_nonpos = `total_nonpos' + `n_nonpos'
+		local total_miss = `total_miss' + `n_miss'
+	}
 	local total_invalid = `total_nonpos' + `total_miss'
 	
 	qui count if `_any_invalid' == 1
 	local n_invalid_obs = r(N)
 	
 	if `total_invalid' > 0 {
-		di as txt "Total invalid observations: " as result `total_invalid'
+		di as txt "Total invalid input-role cells: " as result `total_invalid'
 		di as txt "  Non-positive: " as result `total_nonpos'
 		di as txt "  Missing:      " as result `total_miss'
 		di as txt "Unique invalid obs: " as result `n_invalid_obs'

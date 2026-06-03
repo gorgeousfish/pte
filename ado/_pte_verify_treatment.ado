@@ -485,41 +485,47 @@ program define _pte_verify_treatment, rclass
 		di as txt "  Exit events:      " as result %10.0fc `n_exit'
 	}
 	
-	// nogenerate suppresses helper creation only; it must not weaken the support
-	// checks that protect the production-function moments from empty cells.
+	// nogenerate is used by pte_setup, check as a non-mutating audit surface.
+	// It should report empty support cells through r(), while generation paths
+	// still fail closed before publishing helpers that downstream estimators
+	// could mistake for an identified PTE sample.
 	if `N_stable_0' == 0 {
 		di as error "pte: no stable untreated observations (D=L.D=0)"
 		di as error "  Assumption 3.3 condition (i) violated"
-		if `pte_xtset_switched' {
-			if `pte_had_xtset' {
-				local pte_restore_delta_opt ""
-				if "`pte_prev_delta'" != "" {
-					local pte_restore_delta_opt "delta(`pte_prev_delta')"
+		if "`nogenerate'" == "" {
+			if `pte_xtset_switched' {
+				if `pte_had_xtset' {
+					local pte_restore_delta_opt ""
+					if "`pte_prev_delta'" != "" {
+						local pte_restore_delta_opt "delta(`pte_prev_delta')"
+					}
+					capture quietly xtset `pte_prev_panelvar' `pte_prev_timevar', `pte_restore_delta_opt'
 				}
-				capture quietly xtset `pte_prev_panelvar' `pte_prev_timevar', `pte_restore_delta_opt'
+				else {
+					capture quietly xtset, clear
+				}
 			}
-			else {
-				capture quietly xtset, clear
-			}
+			exit 2001
 		}
-		exit 2001
 	}
 	if `N_stable_1' == 0 {
 		di as error "pte: no stable treated observations (D=L.D=1)"
 		di as error "  Assumption 3.3 condition (ii) violated"
-		if `pte_xtset_switched' {
-			if `pte_had_xtset' {
-				local pte_restore_delta_opt ""
-				if "`pte_prev_delta'" != "" {
-					local pte_restore_delta_opt "delta(`pte_prev_delta')"
+		if "`nogenerate'" == "" {
+			if `pte_xtset_switched' {
+				if `pte_had_xtset' {
+					local pte_restore_delta_opt ""
+					if "`pte_prev_delta'" != "" {
+						local pte_restore_delta_opt "delta(`pte_prev_delta')"
+					}
+					capture quietly xtset `pte_prev_panelvar' `pte_prev_timevar', `pte_restore_delta_opt'
 				}
-				capture quietly xtset `pte_prev_panelvar' `pte_prev_timevar', `pte_restore_delta_opt'
+				else {
+					capture quietly xtset, clear
+				}
 			}
-			else {
-				capture quietly xtset, clear
-			}
+			exit 2001
 		}
-		exit 2001
 	}
 	if `N_stable_0' < 30 {
 		di as txt "  {bf:Warning}: Few stable untreated obs" ///

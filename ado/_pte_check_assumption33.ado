@@ -17,11 +17,36 @@ program define _pte_check_assumption33, rclass
     // =========================================================================
     // Task 1: Panel setup verification
     // =========================================================================
-    // Check xtset is configured
+    local pte_had_xtset 0
+    local pte_setup_xtset_sw 0
+
+    // Check xtset is configured, or use the dataset-scoped setup contract
+    // published by pte_setup for the same treatment law / canonical helper.
     capture qui xtset
     if _rc != 0 {
-        display as error "panel data not set; use {bf:xtset panelvar timevar}"
-        exit 459
+        local setup_panel : char _dta[_pte_setup_panelvar]
+        local setup_time : char _dta[_pte_setup_timevar]
+        local setup_treatment : char _dta[_pte_setup_treatment]
+        local setup_xtdelta : char _dta[_pte_setup_xtdelta]
+        if "`setup_panel'" != "" & "`setup_time'" != "" & ///
+            "`setup_treatment'" != "" & ///
+            ("`treatment'" == "`setup_treatment'" | "`treatment'" == "_pte_D") {
+            local setup_delta_opt ""
+            if "`setup_xtdelta'" != "" {
+                local setup_delta_opt "delta(`setup_xtdelta')"
+            }
+            capture quietly xtset `setup_panel' `setup_time', `setup_delta_opt'
+            if _rc == 0 {
+                local pte_setup_xtset_sw 1
+            }
+        }
+        if !`pte_setup_xtset_sw' {
+            display as error "panel data not set; use {bf:xtset panelvar timevar}"
+            exit 459
+        }
+    }
+    else {
+        local pte_had_xtset 1
     }
     
     // Re-run to capture r() values (capture clears them)
@@ -133,6 +158,9 @@ program define _pte_check_assumption33, rclass
             display as error "  - Ensure data contains untreated spells of length >= 2"
         }
         if "`nonfatal'" == "" {
+            if `pte_setup_xtset_sw' & !`pte_had_xtset' {
+                capture quietly xtset, clear
+            }
             exit 2001
         }
     }
@@ -162,6 +190,9 @@ program define _pte_check_assumption33, rclass
             display as error "  - Ensure data contains treated spells of length >= 2"
         }
         if "`nonfatal'" == "" {
+            if `pte_setup_xtset_sw' & !`pte_had_xtset' {
+                capture quietly xtset, clear
+            }
             exit 2002
         }
     }
@@ -243,5 +274,9 @@ program define _pte_check_assumption33, rclass
     return local  treatment          "`treatment'"
     return local  panelvar           "`panelvar'"
     return local  timevar            "`timevar'"
+
+    if `pte_setup_xtset_sw' & !`pte_had_xtset' {
+        capture quietly xtset, clear
+    }
 
 end
