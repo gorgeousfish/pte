@@ -169,9 +169,10 @@ findfile pte_example.dta
 use "`r(fn)'", clear
 xtset firm year
 
-* Translog with 200 bootstrap replications and controls
+* Translog with 200 bootstrap replications and time-trend control
+gen trend = year
 pte lny, free(lnl) state(lnk) proxy(lnm) treatment(D) ///
-    pfunc(translog) bootstrap(200) control(i.year) level(95)
+    pfunc(translog) bootstrap(200) control(trend) level(95)
 
 * View confidence intervals
 matrix list e(att_se)
@@ -328,7 +329,7 @@ Recommended parameter combinations for typical use cases:
 | Use Case | Configuration |
 |----------|---------------|
 | Quick exploration | `pfunc(cd)` (fast, fewer parameters) |
-| Publication baseline | `pfunc(translog) bootstrap(500) control(i.year)` |
+| Publication baseline | `pfunc(translog) bootstrap(500) control(trend)` |
 | Short panels (T ≤ 8) | `omegapoly(2) attperiods(3)` |
 | Long panels (T ≥ 15) | `omegapoly(3) attperiods(6)` |
 | Large N, speed priority | `pfunc(cd) noparallel bootstrap(200)` |
@@ -369,7 +370,7 @@ Convergence failures usually indicate data issues:
 2. Ensure sufficient variation in the proxy variable.
 3. Try reducing polynomial order: `omegapoly(2)` instead of the default 3.
 4. Verify that transition observations exist: if no firm ever switches treatment, the CLK correction has no bite and the model may be poorly identified.
-5. Add `control(i.year)` to absorb aggregate time shocks.
+5. Add a time-trend control (e.g., `gen trend = year` then `control(trend)`) to absorb aggregate time shocks.
 
 **Q: How do I interpret negative ATT values?**
 
@@ -402,7 +403,7 @@ pte depvar, free(varname) state(varname) proxy(varname) treatment(varname) [opti
 | `nsim(#)` | 100 | Number of Monte Carlo simulation paths |
 | `bootstrap(#)` | 0 | Bootstrap replications (0 = point estimation only) |
 | `by(varname)` | — | Group-by variable (e.g., industry) |
-| `control(varlist)` | — | Controls for first-stage regression (e.g., `i.year`) |
+| `control(varlist)` | — | Controls for first-stage regression (e.g., a pre-generated `trend` variable) |
 | `seed(#)` | 123456 | Random number seed for simulation |
 | `level(#)` | 95 | Confidence level for bootstrap CIs |
 | `nonabsorbing` | — | Enable non-absorbing (reversible) treatment |
