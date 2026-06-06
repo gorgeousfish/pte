@@ -10,7 +10,10 @@ program define _pte_check_assumption33, rclass
     // =========================================================================
     // Task 2: Parse syntax - treatment variable + options
     // =========================================================================
-    syntax name(name=treatment) [, Verbose MINthreshold(integer 30) NONFatal QUIETly]
+    // Default minthreshold to 100 to match the package-wide identification
+    // convention (pte_setup / _pte_setup_summary). The previous default of 30
+    // made pte_diagnose emit small-sample warnings at an inconsistent cutoff.
+    syntax name(name=treatment) [, Verbose MINthreshold(integer 100) NONFatal QUIETly]
     local minthreshold = `minthreshold'
     local assumption33_passed = 1
 

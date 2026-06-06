@@ -221,6 +221,21 @@ program define _pte_graph_att_dynamic, rclass
         }
     }
 
+    if `has_ci' {
+        mata: st_numscalar("__pte_graph_attdyn_ci_order_ok",            ///
+            allof((st_matrix("`ATT_LB'")[|1,1 \ 1,`nperiods'|] :<=      ///
+                   st_matrix("`ATT_UB'")[|1,1 \ 1,`nperiods'|]) :|      ///
+                  (missing(st_matrix("`ATT_LB'")[|1,1 \ 1,`nperiods'|]) :& ///
+                   missing(st_matrix("`ATT_UB'")[|1,1 \ 1,`nperiods'|])), 1))
+        if scalar(__pte_graph_attdyn_ci_order_ok) == 0 {
+            display as error "stored ATT dynamic confidence-interval lower bounds exceed upper bounds"
+            display as error "e(att_lb)/e(att_ub) or e(att_ci_lower)/e(att_ci_upper) must form ordered intervals"
+            scalar drop __pte_graph_attdyn_ci_order_ok
+            exit 198
+        }
+        capture scalar drop __pte_graph_attdyn_ci_order_ok
+    }
+
     // When both the bootstrap ATT CI pair and the legacy graph aliases are
     // posted, they describe the same dynamic-period CI object. The graph
     // consumer must fail-close on disagreement instead of silently preferring

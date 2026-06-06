@@ -64,6 +64,15 @@ program define _pte_graph_tt_dist, rclass
     local have_setup_fragment = ///
         (`have_setup_panel' | `have_setup_time' | `have_setup_treatment' | ///
          `have_setup_treatsig' | `have_setup_xtdelta')
+    local have_setup_helper_bundle = 0
+    foreach helper in _pte_D _pte_mid _pte_cohort _pte_treat_year ///
+        _pte_first_treat_year {
+        capture confirm variable `helper', exact
+        if _rc == 0 {
+            local have_setup_helper_bundle = 1
+            continue, break
+        }
+    }
     local have_live_complete_current_law = ///
         (`"`live_id'"' != "") & (`"`live_time'"' != "") & ///
         (`"`live_treatment'"' != "") & (`"`live_treatsig'"' != "")
@@ -146,6 +155,14 @@ program define _pte_graph_tt_dist, rclass
         di as error "Live pte panel/treatment contract is incomplete for pte_graph, tt_distribution."
         di as error "Publish e(idvar)/e(timevar) or legacy e(id)/e(time) together with e(treatment) and e(treatsig), or clear the live pte state before pte_graph, tt_distribution."
         exit 459
+    }
+    else if !`have_setup_fragment' & `have_setup_helper_bundle' {
+        capture noisily _pte_diag_panel_contract, ///
+            context("pte_graph, tt_distribution") allowsetupmissingxtdelta
+        local _pte_tt_helper_rc = _rc
+        if `_pte_tt_helper_rc' != 0 {
+            exit `_pte_tt_helper_rc'
+        }
     }
 
     // =====================================================================

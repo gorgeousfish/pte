@@ -19,7 +19,7 @@ program define _pte_gmm_matrices, rclass
         ID(name) TIME(name) ///
         [PRODFUNC(string) OMEGAPOLY(integer 3) ///
          LSQ(name) KSQ(name) LK(name) ///
-         GMMSAMPLE(name)]
+         GMMSAMPLE(name) DOPOOLEDZ]
     
     // Map syntax locals to internal names
     local treat_post "`treatpost'"
@@ -117,11 +117,17 @@ program define _pte_gmm_matrices, rclass
     // rows that can feed a real lag into that sample. Unrelated sample-out
     // panels and gap-separated pseudo-neighbors must not veto the current
     // GMM contract.
-    tempvar _pte_mid_guard _pte_treat_guard _pte_true_transition_row
+    tempvar _pte_mid_guard _pte_treat_guard _pte_true_transition_row _pte_missing_transition_status
     qui sort `id' `time'
     qui by `id' (`time'): gen byte `_pte_true_transition_row' = ///
         (_n > 1 & abs((`time' - `time'[_n-1]) - `_tsdelta') <= `_tsdelta_tol' & ///
         `treat_post' != `treat_post'[_n-1]) if !mi(`treat_post', `treat_post'[_n-1])
+    qui by `id' (`time'): gen byte `_pte_missing_transition_status' = ///
+        (_n > 1 & abs((`time' - `time'[_n-1]) - `_tsdelta') <= `_tsdelta_tol' & ///
+        (mi(`treat_post') | mi(`treat_post'[_n-1])))
+    qui count if `_pte_missing_transition_status' == 1
+    local N_missing_transition_status = r(N)
+    qui replace `_pte_true_transition_row' = 0 if missing(`_pte_true_transition_row')
     if "`gmmsample'" != "" {
         capture confirm variable `gmmsample', exact
         if _rc {
@@ -171,6 +177,7 @@ program define _pte_gmm_matrices, rclass
 
     // Translog requires the current-period quadratic terms and the fully
     // lagged interaction used in X_lag. The mixed lag is created below.
+    local translog_mixed_lag_degenerate = 0
     if "`prodfunc'" == "translog" {
         if "`l2'" == "" | "`k2'" == "" | "`l1k1'" == "" {
             di as error "{bf:_pte_gmm_matrices}: Translog requires lsq(), ksq(), lk() options"
@@ -185,19 +192,13 @@ program define _pte_gmm_matrices, rclass
         }
     }
 
-    // Strategy: try calling an accessor to check if already compiled.
-    // If not, derive mata/ path from this ado file's own location
-    // (c(pwd) is unreliable — profile.do may change it).
-    local _mata_ok 0
-    capture mata: st_local("_mata_ok", "1")
-    
-    // Quick check: try calling a simple accessor
-    if "`_mata_ok'" == "1" {
-        local _mata_ok 0
-        capture mata: st_local("_mata_ok", strofreal(_pte_get_omegapoly() >= 0 | _pte_get_omegapoly() < 0 | _pte_get_omegapoly() == .))
-    }
-    
-    if "`_mata_ok'" != "1" {
+    // Rebuild the package-owned Mata runtime before calling the matrix
+    // constructor. Checking for any same-name accessor is not enough: old DO
+    // helpers or a stale package build can leave a compatible-looking Mata
+    // namespace with an incompatible _pte_construct_gmm_matrices() signature.
+    capture quietly _pte_mata_init, force nolog
+    local _mata_init_rc = _rc
+    if `_mata_init_rc' != 0 | r(all_loaded) != 1 {
         // Functions not yet compiled; locate the Mata source via adopath.
         local _mata_found 0
         
@@ -324,11 +325,20 @@ program define _pte_gmm_matrices, rclass
 
         // Keep a visible diagnostic because confusing l1k_lag with l1k1_lag
         // changes the identified instrument set while still looking plausible.
-        tempvar diff_l1k
+        tempvar diff_l1k scale_l1k
         gen double `diff_l1k' = abs(l1k_lag - l1k1_lag) if !mi(l1k_lag) & !mi(l1k1_lag)
+        gen double `scale_l1k' = abs(l1k1_lag) if !mi(l1k_lag) & !mi(l1k1_lag)
         qui sum `diff_l1k'
         local mean_diff = r(mean)
         local max_diff = r(max)
+        local n_l1k_compare = r(N)
+        qui sum `scale_l1k'
+        local mean_scale = r(mean)
+        local rel_mean_diff = .
+        if `n_l1k_compare' > 0 & !missing(`mean_diff') {
+            local denom_l1k = max(1e-12, `mean_scale')
+            local rel_mean_diff = `mean_diff' / `denom_l1k'
+        }
         
         di as text ""
         di as text "l1k_lag Validation:"
@@ -336,10 +346,10 @@ program define _pte_gmm_matrices, rclass
         di as text _col(3) "l1k1_lag = L.lnl × L.lnk (full lag for X_lag matrix)"
         di as text _col(3) "Mean difference:" _col(40) as result %10.6f `mean_diff'
         di as text _col(3) "Max difference:" _col(40) as result %10.6f `max_diff'
+        di as text _col(3) "Relative mean difference:" _col(40) as result %10.3e `rel_mean_diff'
         
-        if `mean_diff' < 1e-10 {
-            di as error "{bf:Warning}: l1k_lag and l1k1_lag are nearly identical"
-            di as error "  This may indicate incorrect data or constant capital"
+        if `n_l1k_compare' == 0 | missing(`mean_diff') {
+            di as text "{bf:Warning}: cannot validate Translog mixed-lag instrument before sample filtering"
         }
     }
 
@@ -370,9 +380,9 @@ program define _pte_gmm_matrices, rclass
     // contract can be blanked before the usual first/mid filtering runs.
     if "`gmmsample'" != "" {
         local gmmsample_external = 1
-        qui count if `gmmsample'
+        qui count if `gmmsample' != 0 & !missing(`gmmsample')
         local N_original = r(N)
-        qui count if `gmmsample' & `mid' == 1
+        qui count if `gmmsample' != 0 & !missing(`gmmsample') & `mid' == 1
         local N_mid_gmmsample = r(N)
         local N_mid = `N_mid_gmmsample'
 
@@ -420,7 +430,7 @@ program define _pte_gmm_matrices, rclass
 
         // Contract the working sample to the caller-provided touse()/if/in
         // support before applying the standard first-period/transition filter.
-        drop if !`gmmsample'
+        drop if `gmmsample' == 0 | missing(`gmmsample')
 
         // Rebuild first-period markers on the contracted sample so return
         // counts match the equivalent keep-if workflow exactly.
@@ -446,16 +456,43 @@ program define _pte_gmm_matrices, rclass
     }
     
     local N_before_miss = _N
-    foreach var of local key_vars {
-        capture confirm variable `var'
-        if !_rc {
-            qui drop if mi(`var')
-        }
-    }
+    tempvar _pte_key_missing
+    egen byte `_pte_key_missing' = rowmiss(`key_vars')
+    qui drop if `_pte_key_missing' > 0
     local N_missing = `N_before_miss' - _N
     
     if `N_missing' > 0 {
         di as text _col(3) "Missing values excluded:" _col(40) as result %10.0fc `N_missing'
+    }
+    if `N_missing_transition_status' > 0 {
+        di as text _col(3) "Rows with missing current/lagged treatment status:" _col(40) as result %10.0fc `N_missing_transition_status'
+    }
+    if "`prodfunc'" == "translog" {
+        qui sum `diff_l1k'
+        local mean_diff_final = r(mean)
+        local max_diff_final = r(max)
+        local n_l1k_compare_final = r(N)
+        qui sum `scale_l1k'
+        local mean_scale_final = r(mean)
+        local rel_mean_diff_final = .
+        if `n_l1k_compare_final' > 0 & !missing(`mean_diff_final') {
+            local denom_l1k_final = max(1e-12, `mean_scale_final')
+            local rel_mean_diff_final = `mean_diff_final' / `denom_l1k_final'
+        }
+        if `n_l1k_compare_final' == 0 | missing(`mean_diff_final') {
+            di as error "{bf:_pte_gmm_matrices}: cannot validate Translog mixed-lag instrument"
+            di as error "  No final GMM rows have both l1k_lag and l1k1_lag nonmissing"
+            restore
+            exit 498
+        }
+        if `max_diff_final' <= 1e-12 | `rel_mean_diff_final' < 1e-8 {
+            local translog_mixed_lag_degenerate = 1
+            di as text "{bf:Warning}: Translog mixed-lag instrument is numerically indistinguishable from the fully lagged interaction"
+            di as text "  l1k_lag  = L.lnl * lnk"
+            di as text "  l1k1_lag = L.lnl * L.lnk"
+            di as text "  Final-sample relative mean difference: " %10.3e `rel_mean_diff_final'
+            di as text "  This can occur with effectively time-invariant capital; continuing because the mixed-lag construction itself is valid."
+        }
     }
     
     // Report both the contracted sample and the final usable GMM sample.
@@ -486,6 +523,14 @@ program define _pte_gmm_matrices, rclass
         restore
         exit 2001
     }
+    local min_gmm_rows = 2 + 2 * `omegapoly'
+    if `N_gmm' <= `min_gmm_rows' {
+        di as error "{bf:_pte_gmm_matrices}: GMM sample too small for the evolution basis"
+        di as error "  Usable rows: `N_gmm'"
+        di as error "  Minimum required rows: > `min_gmm_rows'"
+        restore
+        exit 2001
+    }
 
     // Theorem 3.1 needs support from both stable untreated and stable treated
     // observations because h_bar_0 and h_bar_1 are estimated separately.
@@ -505,19 +550,37 @@ program define _pte_gmm_matrices, rclass
         restore
         exit 498
     }
+    local min_stable_rows = `omegapoly' + 1
+    if `n_stable_0' < `min_stable_rows' | `n_stable_1' < `min_stable_rows' {
+        di as text "{bf:Warning}: very few stable observations for the evolution law"
+        di as text "  Stable control: `n_stable_0', stable treated: `n_stable_1'"
+        di as text "  Nominal rows per stable state for order `omegapoly': `min_stable_rows'"
+        di as text "  Continuing because the paper/DO benchmark does not impose this hard cutoff."
+    }
+    local share_stable_0 = `n_stable_0' / `N_gmm'
+    local share_stable_1 = `n_stable_1' / `N_gmm'
+    if `share_stable_0' < 0.05 | `share_stable_1' < 0.05 {
+        di as text "{bf:Warning}: Assumption 3.3 support is thin"
+        di as text "  Stable control share: " %6.3f `share_stable_0'
+        di as text "  Stable treated share: " %6.3f `share_stable_1'
+        di as text "  Results may be imprecise; the paper/DO benchmark does not impose a 5% hard cutoff."
+    }
     
-    if `n_stable_0' < 30 | `n_stable_1' < 30 {
+    if `n_stable_0' < 50 | `n_stable_1' < 50 {
         di as text "{bf:Warning}: Small sample in stable groups"
+        di as text "  Stable groups below 50 observations can make h_bar estimates unstable"
         di as text "  Results may be imprecise"
     }
 
     di as text ""
     di as text "Constructing GMM Matrices..."
     
+    local _pte_do_pooled_z = ("`dopooledz'" != "")
+
     // Mata stores the matrices in global Mata state for the optimizer.
     mata: _pte_construct_gmm_matrices("`prodfunc'", `omegapoly', ///
         "`phi'", "`lnl'", "`lnk'", "`t'", "`treat_post'", ///
-        "`l2'", "`k2'", "`l1k1'")
+        "`l2'", "`k2'", "`l1k1'", `_pte_do_pooled_z')
     
     // The Mata helper writes these diagnostics back through st_local().
     
@@ -526,9 +589,19 @@ program define _pte_gmm_matrices, rclass
     di as text "Matrix Dimensions:"
     di as text _col(3) "X matrix:" _col(40) as result "`N_gmm' × `cols_X'"
     di as text _col(3) "Z matrix:" _col(40) as result "`N_gmm' × `cols_Z'"
+    if `_pte_do_pooled_z' {
+        di as text _col(3) "Z moment layout:" _col(40) as result "pooled DO benchmark"
+    }
+    else {
+        di as text _col(3) "Z moment layout:" _col(40) as result "state-interacted"
+    }
     di as text _col(3) "OMEGA_LAG_POL columns:" _col(40) as result "`cols_OLP'"
     di as text _col(3) "Z'Z condition number:" _col(40) as result %12.4e `cond_ZZ'
     
+    if `cond_ZZ' > 1e12 {
+        di as text "{bf:Warning}: Z'Z condition number > 1e12"
+        di as text "  The instrument matrix is ill-conditioned; continuing with invsym() to match the paper/DO benchmark path."
+    }
     if `cond_ZZ' > 1e8 {
         di as text "{bf:Warning}: Z'Z condition number > 1e8"
         di as text "  Results may be numerically unstable"
@@ -544,17 +617,26 @@ program define _pte_gmm_matrices, rclass
     return scalar N_excluded = `N_excluded'
     return scalar N_first = `N_first'
     return scalar N_mid = `N_mid'
+    return scalar N_missing_transition_status = `N_missing_transition_status'
     return scalar gmmsample_external = `gmmsample_external'
     return scalar N_first_in_gmmsample = `N_first_gmmsample'
     return scalar N_mid_in_gmmsample = `N_mid_gmmsample'
     return scalar n_stable_0 = `n_stable_0'
     return scalar n_stable_1 = `n_stable_1'
+    return scalar do_pooled_z = `_pte_do_pooled_z'
     return scalar cols_X = `cols_X'
     return scalar cols_Z = `cols_Z'
     return scalar cols_OLP = `cols_OLP'
     return scalar cond_ZZ = `cond_ZZ'
+    return scalar translog_mixed_lag_degenerate = `translog_mixed_lag_degenerate'
     return scalar omegapoly = `omegapoly'
     return local prodfunc "`prodfunc'"
+    if `_pte_do_pooled_z' {
+        return local z_moment_layout "pooled_do"
+    }
+    else {
+        return local z_moment_layout "state_interacted"
+    }
 
     // Leave the caller's dataset untouched.
     restore

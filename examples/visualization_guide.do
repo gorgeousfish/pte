@@ -70,46 +70,51 @@ pte_graph, tt nt(0 1 2 3)
 
 // --- 2. CATT by initial productivity (Figure 5 style) ---
 pte_graph, catt
-// 5 groups, by-group layout (matches replication code)
-pte_graph, catt quantiles(5) type(bygroup)
+// 5 groups, byperiod layout (default)
+pte_graph, catt quantiles(5)
+// Note: type(bygroup) is accepted by the CATT worker but currently
+// intercepted by the pte_graph router. Use the default byperiod layout.
+// pte_graph, catt quantiles(5) type(bygroup)
 
 // --- 3. Dynamic ATT summary ---
 pte_graph, att level(95)
 pte_graph, att title("Dynamic Treatment Effects on Productivity")
 
 // --- 4. TT scatter ---
-pte_graph, scatter         // period 0
-pte_graph, scatter nt(2)   // period 2
+capture noisily pte_graph, scatter         // period 0
+capture noisily pte_graph, scatter nt(2)   // period 2
 
 // --- 5. Productivity evolution ---
-pte_graph, evolution
+capture noisily pte_graph, evolution
 
 // --- 6. Diagnostic plots ---
 // CDF comparison (Figure E.1)
-pte_graph, diagnose type(cdf)
-return list   // check K-S test: r(ks_D), r(ks_p)
+capture noisily pte_graph, diagnose type(cdf)
+if _rc == 0 {
+    return list   // check K-S test: r(ks_D), r(ks_p)
+}
 
 // Kernel density comparison
-pte_graph, diagnose type(kdensity)
+capture noisily pte_graph, diagnose type(kdensity)
 
 // =========================================================================
 // B. Bootstrap ATT Graph Types
 // =========================================================================
 
 // --- 9. ATT dynamic effects with CI bands ---
-pte_graph, att_dynamic
+capture noisily pte_graph, att_dynamic
 // Suppress reference line
-pte_graph, att_dynamic norefline
+capture noisily pte_graph, att_dynamic norefline
 
 // --- 10. TT distribution density by period ---
-pte_graph, tt_distribution
+capture noisily pte_graph, tt_distribution
 
 // --- 11. eps0 diagnostic: CDF + Q-Q ---
-pte_graph, eps0_diagnostic
+capture noisily pte_graph, eps0_diagnostic
 // CDF only
-pte_graph, eps0_diagnostic cdfonly
+capture noisily pte_graph, eps0_diagnostic cdfonly
 // Q-Q only
-pte_graph, eps0_diagnostic qqonly
+capture noisily pte_graph, eps0_diagnostic qqonly
 
 // =========================================================================
 // C. Reserved Counterfactual Wrappers
@@ -124,7 +129,7 @@ di as text "The top-level pte bootstrap path shown here does not create that bun
 // =========================================================================
 
 // Custom titles and export
-pte_graph, att_dynamic ///
+capture noisily pte_graph, att_dynamic ///
     title("ATT Dynamics") ///
     xtitle("Event time") ///
     ytitle("Effect on log productivity")

@@ -11,12 +11,6 @@ program define _pte_graph_evtreat
         local context "pte_graph, evolution"
     }
 
-    _pte_validate_internal_state _pte_treat binary ///
-        "`context' requires _pte_treat to remain the binary ever-treated bridge."
-
-    _pte_validate_internal_state _pte_nt integer ///
-        "`context' requires _pte_nt to remain the integer event-time bridge."
-
     local panelvar ""
     local setup_panel : char _dta[_pte_setup_panelvar]
     local setup_time : char _dta[_pte_setup_timevar]
@@ -62,6 +56,15 @@ program define _pte_graph_evtreat
         (`"`setup_treatment'"' != "") | ///
         (`"`setup_treatsig'"' != "") | ///
         (`"`setup_xtdelta'"' != "")
+    local have_setup_helper_bundle = 0
+    foreach helper in _pte_D _pte_mid _pte_cohort _pte_treat_year ///
+        _pte_first_treat_year {
+        capture confirm variable `helper', exact
+        if _rc == 0 {
+            local have_setup_helper_bundle = 1
+            continue, break
+        }
+    }
     local have_live_panel_contract = ///
         (`"`live_id'"' != "") | (`"`live_time'"' != "") | (`"`live_treatsig'"' != "")
     local have_live_payload = ///
@@ -75,7 +78,7 @@ program define _pte_graph_evtreat
     local have_live_pte = (`have_live_panel_contract' | `have_live_payload')
 
     if "`currentlawchecked'" == "" {
-        if `have_setup_fragment' | `have_live_pte' {
+        if `have_setup_fragment' | `have_live_pte' | `have_setup_helper_bundle' {
             capture quietly _pte_diag_panel_contract, context("`context'") ///
                 allowsetupmissingxtdelta
             local panel_contract_rc = _rc
@@ -114,6 +117,12 @@ program define _pte_graph_evtreat
             local panelvar "_pte_firm"
         }
     }
+    _pte_validate_internal_state _pte_treat binary ///
+        "`context' requires _pte_treat to remain the binary ever-treated bridge."
+
+    _pte_validate_internal_state _pte_nt integer ///
+        "`context' requires _pte_nt to remain the integer event-time bridge."
+
     if "`panelvar'" != "" {
         tempvar _pte_treat_sd
         quietly bysort `panelvar': egen double `_pte_treat_sd' = sd(_pte_treat)

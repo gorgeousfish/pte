@@ -193,13 +193,37 @@ program define pte_esttab_att, eclass
                 exit 301
             }
         }
+        if missing(`attperiods') {
+            di as error "{bf:pte_esttab_att}: legacy ATT support scalar is missing"
+            di as error "Expected nonmissing scalar {bf:e(attperiods_max)} or {bf:e(attperiods)}."
+            exit 198
+        }
+        if floor(`attperiods') != `attperiods' {
+            di as error "{bf:pte_esttab_att}: legacy ATT support must be an integer event-time horizon"
+            di as error "Found `attperiods'; ATT horizons are indexed by discrete ell and cannot be fractional."
+            exit 198
+        }
+        if `attperiods' < 0 {
+            di as error "{bf:pte_esttab_att}: legacy ATT support must be nonnegative"
+            di as error "Found `attperiods'; ATT horizons are indexed by discrete ell >= 0."
+            exit 198
+        }
         local nperiods = `attperiods' + 1
         forvalues s = 0/`attperiods' {
             local periodlist "`periodlist' `s'"
             local colnames "`colnames' ATT_s`s'"
         }
     }
-    local has_bootstrap = (e(bootstrap) > 0)
+    local _pte_boot_reps = .
+    foreach _pte_boot_scalar in bootstrap breps nboot {
+        if missing(`_pte_boot_reps') {
+            capture confirm scalar e(`_pte_boot_scalar')
+            if !_rc {
+                local _pte_boot_reps = e(`_pte_boot_scalar')
+            }
+        }
+    }
+    local has_bootstrap = (`_pte_boot_reps' < . & `_pte_boot_reps' > 0)
 
     // --- Build coefficient vector and SE vector ---
     local ncoef = `nperiods' + 1
@@ -243,9 +267,12 @@ program define pte_esttab_att, eclass
         else {
             tempname att_scalar
             capture scalar `att_scalar' = e(att_`period_token')
-            if !_rc & !missing(`att_scalar') {
-                matrix `__b'[1, `col'] = `att_scalar'
+            if _rc | missing(`att_scalar') {
+                di as error "{bf:pte_esttab_att}: missing scalar e(att_`period_token') for supported event time `period_token'"
+                di as error "The exact support must be matched by a complete scalar ATT bundle before reposting."
+                exit 198
             }
+            matrix `__b'[1, `col'] = `att_scalar'
         }
     }
 
@@ -258,7 +285,14 @@ program define pte_esttab_att, eclass
         matrix `__b'[1, `col'] = `att_mat'[1, `col']
     }
     else {
-        matrix `__b'[1, `col'] = e(att)
+        tempname att_avg_scalar
+        capture scalar `att_avg_scalar' = e(att)
+        if _rc | missing(`att_avg_scalar') {
+            di as error "{bf:pte_esttab_att}: missing overall ATT scalar e(att)"
+            di as error "The scalar fallback bundle must publish the pooled ATT summary before reposting."
+            exit 198
+        }
+        matrix `__b'[1, `col'] = `att_avg_scalar'
     }
 
     matrix colnames `__b' = `colnames'

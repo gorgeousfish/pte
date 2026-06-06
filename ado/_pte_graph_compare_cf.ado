@@ -253,6 +253,23 @@ program define _pte_graph_compare_cf, rclass
             }
             capture scalar drop __pte_compare_dual_ci_alias_ok
         }
+
+        mata: st_numscalar("__pte_compare_ci_order_ok",                  ///
+            allof((st_matrix("`ATT_LB'")[|1,1 \ 1,`nperiods'|] :<=       ///
+                   st_matrix("`ATT_UB'")[|1,1 \ 1,`nperiods'|]) :|       ///
+                  (missing(st_matrix("`ATT_LB'")[|1,1 \ 1,`nperiods'|]) :& ///
+                   missing(st_matrix("`ATT_UB'")[|1,1 \ 1,`nperiods'|])), 1) ///
+            & allof((st_matrix("`ATE_LB'")[|1,1 \ 1,`nperiods'|] :<=    ///
+                     st_matrix("`ATE_UB'")[|1,1 \ 1,`nperiods'|]) :|    ///
+                    (missing(st_matrix("`ATE_LB'")[|1,1 \ 1,`nperiods'|]) :& ///
+                     missing(st_matrix("`ATE_UB'")[|1,1 \ 1,`nperiods'|])), 1))
+        if scalar(__pte_compare_ci_order_ok) == 0 {
+            di as error "{bf:Error}: Stored comparison confidence-interval lower bounds exceed upper bounds."
+            di as error "ATT and ATE{sup:count} confidence-interval matrices must form ordered intervals on the graphed dynamic support."
+            scalar drop __pte_compare_ci_order_ok
+            exit 198
+        }
+        capture scalar drop __pte_compare_ci_order_ok
     }
 
     // Exact stored support means each supported dynamic period must carry a

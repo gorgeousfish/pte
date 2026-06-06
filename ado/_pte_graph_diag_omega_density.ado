@@ -10,6 +10,62 @@ program define _pte_graph_diag_omega_density, rclass
               TItle(string) XTItle(string) YTItle(string) ///
               SAVE(string) EXPORT(string) ///
               WIDTH(integer 800) HEIGHT(integer 600)]
+
+    if "`currentlawchecked'" == "" {
+        local pre_setup_panel : char _dta[_pte_setup_panelvar]
+        local pre_setup_time : char _dta[_pte_setup_timevar]
+        local pre_setup_treatment : char _dta[_pte_setup_treatment]
+        local pre_setup_treatsig : char _dta[_pte_setup_treatsig]
+        local pre_setup_xtdelta : char _dta[_pte_setup_xtdelta]
+        local pre_have_setup = ///
+            (`"`pre_setup_panel'"' != "") | ///
+            (`"`pre_setup_time'"' != "") | ///
+            (`"`pre_setup_treatment'"' != "") | ///
+            (`"`pre_setup_treatsig'"' != "") | ///
+            (`"`pre_setup_xtdelta'"' != "")
+        local pre_hsh = 0
+        foreach helper in _pte_mid _pte_cohort _pte_treat_year ///
+            _pte_first_treat_year {
+            capture confirm variable `helper', exact
+            if _rc == 0 {
+                local pre_hsh = 1
+                continue, break
+            }
+        }
+        local pre_live_id ""
+        local pre_live_time ""
+        local pre_live_treatsig ""
+        local pre_live_predict ""
+        if "`e(cmd)'" == "pte" {
+            capture local pre_live_id = e(idvar)
+            if _rc != 0 | inlist("`pre_live_id'", "", ".") {
+                capture local pre_live_id = e(id)
+            }
+            if "`pre_live_id'" == "." local pre_live_id ""
+            capture local pre_live_time = e(timevar)
+            if _rc != 0 | inlist("`pre_live_time'", "", ".") {
+                capture local pre_live_time = e(time)
+            }
+            if "`pre_live_time'" == "." local pre_live_time ""
+            capture local pre_live_treatsig = e(treatsig)
+            if _rc != 0 | "`pre_live_treatsig'" == "." local pre_live_treatsig ""
+            capture local pre_live_predict = e(predict)
+            if _rc != 0 | "`pre_live_predict'" == "." local pre_live_predict ""
+        }
+        local pre_have_live = ///
+            (`"`pre_live_id'"' != "") | ///
+            (`"`pre_live_time'"' != "") | ///
+            (`"`pre_live_treatsig'"' != "") | ///
+            (`"`pre_live_predict'"' != "")
+        if `pre_have_setup' | `pre_hsh' | `pre_have_live' {
+            capture noisily _pte_diag_panel_contract, ///
+                context("pte_graph diagnose type(omega_density)") allowsetupmissingxtdelta
+            local pre_contract_rc = _rc
+            if `pre_contract_rc' != 0 {
+                exit `pre_contract_rc'
+            }
+        }
+    }
     
     // =========================================
     // Step 1: Validate prerequisites

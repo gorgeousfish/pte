@@ -17,7 +17,7 @@
 {title:Syntax}
 
 {p 8 17 2}
-{cmd:_pte_cd_estimate}{cmd:,}
+{cmd:_pte_cd_estimate} {ifin}{cmd:,}
 {opt depvar(varname)}
 {opt free(varname)}
 {opt state(varname)}
@@ -43,6 +43,7 @@
 {synopt:{opt by(varname)}}industry grouping variable (with {opt pooled}); the grouping variable name must be spelled exactly{p_end}
 {synopt:{opt omegapoly(#)}}omega evolution polynomial order; default is {cmd:1}{p_end}
 {synopt:{opt maxiter(#)}}maximum GMM iterations; default is {cmd:10000}{p_end}
+{synopt:{opt touse(varname)}}internal numeric sample indicator; zero and missing values are excluded from all estimator stages{p_end}
 {synopt:{opt nodiagnose}}suppress diagnostic output{p_end}
 {synopt:{opt nolog}}suppress progress log{p_end}
 {synoptline}
@@ -52,6 +53,12 @@
 Data must be {cmd:xtset} before calling this command. The canonical transition
 indicator is {bf:_pte_mid} from {cmd:_pte_transition}; legacy {bf:mid} is
 accepted only as a compatibility fallback when present.
+
+{p 4 6 2}
+{cmd:if}, {cmd:in}, and {opt touse()} define the live estimation sample.  The
+same sample contract is applied to the first-stage proxy regression, GMM matrix
+assembly, OLS starting values, transition-law validation, and the posted
+{cmd:e(sample)}.
 
 
 {marker description}{...}
@@ -172,6 +179,12 @@ current implementation accepts higher-order omega polynomials when requested.
 {phang}
 {opt maxiter(#)} specifies the maximum number of iterations for the
 Nelder-Mead GMM optimizer.  Default is {cmd:10000}.
+
+{phang}
+{opt touse(varname)} specifies an internal numeric sample indicator.  Observations
+where {it:varname} is zero or missing are excluded before required variables,
+controls, grouping variables, and transition periods are checked.  This option is
+intended for callers that have already constructed a package-level sample.
 
 {phang}
 {opt nodiagnose} suppresses diagnostic output (R-squared checks, VIF, etc.).

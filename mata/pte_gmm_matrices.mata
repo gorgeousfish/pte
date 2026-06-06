@@ -11,6 +11,11 @@ version 14.0
 
 mata:
 
+string scalar _pte_gmm_matrices_signature()
+{
+    return("pte_gmm_matrices_v2_11args")
+}
+
 // Build the fixed matrix payload consumed by GMM_CLK().
 // `prodfunc' switches between the Cobb-Douglas and Translog column layouts.
 // `omegapoly' is stored so the evaluator can rebuild the same evolution basis.
@@ -31,7 +36,8 @@ void _pte_construct_gmm_matrices(string scalar prodfunc,
                                   string scalar tp_var,
                                   string scalar l2_var,
                                   string scalar k2_var,
-                                  string scalar l1k1_var)
+                                  string scalar l1k1_var,
+                                  real scalar do_pooled_z)
 {
     // Publish matrices through Mata externals so the optimizer can reuse them
     // across repeated criterion evaluations without rereading Stata memory.
@@ -46,8 +52,8 @@ void _pte_construct_gmm_matrices(string scalar prodfunc,
     external real scalar    _pte_mat_N
     external real scalar    _pte_mat_omegapoly
 
-    real matrix ZtZ
-    real scalar N, cond_ZZ, cols_OLP
+    real matrix ZtZ, Z_base, D0, D1
+    real scalar N, cond_ZZ, rank_ZZ, cols_OLP
 
     // PHI and PHI_lag carry the control-function object before netting out
     // the candidate production-function coefficients inside the evaluator.
@@ -60,15 +66,15 @@ void _pte_construct_gmm_matrices(string scalar prodfunc,
     _pte_mat_TP_lag = st_data(., "treat_post_lag")
 
     // X uses current inputs; X_lag uses their lagged counterparts exactly as
-    // they enter the reference moment conditions. Z mirrors the instrument
-    // set in the DO files, including the state-variable timing of capital.
+    // they enter the reference moment conditions. Z_base mirrors the base
+    // instrument set, including the state-variable timing of capital.
     if (prodfunc == "cd") {
         _pte_mat_X     = st_data(., (lnl_var, lnk_var))
         _pte_mat_X_lag = st_data(., ("lnl_lag", "lnk_lag"))
 
         // Current-period capital belongs in Z because K_t is predetermined at
         // t-1, so lnk_t is valid when paired with lagged labor.
-        _pte_mat_Z = st_data(., ("const", "lnl_lag", lnk_var, t_var))
+        Z_base = st_data(., ("const", "lnl_lag", lnk_var, t_var))
     }
     else {
         _pte_mat_X     = st_data(., (lnl_var, lnk_var, l2_var, k2_var, l1k1_var))
@@ -77,14 +83,38 @@ void _pte_construct_gmm_matrices(string scalar prodfunc,
         // The mixed term l1k_lag must be L.lnl * lnk_t rather than the fully
         // lagged interaction in X_lag; otherwise the Translog Z matrix would
         // collapse the mixed-lag instrument required by the reference code.
-        _pte_mat_Z = st_data(., ("const", "lnl_lag", lnk_var, "l2_lag", k2_var, "l1k_lag", t_var))
+        Z_base = st_data(., ("const", "lnl_lag", lnk_var, "l2_lag", k2_var, "l1k_lag", t_var))
     }
 
-    // The paper's one-step implementation uses W = invsym(Z'Z) / N. Keeping
-    // the 1/N scaling here preserves the criterion normalization seen by the
-    // optimizer and by the ado-level diagnostics that consume fval.
+    // The default package path enforces the two stable-state moment blocks
+    // implied by Theorem 3.1. Benchmark replicate() modes intentionally keep
+    // the original paper DO files' weaker pooled-Z implementation, because
+    // those modes promise numerical reproduction of the DO output.
+    if (do_pooled_z) {
+        _pte_mat_Z = Z_base
+    }
+    else {
+        D0 = 1 :- _pte_mat_TP_lag
+        D1 = _pte_mat_TP_lag
+        _pte_mat_Z = (Z_base :* (D0 * J(1, cols(Z_base), 1)),
+                      Z_base :* (D1 * J(1, cols(Z_base), 1)))
+    }
+
+    // The paper-strict one-step implementation uses W = invsym(Z'Z) / N on
+    // the stacked state-specific instrument matrix. Keeping the 1/N scaling
+    // preserves the criterion normalization seen by the optimizer and by the
+    // ado-level diagnostics that consume fval.
     N = rows(_pte_mat_X)
     ZtZ = cross(_pte_mat_Z, _pte_mat_Z)
+    cond_ZZ = cond(ZtZ)
+    rank_ZZ = rank(ZtZ)
+    if (rank_ZZ < cols(ZtZ) | cond_ZZ == . | cond_ZZ > 1e12) {
+        if (do_pooled_z) printf("Warning: pooled DO Z'Z matrix is ill-conditioned\n")
+        else printf("Warning: state-interacted Z'Z matrix is ill-conditioned\n")
+        printf("  rank(Z'Z) = %g of %g\n", rank_ZZ, cols(ZtZ))
+        printf("  cond(Z'Z) = %g\n", cond_ZZ)
+        printf("  Continuing with invsym() to match the paper/DO benchmark path.\n")
+    }
     _pte_mat_W = invsym(ZtZ) / N
 
     // Cache scalar metadata that the evaluator and the ado diagnostics both
@@ -94,8 +124,6 @@ void _pte_construct_gmm_matrices(string scalar prodfunc,
 
     // Return lightweight diagnostics to Stata so the caller can surface the
     // matrix layout and the Z'Z condition number in its own reporting layer.
-    cond_ZZ = cond(ZtZ)
-
     // OMEGA_LAG_POL alternates untreated and treated polynomial terms and
     // ends with D_{t-1}, so the width is fixed at 2 + 2 * omegapoly.
     cols_OLP = 2 + 2 * omegapoly
@@ -249,23 +277,38 @@ real matrix _pte_construct_omega_lag_pol(real colvector omega_lag,
 
 real scalar _pte_verify_l1k_lag()
 {
-    real colvector l1k, l1k1, diff
-    real scalar mean_diff
+    real colvector l1k, l1k1, diff, scale, ok
+    real scalar mean_diff, max_diff, mean_scale, rel_mean_diff, denom
 
     l1k  = st_data(., "l1k_lag")
     l1k1 = st_data(., "l1k1_lag")
 
-    diff = abs(l1k - l1k1)
-    mean_diff = mean(diff)
+    ok = (l1k :< .) :& (l1k1 :< .)
+    diff = select(abs(l1k - l1k1), ok)
+    scale = select(abs(l1k1), ok)
 
-    if (mean_diff < 1e-10) {
-        printf("WARNING: l1k_lag and l1k1_lag are nearly identical\n")
-        printf("  mean|diff| = %g\n", mean_diff)
-        printf("  This may indicate constant capital or data error\n")
+    if (rows(diff) == 0) {
+        printf("  Warning: cannot validate Translog mixed-lag instrument; no rows have both comparison terms nonmissing\n")
         return(0)
     }
 
-    printf("  l1k_lag validation: mean|diff| = %g (OK)\n", mean_diff)
+    mean_diff = mean(diff)
+    max_diff = max(diff)
+    mean_scale = mean(scale)
+    denom = mean_scale
+    if (denom == . | denom < 1e-12) denom = 1e-12
+    rel_mean_diff = mean_diff / denom
+
+    if (max_diff <= 1e-12 | rel_mean_diff < 1e-8) {
+        printf("  Warning: Translog mixed-lag instrument is numerically close to the fully lagged interaction\n")
+        printf("  mean|diff| = %g, max|diff| = %g, relative mean diff = %g\n",
+                  mean_diff, max_diff, rel_mean_diff)
+        printf("  Continuing because near equality can be a valid weak-variation feature of the sample.\n")
+        return(0)
+    }
+
+    printf("  l1k_lag validation: mean|diff| = %g, relative mean diff = %g (OK)\n",
+           mean_diff, rel_mean_diff)
     return(1)
 }
 

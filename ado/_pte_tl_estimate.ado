@@ -9,11 +9,12 @@ program define _pte_tl_estimate, eclass
     version 14.0
 
     // Parse the estimation contract before any helper-derived variables are read.
-    syntax, depvar(name) free(name) state(name) proxy(name) ///
+    local _pte_tl_raw_opts `"`0'"'
+    syntax [if] [in], depvar(name) free(name) state(name) proxy(name) ///
         treatment(name) [control(varlist) id(varname) t(varname) ///
         pooled by(varname) omegapoly(integer 3) maxiter(integer 10000) ///
         TOLerance(real 1e-6) INIT(numlist) GRID ///
-        NODIAGnose NOLOG]
+        NODIAGnose NOLOG TOUSE(varname)]
 
     // ----------------------------------------------------------------
     // 0a: Check xtset panel structure
@@ -36,13 +37,14 @@ program define _pte_tl_estimate, eclass
     if "`t'" != "" {
         local timevar "`t'"
     }
+    unab _pte_tl_allvars : _all
 
     // ----------------------------------------------------------------
     // 0b: Validate all required variables exist and are numeric
     // ----------------------------------------------------------------
     foreach var in `depvar' `free' `state' `proxy' `treatment' {
-        capture confirm variable `var', exact
-        if _rc {
+        local _pte_tl_has_required : list posof "`var'" in _pte_tl_allvars
+        if !`_pte_tl_has_required' {
             di as error "{bf:_pte_tl_estimate}: variable {bf:`var'} not found"
             exit 111
         }
@@ -53,51 +55,107 @@ program define _pte_tl_estimate, eclass
         }
     }
 
-    // The transition helper may arrive under the package name or the legacy alias.
-    local midvar "_pte_mid"
-    capture confirm variable `midvar'
-    if _rc {
-        local midvar "mid"
-        capture confirm variable `midvar'
+    marksample _pte_tl_ifin, novarlist
+    tempvar _pte_tl_sample
+    qui gen byte `_pte_tl_sample' = (`_pte_tl_ifin' != 0 & !missing(`_pte_tl_ifin'))
+    if "`touse'" != "" {
+        capture confirm variable `touse', exact
         if _rc {
-            di as error "{bf:_pte_tl_estimate}: neither {bf:_pte_mid} nor legacy {bf:mid} found"
-            di as error "  Run {bf:_pte_transition} first"
+            di as error "{bf:_pte_tl_estimate}: touse variable {bf:`touse'} not found"
             exit 111
         }
+        capture confirm numeric variable `touse'
+        if _rc {
+            di as error "{bf:_pte_tl_estimate}: touse variable {bf:`touse'} must be numeric"
+            exit 109
+        }
+        qui replace `_pte_tl_sample' = 0 if `touse' == 0 | missing(`touse')
+    }
+    markout `_pte_tl_sample' `depvar' `free' `state' `proxy' `treatment'
+
+    // The transition helper may arrive under the package name or the legacy alias.
+    local _pte_tl_has_mid : list posof "_pte_mid" in _pte_tl_allvars
+    local _pte_tl_has_legacy_mid : list posof "mid" in _pte_tl_allvars
+    if `_pte_tl_has_mid' {
+        local midvar "_pte_mid"
+    }
+    else if `_pte_tl_has_legacy_mid' {
+        local midvar "mid"
+    }
+    else {
+        di as error "{bf:_pte_tl_estimate}: neither {bf:_pte_mid} nor legacy {bf:mid} found"
+        di as error "  Run {bf:_pte_transition} first"
+        exit 111
     }
 
     // ----------------------------------------------------------------
     // 0d: Validate treatment is binary (0/1)
     // ----------------------------------------------------------------
-    qui count if !inlist(`treatment', 0, 1) & !mi(`treatment')
+    qui count if `_pte_tl_sample' & !inlist(`treatment', 0, 1) & !mi(`treatment')
     if r(N) > 0 {
         di as error "{bf:_pte_tl_estimate}: treatment variable {bf:`treatment'} must be binary (0/1)"
         di as error "  Found `r(N)' non-binary observations"
         exit 450
     }
 
+    // Theorem 3.1 requires transition periods to be computed from the same
+    // treatment path consumed by this production-function call.
+    capture noisily _pte_validate_mid_contract, midvar(`midvar') ///
+        treatment(`treatment') panelvar(`panelvar') timevar(`timevar') ///
+        touse(`_pte_tl_sample') context("_pte_tl_estimate")
+    if _rc != 0 {
+        local _pte_mid_contract_rc = _rc
+        exit `_pte_mid_contract_rc'
+    }
+
     // ----------------------------------------------------------------
     // 0e: Validate optional control variables
     // ----------------------------------------------------------------
     if "`control'" != "" {
+        local _pte_tl_control_literal ""
+        if regexm(`"`_pte_tl_raw_opts'"', "(^|[ ,])control[ ]*[(]([^)]*)[)]") {
+            local _pte_tl_control_literal `"`=strtrim(regexs(2))'"'
+        }
+        if `"`_pte_tl_control_literal'"' != "" {
+            foreach var of local _pte_tl_control_literal {
+                local _pte_tl_has_control : list posof "`var'" in _pte_tl_allvars
+                if !`_pte_tl_has_control' {
+                    di as error "{bf:_pte_tl_estimate}: control variable {bf:`var'} not found"
+                    exit 111
+                }
+            }
+        }
         foreach var of local control {
-            capture confirm variable `var'
+            capture confirm variable `var', exact
             if _rc {
                 di as error "{bf:_pte_tl_estimate}: control variable {bf:`var'} not found"
                 exit 111
             }
         }
+        markout `_pte_tl_sample' `control'
     }
 
     // ----------------------------------------------------------------
     // 0f: Validate by() variable if pooled mode
     // ----------------------------------------------------------------
     if "`by'" != "" {
-        capture confirm variable `by'
+        local _pte_tl_by_literal ""
+        if regexm(`"`_pte_tl_raw_opts'"', "(^|[ ,])by[ ]*[(]([^)]*)[)]") {
+            local _pte_tl_by_literal `"`=strtrim(regexs(2))'"'
+        }
+        if `"`_pte_tl_by_literal'"' != "" & `"`_pte_tl_by_literal'"' != `"`by'"' {
+            local _pte_tl_has_by_literal : list posof "`_pte_tl_by_literal'" in _pte_tl_allvars
+            if !`_pte_tl_has_by_literal' {
+                di as error "{bf:_pte_tl_estimate}: by() variable {bf:`_pte_tl_by_literal'} not found"
+                exit 111
+            }
+        }
+        capture confirm variable `by', exact
         if _rc {
             di as error "{bf:_pte_tl_estimate}: by() variable {bf:`by'} not found"
             exit 111
         }
+        markout `_pte_tl_sample' `by'
     }
 
     // by() is only admissible in by-industry mode when the estimation sample
@@ -108,7 +166,7 @@ program define _pte_tl_estimate, eclass
             local by_guard_vars "`by_guard_vars' `control'"
         }
         local by_guard_args : subinstr local by_guard_vars " " ", ", all
-        quietly levelsof `by' if !missing(`by_guard_args'), ///
+        quietly levelsof `by' if `_pte_tl_sample' & !missing(`by_guard_args'), ///
             local(by_levels)
         local n_by_levels : word count `by_levels'
         if `n_by_levels' == 0 {
@@ -192,6 +250,7 @@ program define _pte_tl_estimate, eclass
     if "`control'" != "" {
         local stage1_opts "`stage1_opts' control(`control')"
     }
+    local stage1_opts "`stage1_opts' touse(`_pte_tl_sample')"
 
     if "`pooled'" != "" {
         // Pooled translog matches the DO design: one grouped-time interaction
@@ -200,10 +259,10 @@ program define _pte_tl_estimate, eclass
         qui egen _pte_t = group(`timevar')
         local t_vars ""
         if "`by'" != "" {
-            qui levelsof `by', local(ind_levels)
+            qui levelsof `by' if `_pte_tl_sample', local(ind_levels)
             local num_ind : word count `ind_levels'
             tempvar _pte_by_group
-            qui egen long `_pte_by_group' = group(`by') if !missing(`by')
+            qui egen long `_pte_by_group' = group(`by') if `_pte_tl_sample' & !missing(`by')
 
             // Grouped time must match the scale used by the stage-1 and GMM helpers.
             capture drop _pte_t
@@ -276,7 +335,8 @@ program define _pte_tl_estimate, eclass
     // Translog-specific matrices:
     //   X:     N x 5 (lnl, lnk, l2, k2, l1k1)
     //   X_lag: N x 5 (lnl_lag, lnk_lag, l2_lag, k2_lag, l1k1_lag)
-    //   Z:     N x 7 (const, lnl_lag, lnk, l2_lag, k2, l1k_lag, t)
+    //   Z:     N x 14, state-stacked base instruments for D_lag=0 and D_lag=1
+    //          base block: const, lnl_lag, lnk, l2_lag, k2, l1k_lag, t
     //
     // CRITICAL: l1k_lag = L.lnl * lnk (mixed-lag, NOT L.lnl * L.lnk)
     //   Capital is state variable (decided at t-1), so current lnk in Z
@@ -291,7 +351,8 @@ program define _pte_tl_estimate, eclass
     _pte_gmm_matrices, phi(phi) lnl(`free') lnk(`state') ///
         treatpost(`treatment') mid(`midvar') t(_pte_t) ///
         id(`panelvar') time(`timevar') prodfunc(translog) ///
-        omegapoly(`omegapoly') lsq(l2) ksq(k2) lk(l1k1)
+        omegapoly(`omegapoly') lsq(l2) ksq(k2) lk(l1k1) ///
+        gmmsample(`_pte_tl_sample')
 
     // Capture GMM matrix results
     local N_gmm = r(N)
@@ -303,7 +364,7 @@ program define _pte_tl_estimate, eclass
     if "`nolog'" == "" {
         di as text "  GMM sample size: " as result %8.0fc `N_gmm'
         di as text "  X matrix columns: " as result `cols_X' " (expected 5)"
-        di as text "  Z matrix columns: " as result `cols_Z' " (expected 7)"
+        di as text "  Z matrix columns: " as result `cols_Z' " (expected 14)"
         di as text "  OMEGA_LAG_POL columns: " as result `cols_OLP'
     }
 
@@ -312,8 +373,8 @@ program define _pte_tl_estimate, eclass
         di as error "{bf:_pte_tl_estimate}: X matrix has `cols_X' columns (expected 5)"
         exit 503
     }
-    if `cols_Z' != 7 {
-        di as error "{bf:_pte_tl_estimate}: Z matrix has `cols_Z' columns (expected 7)"
+    if `cols_Z' != 14 {
+        di as error "{bf:_pte_tl_estimate}: Z matrix has `cols_Z' columns (expected 14)"
         exit 503
     }
 
@@ -368,7 +429,7 @@ program define _pte_tl_estimate, eclass
         local ols_controls "`ols_controls' `control'"
         local ols_controls : list uniq ols_controls
     }
-    qui reg `depvar' `free' `state' l2 k2 l1k1 `ols_controls'
+    qui reg `depvar' `free' `state' l2 k2 l1k1 `ols_controls' if `_pte_tl_sample'
 
     // Extract first 5 coefficients as beta0 (excluding controls and constant)
     // Order: beta_l, beta_k, beta_ll, beta_kk, beta_lk
@@ -502,8 +563,10 @@ program define _pte_tl_estimate, eclass
     qui by `panelvar' (`timevar'): gen byte `_pte_tl_gap' = ///
         (abs((`timevar' - `timevar'[_n-1]) - `_tl_tsdelta') > `_tl_tsdelta_tol') if _n > 1
     qui by `panelvar' (`timevar'): replace `_pte_tl_gap' = 1 if _n == 1
+    qui by `panelvar' (`timevar'): replace `_pte_tl_gap' = 1 if _n > 1 & ///
+        (`_pte_tl_sample'[_n-1] == 0 | missing(`_pte_tl_sample'[_n-1]))
 
-    qui gen byte `_pte_tl_esample' = (`midvar' == 0)
+    qui gen byte `_pte_tl_esample' = (`_pte_tl_sample' & `midvar' == 0)
     qui replace `_pte_tl_esample' = 0 if `_pte_tl_gap' == 1
     qui replace `_pte_tl_esample' = 0 if ///
         mi(phi) | mi(phi[_n-1]) | ///

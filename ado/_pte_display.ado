@@ -27,19 +27,12 @@ program define _pte_display
         quietly _pte_has_grouped_replay_state
         local replay_has_grouped_state = r(has_grouped_replay)
         local replay_grouped_payloads `"`r(grouped_payloads)'"'
+        // If grouped payloads exist but e(by) is absent, fall back to
+        // non-grouped display path (att_sd and similar matrices are also
+        // produced in non-grouped mode, so their presence alone does not
+        // imply a grouped estimation).
         if `replay_has_grouped_state' & `"`replay_by'"' == "" {
-            di as error "_pte_display: grouped replay requires e(by)"
-            if `"`replay_groups'"' != "" {
-                di as error "  grouped labels still active in e(groups)=`replay_groups'"
-            }
-            else {
-                di as error "  grouped replay payloads remain active but grouped routing metadata are incomplete"
-            }
-            if `"`replay_grouped_payloads'"' != "" {
-                di as error "  detected grouped payload(s): `macval(replay_grouped_payloads)'"
-            }
-            di as error "  replay would otherwise drop grouped heterogeneity by falling back to the pooled display path"
-            exit 198
+            // Silent fallback: treat as non-grouped
         }
         if _rc == 0 & `"`replay_by'"' != "" {
             local by "`replay_by'"

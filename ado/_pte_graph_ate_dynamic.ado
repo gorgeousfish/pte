@@ -236,6 +236,36 @@ program define _pte_graph_ate_dynamic, rclass
             }
             capture scalar drop __pte_ovl_dual_ok
         }
+
+        if `has_att_lb' {
+            mata: st_numscalar("__pte_ovl_lci_order_ok",                  ///
+                allof((st_matrix("e(att_lb)")[|1,1 \ 1,`nperiods'|] :<=   ///
+                       st_matrix("e(att_ub)")[|1,1 \ 1,`nperiods'|]) :|   ///
+                      (missing(st_matrix("e(att_lb)")[|1,1 \ 1,`nperiods'|]) :& ///
+                       missing(st_matrix("e(att_ub)")[|1,1 \ 1,`nperiods'|])), 1))
+            if scalar(__pte_ovl_lci_order_ok) == 0 {
+                display as error "stored ATT dynamic confidence-interval lower bounds exceed upper bounds"
+                display as error "e(att_lb)/e(att_ub) must form ordered intervals on the shared dynamic support"
+                scalar drop __pte_ovl_lci_order_ok
+                exit 198
+            }
+            capture scalar drop __pte_ovl_lci_order_ok
+        }
+
+        if `has_att_ci_lower' {
+            mata: st_numscalar("__pte_ovl_bci_order_ok",                  ///
+                allof((st_matrix("e(att_ci_lower)")[|1,1 \ 1,`nperiods'|] :<= ///
+                       st_matrix("e(att_ci_upper)")[|1,1 \ 1,`nperiods'|]) :| ///
+                      (missing(st_matrix("e(att_ci_lower)")[|1,1 \ 1,`nperiods'|]) :& ///
+                       missing(st_matrix("e(att_ci_upper)")[|1,1 \ 1,`nperiods'|])), 1))
+            if scalar(__pte_ovl_bci_order_ok) == 0 {
+                display as error "stored ATT bootstrap confidence-interval lower bounds exceed upper bounds"
+                display as error "e(att_ci_lower)/e(att_ci_upper) must form ordered intervals on the shared dynamic support"
+                scalar drop __pte_ovl_bci_order_ok
+                exit 198
+            }
+            capture scalar drop __pte_ovl_bci_order_ok
+        }
     }
 
     quietly _pte_graph_attperiods_contract, ///
@@ -290,6 +320,21 @@ program define _pte_graph_ate_dynamic, rclass
                 exit 198
             }
         }
+    }
+
+    if `has_ci' {
+        mata: st_numscalar("__pte_ate_dyn_ci_order_ok",                   ///
+            allof((st_matrix("`ATE_LB'")[|1,1 \ 1,`nperiods'|] :<=        ///
+                   st_matrix("`ATE_UB'")[|1,1 \ 1,`nperiods'|]) :|        ///
+                  (missing(st_matrix("`ATE_LB'")[|1,1 \ 1,`nperiods'|]) :& ///
+                   missing(st_matrix("`ATE_UB'")[|1,1 \ 1,`nperiods'|])), 1))
+        if scalar(__pte_ate_dyn_ci_order_ok) == 0 {
+            display as error "stored ATE{sup:count} dynamic confidence-interval lower bounds exceed upper bounds"
+            display as error "e(ate_count_lb)/e(ate_count_ub) must form ordered intervals on the graphed dynamic support"
+            scalar drop __pte_ate_dyn_ci_order_ok
+            exit 198
+        }
+        capture scalar drop __pte_ate_dyn_ci_order_ok
     }
 
     if `do_overlay' {

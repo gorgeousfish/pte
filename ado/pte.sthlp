@@ -401,7 +401,8 @@ paper-specific {cmd:eps0window(3)} setting) intended for paper replication
 scripts. The currently
 supported modes are:
 {cmd:order1}, {cmd:order2}, {cmd:order3}, {cmd:order4}, {cmd:table1},
-{cmd:table5}, and {cmd:table_e4}.
+{cmd:table5}, {cmd:table_e4}, {cmd:pool_trlg}, and
+{cmd:pooled_translog}.
 
 {pstd}
 All supported replicate modes force the trimmed-{cmd:eps0} path. An explicit
@@ -423,6 +424,15 @@ combined with {opt by()} or {opt industry()}. {cmd:table_e4} is the
 production-function benchmark and therefore requires {opt noatt} on the
 public path; the grouped production-function benchmark remains available
 through {opt by()}/{opt industry()} together with {opt noatt}.
+{cmd:replicate(pool_trlg)} and {cmd:replicate(pooled_translog)} reproduce the
+historical pooled translog DO branch {cmd:att_estimation_pool_trlg.do}: they
+pin {cmd:pfunc(translog)}, cubic productivity evolution, {cmd:nsim(100)},
+{cmd:attperiods(3)}, the benchmark seed {cmd:10000}, the detected {cmd:t1-t6}
+time-trend controls, and the DO's untreated innovation support
+{cmd:year<=2010 & treatment==0}. This legacy support is for direct DO
+comparison and is intentionally distinct from the paper-window
+{cmd:eps0window(3)} modes; therefore explicit {opt eps0window()} conflicts
+with {cmd:replicate(pool_trlg)}.
 The generic {cmd:order3} mode is available under both
 {cmd:pfunc(cd)} and {cmd:pfunc(translog)}; it keeps the official
 Cobb-Douglas point-estimation default seed {cmd:123456} on the CD path and
@@ -780,6 +790,10 @@ Identifying Treatment Effects on Productivity.
 
 {pstd}
 Zhiyuan Chen, Moyu Liao, and Karl Schurter
+{p_end}
+
+{pstd}
+Wenli Xu, City University of Macau ({browse "mailto:wlxu@cityu.edu.mo":wlxu@cityu.edu.mo})
 {p_end}
 
 {pstd}

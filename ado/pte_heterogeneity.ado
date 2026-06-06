@@ -6,6 +6,7 @@ version 14.0
 capture program drop pte_heterogeneity
 program define pte_heterogeneity, eclass
     version 14.0
+    local pte_cmdline `"pte_heterogeneity`0'"'
     
     // =========================================================================
     // Syntax parsing
@@ -28,6 +29,11 @@ program define pte_heterogeneity, eclass
         di as error "tolerance() must be positive"
         exit 198
     }
+    local by_label : variable label `by'
+    if `"`by_label'"' == "" {
+        local by_label "`by'"
+    }
+    local heterogeneity_title `"`by_label'-level Treatment Effects on Productivity"'
 
     // Store option flags as locals for downstream modules
     local do_test      = ("`test'" != "")
@@ -144,7 +150,7 @@ program define pte_heterogeneity, eclass
 
             local valid_group_list "`valid_group_list' `group_value'"
             local valid_group_positions "`valid_group_positions' `g'"
-            local valid_group_labels "`valid_group_labels' `group_label'"
+            local valid_group_labels `"`valid_group_labels' `"`group_label'"'"'
             if `by_is_string' {
                 local current_group_token `"`group_token'"'
             }
@@ -169,6 +175,7 @@ program define pte_heterogeneity, eclass
     if `by_is_string' {
         quietly levelsof `by' if !missing(_pte_tt) & `support_condition'`treated_condition' & !missing(`by'), ///
             local(valid_group_tokens)
+        local group_labels `"`valid_group_tokens'"'
     }
     else {
         local valid_group_tokens = trim(`"`valid_group_list'"')
@@ -287,7 +294,17 @@ program define pte_heterogeneity, eclass
         local has_live_att_se = 1
         tempname att_se_live
         matrix `att_se_live' = e(att_se)
+        tempname attperiods_live_check
+        matrix `attperiods_live_check' = e(attperiods)
         local total_se_col = colsof(`att_se_live')
+        quietly _pte_dynamic_colstripe_contract `att_se_live' `attperiods_live_check' ///
+            `attperiods_cols' "pte_heterogeneity total SE replay" "e(att_se)"
+        if `total_se_col' <= `attperiods_cols' {
+            di as error "[pte] pte_heterogeneity requires the pooled ATT_avg standard error when live e(att_se) is posted."
+            di as error "[pte] The live pooled ATT inference bundle is incomplete: e(att_se) has `total_se_col' column(s) for `attperiods_cols' supported event time(s)."
+            di as error "[pte] Re-run pte so the pooled ATT_avg inference bundle remains complete, or drop the stale live e(att_se) helper state before replaying Table 2."
+            exit 198
+        }
         if `total_se_col' >= 1 {
             local total_se = `att_se_live'[1, `total_se_col']
         }
@@ -315,6 +332,12 @@ program define pte_heterogeneity, eclass
     matrix `se_vector' = r(se_vector)
     local nboot = r(nboot)
     local se_method "`r(method)'"
+    local nboot_opt ""
+    if "`nboot'" != "" {
+        if !missing(`nboot') & `nboot' > 0 {
+            local nboot_opt "nboot(`nboot')"
+        }
+    }
     
     // =========================================================================
     // Step 5: Compute contribution rates (unless nocontribution specified)
@@ -392,7 +415,8 @@ program define pte_heterogeneity, eclass
         _pte_het_ereturn, result(`result_matrix') se(`se_vector') ///
             contrib(`contribution') ci(`ci_matrix') ///
             byvar(`by') labels(`"`group_labels'"') n_groups(`n_groups') ///
-            grouptokens(`"`valid_group_tokens'"') level(`level') nboot(`nboot') ///
+            grouptokens(`"`valid_group_tokens'"') level(`level') `nboot_opt' ///
+            cmdline(`"`pte_cmdline'"') ///
             bootkeep(`boot_keep_positions') ///
             `test_opts'
     }
@@ -400,7 +424,8 @@ program define pte_heterogeneity, eclass
         _pte_het_ereturn, result(`result_matrix') se(`se_vector') ///
             ci(`ci_matrix') ///
             byvar(`by') labels(`"`group_labels'"') n_groups(`n_groups') ///
-            grouptokens(`"`valid_group_tokens'"') level(`level') nboot(`nboot') ///
+            grouptokens(`"`valid_group_tokens'"') level(`level') `nboot_opt' ///
+            cmdline(`"`pte_cmdline'"') ///
             bootkeep(`boot_keep_positions') ///
             `test_opts'
     }
@@ -410,11 +435,11 @@ program define pte_heterogeneity, eclass
     // =========================================================================
     if `do_test' {
         _pte_het_output, matrix(_pte_het_result_display) labels(`"`group_labels'"') ///
-            level(`level') test nboot(`nboot')
+            level(`level') byvar(`by') test `nboot_opt'
     }
     else {
         _pte_het_output, matrix(_pte_het_result_display) labels(`"`group_labels'"') ///
-            level(`level') nboot(`nboot')
+            level(`level') byvar(`by') `nboot_opt'
     }
     capture matrix drop _pte_het_result_display
     

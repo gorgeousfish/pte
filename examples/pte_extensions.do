@@ -39,7 +39,9 @@ display ""
 * Load panel dataset and verify structure
 
 use "`root'/data/pte_example.dta", clear
-gen ind = industry
+* Generate synthetic industry grouping (pte_example.dta does not contain industry)
+egen ind = cut(firm), group(4)
+label variable ind "Industry group (synthetic)"
 xtset firm year
 
 display _dup(70) "-"
@@ -58,7 +60,7 @@ display ""
 * treatment), enabling analysis of reversible policy interventions.
 
 use "`root'/data/pte_example.dta", clear
-gen ind = industry
+egen ind = cut(firm), group(4)
 xtset firm year
 
 display _dup(70) "-"
@@ -92,7 +94,7 @@ display ""
 * not just productivity levels.
 
 use "`root'/data/pte_example.dta", clear
-gen ind = industry
+egen ind = cut(firm), group(4)
 xtset firm year
 
 display _dup(70) "-"
@@ -129,7 +131,7 @@ display ""
 * aligned with the current public contract.
 
 use "`root'/data/pte_example.dta", clear
-gen ind = industry
+egen ind = cut(firm), group(4)
 xtset firm year
 
 display _dup(70) "-"
@@ -172,7 +174,7 @@ display ""
 * Requires a prior pte estimation stored in e().
 
 use "`root'/data/pte_example.dta", clear
-gen ind = industry
+egen ind = cut(firm), group(4)
 xtset firm year
 
 display _dup(70) "-"
@@ -217,7 +219,7 @@ display ""
 * Requires a prior pte estimation with bootstrap.
 
 use "`root'/data/pte_example.dta", clear
-gen ind = industry
+egen ind = cut(firm), group(4)
 xtset firm year
 
 display _dup(70) "-"

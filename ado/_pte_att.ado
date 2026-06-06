@@ -97,6 +97,9 @@ program define _pte_att, eclass
          PRESERVERNG ///
          TOUSE(name) ///
          NOTRIMeps ///
+         LEGACYPOOLEDeps0 ///
+         LEGACYATTGaussian ///
+         LEGACYATTPanelorder ///
          NODIAGnose ///
          noCLIPOMG ///
          CLIPRANGE(real 50) ///
@@ -116,6 +119,7 @@ program define _pte_att, eclass
     // the RNG, consume the caller's live stream, then restore caller state.
     // ================================================================
     local preserve_rng = ("`preserverng'" != "")
+    local legacy_att_panel_order = ("`legacyattpanelorder'" != "")
     local seed_source = "default"
     if `preserve_rng' {
         if `seed' != -1 {
@@ -281,7 +285,7 @@ program define _pte_att, eclass
         exit 111
     }
 
-    tempvar _pte_sample
+    tempvar _pte_sample _pte_target_sample
     if "`touse'" != "" {
         capture confirm variable `touse', exact
         if _rc != 0 {
@@ -295,7 +299,41 @@ program define _pte_att, eclass
             `_pte_clear_eclass'
             exit 111
         }
-        quietly gen byte `_pte_sample' = (`touse' != 0 & !missing(`touse'))
+        quietly gen byte `_pte_target_sample' = (`touse' != 0 & !missing(`touse'))
+
+        // touse() is a target-reporting mask, not the recursive work sample.
+        // Counterfactual ATT_l can require nt=0,...,l-1 rows even when only a
+        // later treated period is requested for reporting.
+        local _pte_last_cmd `"`e(cmd)'"'
+        capture confirm variable _pte_active_sample, exact
+        if _rc == 0 {
+            capture confirm numeric variable _pte_active_sample
+            if _rc != 0 {
+                di as error "[pte] Error: persisted active sample '_pte_active_sample' must be numeric"
+                di as error "[pte]        Re-run _pte_evolution or _pte_omega to rebuild the bridge state"
+                `_pte_clear_eclass'
+                exit 111
+            }
+            quietly gen byte `_pte_sample' = (_pte_active_sample != 0 & !missing(_pte_active_sample))
+        }
+        else {
+            if inlist("`_pte_last_cmd'", "_pte_winsorize", "_pte_eps0_sample", ///
+                "_pte_evolution", "_pte_treatdep_evolution", "_pte_omega", "pte") {
+                di as error "[pte] Error: current `_pte_last_cmd' state is missing '_pte_active_sample'"
+                di as error "[pte]        e(sample) from `_pte_last_cmd' is not the active sample"
+                di as error "[pte]        required for ATT estimation"
+                di as error "[pte]        Rebuild '_pte_active_sample' before using _pte_att, touse()"
+                `_pte_clear_eclass'
+                exit 498
+            }
+            capture confirm matrix e(b)
+            if _rc == 0 {
+                quietly gen byte `_pte_sample' = e(sample)
+            }
+            else {
+                quietly gen byte `_pte_sample' = 1
+            }
+        }
     }
     else {
         // ATT must consume the same live sample that identified
@@ -331,11 +369,18 @@ program define _pte_att, eclass
                 quietly gen byte `_pte_sample' = 1
             }
         }
+        quietly gen byte `_pte_target_sample' = `_pte_sample'
     }
 
     quietly count if `_pte_sample'
     if r(N) == 0 {
-        di as error "[pte] Error: touse() excludes all observations"
+        di as error "[pte] Error: active ATT work sample is empty"
+        `_pte_clear_eclass'
+        exit 2000
+    }
+    quietly count if `_pte_target_sample'
+    if r(N) == 0 {
+        di as error "[pte] Error: touse() excludes all target observations"
         `_pte_clear_eclass'
         exit 2000
     }
@@ -453,11 +498,12 @@ program define _pte_att, eclass
             local pte_stored_delta_opt "delta(`pte_stored_xtdelta')"
         }
         capture quietly xtset `pte_stored_panel' `pte_stored_time', `pte_stored_delta_opt'
-        if _rc != 0 {
+        local _pte_restore_stored_xtset_rc = _rc
+        if `_pte_restore_stored_xtset_rc' != 0 {
             di as error "[pte] Error: could not restore stored panel structure `pte_stored_panel' `pte_stored_time'"
             di as error "[pte]        Ensure the current data still matches the live state"
             `_pte_clear_eclass'
-            exit _rc
+            exit `_pte_restore_stored_xtset_rc'
         }
         local pte_xtset_switched = 1
         local panelvar "`pte_stored_panel'"
@@ -481,6 +527,7 @@ program define _pte_att, eclass
     }
     local pte_tl_o3_raw_g = ///
         (`pte_pf_is_translog' & `omegapoly' == 3 & `nsim' > 1)
+    local pte_legacy_att_gaussian = ("`legacyattgaussian'" != "")
     local pte_context_treatment `"`e(treatment)'"'
     if "`pte_context_treatment'" != "" {
         if "`pte_context_treatment'" != "`treatment'" {
@@ -555,6 +602,17 @@ program define _pte_att, eclass
     if `omegapoly' >= 2 scalar _pte_att_rho2 = `rho_0_mat'[1,3]
     if `omegapoly' >= 3 scalar _pte_att_rho3 = `rho_0_mat'[1,4]
     if `omegapoly' >= 4 scalar _pte_att_rho4 = `rho_0_mat'[1,5]
+    forvalues _pte_r = 0/`omegapoly' {
+        if missing(_pte_att_rho`_pte_r') {
+            di as error "[pte] Error: untreated evolution coefficient rho`_pte_r' is missing"
+            di as error "[pte]        Re-run _pte_evolution/_pte_omega before _pte_att"
+            if `pte_xtset_switched' {
+                `pte_restore_xtset'
+            }
+            `_pte_clear_eclass'
+            exit 198
+        }
+    }
     
     // 0.9 Optional rho usage verification ( Task 7)
     if "`verify'" != "" {
@@ -710,7 +768,7 @@ program define _pte_att, eclass
     // Restrict the ATT work sample only after the untreated innovation pool is
     // fixed. This allows target treated subgroups to reuse the same G^0_epsilon.
     quietly keep if `_pte_sample'
-    
+
     // 1.5 Read sigma values from (_pte_omega / _pte_winsorize)
     local sigma_eps = e(sigma_eps)
     if missing(`sigma_eps') | `sigma_eps' < 0 {
@@ -732,8 +790,29 @@ program define _pte_att, eclass
         exit 198
     }
     
-    // 1.5 Handle notrimeps option
-    if "`notrimeps'" != "" {
+    // 1.5 Use the upstream eps0 trimming contract as the single source of truth.
+    local upstream_trimeps = .
+    capture local upstream_trimeps = e(trimeps)
+    if _rc != 0 | missing(`upstream_trimeps') {
+        di as error "[pte] Error: e(trimeps) missing from upstream omega state"
+        di as error "[pte]        Re-run _pte_omega before _pte_att"
+        capture quietly use `pte_att_orig_data', clear
+        `pte_restore_xtset'
+        `_pte_clear_eclass'
+        exit 198
+    }
+    if "`notrimeps'" != "" & `upstream_trimeps' == 1 {
+        di as error "[pte] Error: notrimeps conflicts with the upstream trimmed eps0 state"
+        di as error "[pte]        Re-run _pte_omega, notrimeps before _pte_att, notrimeps"
+        capture quietly use `pte_att_orig_data', clear
+        `pte_restore_xtset'
+        `_pte_clear_eclass'
+        exit 198
+    }
+    if "`notrimeps'" == "" & `upstream_trimeps' == 0 {
+        local notrimeps "notrimeps"
+    }
+    if `upstream_trimeps' == 0 {
         local sigma_eps_trim = `sigma_eps'
     }
     
@@ -782,11 +861,22 @@ program define _pte_att, eclass
     // Left-censored treated firms keep missing timing metadata because the
     // sample never reveals an observed 0->1 entry.
 
+    local _pte_legacy_treat_year_var ""
+    if "`legacypooledeps0'" != "" {
+        capture confirm numeric variable treat_yr0, exact
+        if _rc == 0 {
+            local _pte_legacy_treat_year_var "treat_yr0"
+        }
+    }
+
     capture confirm variable _pte_treat_year, exact
     if _rc == 0 {
         quietly drop _pte_treat_year
     }
     quietly gen double _pte_treat_year = `pte_att_treat_year_full'
+    if "`_pte_legacy_treat_year_var'" != "" {
+        quietly replace _pte_treat_year = `_pte_legacy_treat_year_var'
+    }
     label variable _pte_treat_year "Observed treatment entry year (recomputed from full treatment path)"
 
     capture confirm variable treat_yr0, exact
@@ -852,22 +942,34 @@ program define _pte_att, eclass
         local _validate_opts "`_validate_opts' verbose"
     }
     
-    // Call validation - errors propagate automatically (Task 7)
-    capture noisily _pte_validate_nt_neg1, `_validate_opts'
-    if _rc != 0 {
-        local _pte_att_nt_rc = _rc
-        // Error already displayed by _pte_validate_nt_neg1
-        capture quietly use `pte_att_orig_data', clear
-        `pte_restore_xtset'
-        `_pte_clear_eclass'
-        exit `_pte_att_nt_rc'
+    if "`legacypooledeps0'" == "" {
+        // Call validation - errors propagate automatically (Task 7)
+        capture noisily _pte_validate_nt_neg1, `_validate_opts'
+        if _rc != 0 {
+            local _pte_att_nt_rc = _rc
+            // Error already displayed by _pte_validate_nt_neg1
+            capture quietly use `pte_att_orig_data', clear
+            `pte_restore_xtset'
+            `_pte_clear_eclass'
+            exit `_pte_att_nt_rc'
+        }
+
+        // Capture validation return values (Task 8: verbose output)
+        local N_neg1 = r(n_neg1)
+        local N_validated_firms = r(n_firms)
+        local N_filtered = _N
+        local N_treated_firms = `N_validated_firms'
     }
-    
-    // Capture validation return values (Task 8: verbose output)
-    local N_neg1 = r(n_neg1)
-    local N_validated_firms = r(n_firms)
-    local N_filtered = _N
-    local N_treated_firms = `N_validated_firms'
+    else {
+        quietly count if _pte_nt == -1
+        local N_neg1 = r(N)
+        tempvar _pte_legacy_att_tag
+        quietly egen byte `_pte_legacy_att_tag' = tag(`panelvar')
+        quietly count if `_pte_legacy_att_tag' == 1
+        local N_validated_firms = r(N)
+        local N_filtered = _N
+        local N_treated_firms = `N_validated_firms'
+    }
     
     if "`nodiagnose'" == "" {
         di as text "  Validated: `N_neg1' nt=-1 obs, `N_validated_firms' firms"
@@ -880,50 +982,52 @@ program define _pte_att, eclass
     // simulation sample or treated-firm counts.
     // ================================================================
 
-    tempvar _pte_has_nt0
-    quietly bysort `panelvar': egen byte `_pte_has_nt0' = max(_pte_nt == 0)
-    quietly count if `_pte_has_nt0' == 0
-    local N_missing_nt0_obs = r(N)
-    local N_missing_nt0_firms = 0
+    if "`legacypooledeps0'" == "" {
+        tempvar _pte_has_nt0
+        quietly bysort `panelvar': egen byte `_pte_has_nt0' = max(_pte_nt == 0)
+        quietly count if `_pte_has_nt0' == 0
+        local N_missing_nt0_obs = r(N)
+        local N_missing_nt0_firms = 0
 
-    if `N_missing_nt0_obs' > 0 {
-        capture drop _pte_att_drop_nt0_tag
-        quietly bysort `panelvar' (`timevar'): gen byte _pte_att_drop_nt0_tag = ///
-            (_n == 1) if `_pte_has_nt0' == 0
-        quietly count if _pte_att_drop_nt0_tag == 1
-        local N_missing_nt0_firms = r(N)
-        capture drop _pte_att_drop_nt0_tag
+        if `N_missing_nt0_obs' > 0 {
+            capture drop _pte_att_drop_nt0_tag
+            quietly bysort `panelvar' (`timevar'): gen byte _pte_att_drop_nt0_tag = ///
+                (_n == 1) if `_pte_has_nt0' == 0
+            quietly count if _pte_att_drop_nt0_tag == 1
+            local N_missing_nt0_firms = r(N)
+            capture drop _pte_att_drop_nt0_tag
 
-        if "`nodiagnose'" == "" {
-            di as error ""
-            di as error "{bf:pte warning}: `N_missing_nt0_firms' firms missing nt=0 in the active ATT sample — dropped"
-            di as error "{hline 70}"
+            if "`nodiagnose'" == "" {
+                di as error ""
+                di as error "{bf:pte warning}: `N_missing_nt0_firms' firms missing nt=0 in the active ATT sample — dropped"
+                di as error "{hline 70}"
+            }
+
+            quietly drop if `_pte_has_nt0' == 0
         }
 
-        quietly drop if `_pte_has_nt0' == 0
-    }
+        quietly count
+        local N_filtered = r(N)
+        if `N_filtered' == 0 {
+            di as error "[pte] Error: no treated firms remain with nt=0 after touse()/window selection"
+            capture quietly use `pte_att_orig_data', clear
+            `pte_restore_xtset'
+            `_pte_clear_eclass'
+            exit 2000
+        }
+        capture drop _pte_att_treated_tag
+        quietly bysort `panelvar' (`timevar'): gen byte _pte_att_treated_tag = (_n == 1)
+        quietly count if _pte_att_treated_tag == 1
+        local N_treated_firms = r(N)
+        capture drop _pte_att_treated_tag
 
-    quietly count
-    local N_filtered = r(N)
-    if `N_filtered' == 0 {
-        di as error "[pte] Error: no treated firms remain with nt=0 after touse()/window selection"
-        capture quietly use `pte_att_orig_data', clear
-        `pte_restore_xtset'
-        `_pte_clear_eclass'
-        exit 2000
-    }
-    capture drop _pte_att_treated_tag
-    quietly bysort `panelvar' (`timevar'): gen byte _pte_att_treated_tag = (_n == 1)
-    quietly count if _pte_att_treated_tag == 1
-    local N_treated_firms = r(N)
-    capture drop _pte_att_treated_tag
-
-    if `N_treated_firms' == 0 {
-        di as error "[pte] Error: no treated firms remain with nt=0 after touse()/window selection"
-        capture quietly use `pte_att_orig_data', clear
-        `pte_restore_xtset'
-        `_pte_clear_eclass'
-        exit 2000
+        if `N_treated_firms' == 0 {
+            di as error "[pte] Error: no treated firms remain with nt=0 after touse()/window selection"
+            capture quietly use `pte_att_orig_data', clear
+            `pte_restore_xtset'
+            `_pte_clear_eclass'
+            exit 2000
+        }
     }
 
     // ================================================================
@@ -934,31 +1038,33 @@ program define _pte_att, eclass
     // intermediate missing periods that are still needed to recurse forward.
     // ================================================================
 
-    tempvar _pte_last_obs_nt _pte_dead_tail_tag _pte_no_postomega_tag
-    quietly bysort `panelvar': egen double `_pte_last_obs_nt' = ///
-        max(cond(inrange(_pte_nt, 0, `attperiods') & !missing(omega), _pte_nt, .))
+    if "`legacypooledeps0'" == "" {
+        tempvar _pte_last_obs_nt _pte_dead_tail_tag _pte_no_postomega_tag
+        quietly bysort `panelvar': egen double `_pte_last_obs_nt' = ///
+            max(cond(inrange(_pte_nt, 0, `attperiods') & !missing(omega), _pte_nt, .))
 
-    quietly gen byte `_pte_dead_tail_tag' = ///
-        (_pte_nt >= 0 & !missing(`_pte_last_obs_nt') & _pte_nt > `_pte_last_obs_nt')
-    quietly count if `_pte_dead_tail_tag' == 1
-    local N_dead_tail_obs = r(N)
+        quietly gen byte `_pte_dead_tail_tag' = ///
+            (_pte_nt >= 0 & !missing(`_pte_last_obs_nt') & _pte_nt > `_pte_last_obs_nt')
+        quietly count if `_pte_dead_tail_tag' == 1
+        local N_dead_tail_obs = r(N)
 
-    quietly bysort `panelvar' (`timevar'): gen byte `_pte_no_postomega_tag' = ///
-        (_n == 1) if missing(`_pte_last_obs_nt')
-    quietly count if `_pte_no_postomega_tag' == 1
-    local N_no_postomega_firms = r(N)
-    capture drop `_pte_no_postomega_tag'
+        quietly bysort `panelvar' (`timevar'): gen byte `_pte_no_postomega_tag' = ///
+            (_n == 1) if missing(`_pte_last_obs_nt')
+        quietly count if `_pte_no_postomega_tag' == 1
+        local N_no_postomega_firms = r(N)
+        capture drop `_pte_no_postomega_tag'
 
-    if `N_dead_tail_obs' > 0 | `N_no_postomega_firms' > 0 {
-        if "`nodiagnose'" == "" {
-            if `N_no_postomega_firms' > 0 {
-                di as text "{bf:Warning}: dropping `N_no_postomega_firms' treated firms with no observed omega in nt=0..`attperiods'"
+        if `N_dead_tail_obs' > 0 | `N_no_postomega_firms' > 0 {
+            if "`nodiagnose'" == "" {
+                if `N_no_postomega_firms' > 0 {
+                    di as text "{bf:Warning}: dropping `N_no_postomega_firms' treated firms with no observed omega in nt=0..`attperiods'"
+                }
+                if `N_dead_tail_obs' > 0 {
+                    di as text "{bf:Warning}: dropping `N_dead_tail_obs' ATT-dead tail observations beyond each firm's last observed omega"
+                }
             }
-            if `N_dead_tail_obs' > 0 {
-                di as text "{bf:Warning}: dropping `N_dead_tail_obs' ATT-dead tail observations beyond each firm's last observed omega"
-            }
+            quietly drop if missing(`_pte_last_obs_nt') | `_pte_dead_tail_tag' == 1
         }
-        quietly drop if missing(`_pte_last_obs_nt') | `_pte_dead_tail_tag' == 1
     }
 
     quietly count
@@ -1002,6 +1108,19 @@ program define _pte_att, eclass
     local expanded = 0
     
     if `nsim' > 1 {
+        local _pte_expand_obs = _N * `nsim'
+        local _pte_expand_max_obs = 5000000
+        if `_pte_expand_obs' > `_pte_expand_max_obs' {
+            di as error "[pte] Error: nsim(`nsim') would expand the ATT work sample to " ///
+                %21.0fc `_pte_expand_obs' " observations"
+            di as error "[pte]        Maximum allowed expansion is " ///
+                %21.0fc `_pte_expand_max_obs' " observations"
+            di as error "[pte]        Reduce nsim(), shorten attperiods(), or narrow the active treated sample"
+            capture quietly use `pte_att_orig_data', clear
+            `pte_restore_xtset'
+            `_pte_clear_eclass'
+            exit 908
+        }
         // 3.1 Expand each observation nsim times
         quietly expand `nsim'
         local expanded = 1
@@ -1027,6 +1146,14 @@ program define _pte_att, eclass
         }
     }
     else {
+        // Keep the downstream counterfactual recursion on one panel-id
+        // contract. Some legacy Gaussian branches use _pte_firm_sim_id even
+        // when nsim == 1; in that case it is just the original treated-panel
+        // id crossed with a single copy.
+        capture drop _pte_copy_id
+        quietly gen byte _pte_copy_id = 1
+        capture drop _pte_firm_sim_id
+        quietly egen long _pte_firm_sim_id = group(`panelvar' _pte_copy_id)
         if "`nodiagnose'" == "" {
             di as text "  nsim = 1, no expansion needed"
         }
@@ -1063,11 +1190,21 @@ program define _pte_att, eclass
     // when users request additional future periods. Order by nt first so any
     // newly requested nt = L+1 rows are appended after the existing nt <= L
     // prefix instead of being interleaved by panel-major sort order.
-    if `expanded' {
-        quietly sort _pte_nt _pte_firm_sim_id
+    if `legacy_att_panel_order' {
+        if `expanded' {
+            quietly sort _pte_firm_sim_id _pte_nt
+        }
+        else {
+            quietly sort `panelvar' _pte_nt
+        }
     }
     else {
-        quietly sort _pte_nt `panelvar'
+        if `expanded' {
+            quietly sort _pte_nt _pte_firm_sim_id
+        }
+        else {
+            quietly sort _pte_nt `panelvar'
+        }
     }
     capture drop _pte_tr_id
     quietly gen long _pte_tr_id = _n
@@ -1102,7 +1239,38 @@ program define _pte_att, eclass
     
     // 4.2 Prepare eps0 sample in tempfile
     preserve
-        if `pte_tl_o3_raw_g' {
+        if (`pte_tl_o3_raw_g' & "`legacypooledeps0'" != "") | `pte_legacy_att_gaussian' {
+            quietly sort _pte_firm_sim_id _pte_nt
+            quietly tsset _pte_firm_sim_id _pte_nt
+            capture drop _pte_eps0_draw
+            capture drop _pte_eps0_trim_draw
+            tempvar _pte_eps0_target_draw _pte_eps0_trim_target_draw
+            quietly gen double _pte_eps0_draw = .
+            quietly gen double _pte_eps0_trim_draw = .
+            quietly gen double `_pte_eps0_target_draw' = .
+            quietly gen double `_pte_eps0_trim_target_draw' = .
+            if !`preserve_rng' {
+                set seed `seed'
+            }
+            quietly replace `_pte_eps0_target_draw' = rnormal(0, `sigma_eps') ///
+                if _pte_nt == 0
+            quietly replace `_pte_eps0_trim_target_draw' = rnormal(0, `sigma_eps_trim') ///
+                if _pte_nt == 0
+            forvalues _pte_s = 1/`attperiods' {
+                quietly replace `_pte_eps0_target_draw' = rnormal(0, `sigma_eps') ///
+                    if _pte_nt == `_pte_s'
+                quietly replace `_pte_eps0_trim_target_draw' = rnormal(0, `sigma_eps_trim') ///
+                    if _pte_nt == `_pte_s'
+            }
+            forvalues _pte_s = 0/`attperiods' {
+                local _pte_draw_nt = `_pte_s' - 1
+                quietly replace _pte_eps0_draw = F.`_pte_eps0_target_draw' ///
+                    if _pte_nt == `_pte_draw_nt' & F._pte_nt == `_pte_s'
+                quietly replace _pte_eps0_trim_draw = F.`_pte_eps0_trim_target_draw' ///
+                    if _pte_nt == `_pte_draw_nt' & F._pte_nt == `_pte_s'
+            }
+        }
+        else if `pte_tl_o3_raw_g' {
             // Official translog order-3 simulation replaces the raw empirical
             // eps0 support with Gaussian draws once the ATT sample is expanded
             // into multiple paths. Preserve that law here so notrimeps and the
@@ -1139,18 +1307,18 @@ program define _pte_att, eclass
                 capture drop _pte_eps0_id
 
                 if `pte_pf_is_translog' & `omegapoly' == 1 {
-                    if !`preserve_rng' {
-                        set seed `seed'
-                    }
+                    // Preserve the Translog/order-1 Gaussian raw law, but
+                    // continue the bsample RNG stream instead of restarting the
+                    // same seed before drawing the raw shocks.
                     quietly replace _pte_eps0 = rnormal(0, `sigma_eps')
                 }
                 
                 // Canonical track is always Gaussian; under notrimeps the
-                // upstream sigma alias makes sigma_eps_trim = sigma_eps.
-                if !(`pte_pf_is_translog' & `omegapoly' == 1) {
-                    if !`preserve_rng' {
-                        set seed `seed'
-                    }
+                // upstream sigma alias makes sigma_eps_trim = sigma_eps. Use
+                // the live RNG stream after the raw-track draw so raw and trim
+                // tracks are not restarted from the same seed.
+                if `legacy_att_panel_order' & !`preserve_rng' {
+                    set seed `seed'
                 }
                 quietly gen double _pte_eps0_trim = rnormal(0, `sigma_eps_trim')
             }
@@ -1169,9 +1337,9 @@ program define _pte_att, eclass
                 }
                 quietly bsample `nobs', cluster(_pte_eps0_id) idcluster(_pte_tr_id)
                 capture drop _pte_eps0_id
-                if !`preserve_rng' {
-                    set seed `seed'
-                }
+                // Continue the RNG stream after bsample; resetting to the same
+                // seed would couple the empirical raw track with the Gaussian
+                // trim track.
                 quietly gen double _pte_eps0_trim = rnormal(0, `sigma_eps_trim')
             }
             
@@ -1200,6 +1368,30 @@ program define _pte_att, eclass
         quietly xtset `panelvar' _pte_nt
     }
     local pte_xtset_switched = 1
+
+    tempvar _pte_lomega_anchor
+    quietly gen double `_pte_lomega_anchor' = L.omega if _pte_nt == 0
+    quietly count if _pte_nt == 0 & missing(`_pte_lomega_anchor')
+    local N_missing_anchor_omega = r(N)
+    if `N_missing_anchor_omega' > 0 & "`legacypooledeps0'" == "" {
+        tempvar _pte_bad_anchor_tag
+        quietly egen byte `_pte_bad_anchor_tag' = tag(`panelvar') ///
+            if _pte_nt == 0 & missing(`_pte_lomega_anchor')
+        quietly count if `_pte_bad_anchor_tag' == 1
+        local N_missing_anchor_firms = r(N)
+        di as error "[pte] Error: counterfactual path has missing L.omega at nt=0"
+        di as error "[pte]        Missing anchor observations: `N_missing_anchor_omega'"
+        di as error "[pte]        Affected treated firms: `N_missing_anchor_firms'"
+        di as error "[pte]        Counterfactual simulation must start from observed omega at nt=-1"
+        if `pte_xtset_switched' {
+            `pte_restore_xtset'
+        }
+        capture quietly use `pte_att_orig_data', clear
+        `pte_restore_xtset'
+        `_pte_restore_rngstate_failure'
+        `_pte_clear_eclass'
+        exit 3002
+    }
     
     // 4.5 Compute eps0 diagnostics (always, for e() returns)
     quietly summarize _pte_eps0_draw
@@ -1339,35 +1531,35 @@ program define _pte_att, eclass
         quietly gen double _pte_omega_04_trim = .
     }
     
-    // 5.3 Period nt=0: start the simulated untreated path from omega_{e_i-1}
-    // and add the first untreated innovation draw epsilon_{e_i}^0.
-    // Proposition 4.1 identifies ATT_0 from the conditional mean
-    // E[omega_{e_i} - h_bar_0(omega_{e_i-1})], but the simulated
-    // counterfactual path for Proposition 4.3 must include the current
-    // treatment-onset innovation draw rather than the prior-period shock.
+    // 5.3 Period nt=0: Proposition 4.3 simulates the untreated potential path
+    // from the pre-entry state using the innovation draw on the nt=-1 anchor.
+    // This mirrors the official DO recursion:
+    //   omega_0 = h_bar_0(L.omega) + L.eps0  if nt == 0
+    // and keeps the nonlinear future path from dropping the first untreated
+    // innovation.
     // NOTE: attpoly is locked to omegapoly so the recursion always uses the
     // same estimated untreated law order as the evolution step.
     
     if `attpoly' == 1 {
         quietly replace _pte_omega_0 = _pte_att_rho0 ///
             + _pte_att_rho1 * L.omega ///
-            + _pte_eps0_draw ///
+            + L._pte_eps0_draw ///
             if _pte_nt == 0
         quietly replace _pte_omega_0_trim = _pte_att_rho0 ///
             + _pte_att_rho1 * L.omega ///
-            + _pte_eps0_trim_draw ///
+            + L._pte_eps0_trim_draw ///
             if _pte_nt == 0
     }
     else if `attpoly' == 2 {
         quietly replace _pte_omega_0 = _pte_att_rho0 ///
             + _pte_att_rho1 * L.omega ///
             + _pte_att_rho2 * (L.omega)^2 ///
-            + _pte_eps0_draw ///
+            + L._pte_eps0_draw ///
             if _pte_nt == 0
         quietly replace _pte_omega_0_trim = _pte_att_rho0 ///
             + _pte_att_rho1 * L.omega ///
             + _pte_att_rho2 * (L.omega)^2 ///
-            + _pte_eps0_trim_draw ///
+            + L._pte_eps0_trim_draw ///
             if _pte_nt == 0
     }
     else if `attpoly' == 3 {
@@ -1375,13 +1567,13 @@ program define _pte_att, eclass
             + _pte_att_rho1 * L.omega ///
             + _pte_att_rho2 * (L.omega)^2 ///
             + _pte_att_rho3 * (L.omega)^3 ///
-            + _pte_eps0_draw ///
+            + L._pte_eps0_draw ///
             if _pte_nt == 0
         quietly replace _pte_omega_0_trim = _pte_att_rho0 ///
             + _pte_att_rho1 * L.omega ///
             + _pte_att_rho2 * (L.omega)^2 ///
             + _pte_att_rho3 * (L.omega)^3 ///
-            + _pte_eps0_trim_draw ///
+            + L._pte_eps0_trim_draw ///
             if _pte_nt == 0
     }
     else if `attpoly' == 4 {
@@ -1390,14 +1582,14 @@ program define _pte_att, eclass
             + _pte_att_rho2 * (L.omega)^2 ///
             + _pte_att_rho3 * (L.omega)^3 ///
             + _pte_att_rho4 * (L.omega)^4 ///
-            + _pte_eps0_draw ///
+            + L._pte_eps0_draw ///
             if _pte_nt == 0
         quietly replace _pte_omega_0_trim = _pte_att_rho0 ///
             + _pte_att_rho1 * L.omega ///
             + _pte_att_rho2 * (L.omega)^2 ///
             + _pte_att_rho3 * (L.omega)^3 ///
             + _pte_att_rho4 * (L.omega)^4 ///
-            + _pte_eps0_trim_draw ///
+            + L._pte_eps0_trim_draw ///
             if _pte_nt == 0
     }
     if `_pte_clip_enabled' {
@@ -1454,27 +1646,27 @@ program define _pte_att, eclass
         }
         
         // Compute counterfactual at nt=s using lagged counterfactual state and
-        // the current-period untreated innovation draw (dual-track)
+        // the untreated innovation draw carried on the previous event-time row.
         if `attpoly' == 1 {
             quietly replace _pte_omega_0 = _pte_att_rho0 ///
                 + _pte_att_rho1 * L._pte_omega_0 ///
-                + _pte_eps0_draw ///
+                + L._pte_eps0_draw ///
                 if _pte_nt == `s'
             quietly replace _pte_omega_0_trim = _pte_att_rho0 ///
                 + _pte_att_rho1 * L._pte_omega_0_trim ///
-                + _pte_eps0_trim_draw ///
+                + L._pte_eps0_trim_draw ///
                 if _pte_nt == `s'
         }
         else if `attpoly' == 2 {
             quietly replace _pte_omega_0 = _pte_att_rho0 ///
                 + _pte_att_rho1 * L._pte_omega_0 ///
                 + _pte_att_rho2 * L._pte_omega_02 ///
-                + _pte_eps0_draw ///
+                + L._pte_eps0_draw ///
                 if _pte_nt == `s'
             quietly replace _pte_omega_0_trim = _pte_att_rho0 ///
                 + _pte_att_rho1 * L._pte_omega_0_trim ///
                 + _pte_att_rho2 * L._pte_omega_02_trim ///
-                + _pte_eps0_trim_draw ///
+                + L._pte_eps0_trim_draw ///
                 if _pte_nt == `s'
         }
         else if `attpoly' == 3 {
@@ -1482,13 +1674,13 @@ program define _pte_att, eclass
                 + _pte_att_rho1 * L._pte_omega_0 ///
                 + _pte_att_rho2 * L._pte_omega_02 ///
                 + _pte_att_rho3 * L._pte_omega_03 ///
-                + _pte_eps0_draw ///
+                + L._pte_eps0_draw ///
                 if _pte_nt == `s'
             quietly replace _pte_omega_0_trim = _pte_att_rho0 ///
                 + _pte_att_rho1 * L._pte_omega_0_trim ///
                 + _pte_att_rho2 * L._pte_omega_02_trim ///
                 + _pte_att_rho3 * L._pte_omega_03_trim ///
-                + _pte_eps0_trim_draw ///
+                + L._pte_eps0_trim_draw ///
                 if _pte_nt == `s'
         }
         else if `attpoly' == 4 {
@@ -1497,14 +1689,14 @@ program define _pte_att, eclass
                 + _pte_att_rho2 * L._pte_omega_02 ///
                 + _pte_att_rho3 * L._pte_omega_03 ///
                 + _pte_att_rho4 * L._pte_omega_04 ///
-                + _pte_eps0_draw ///
+                + L._pte_eps0_draw ///
                 if _pte_nt == `s'
             quietly replace _pte_omega_0_trim = _pte_att_rho0 ///
                 + _pte_att_rho1 * L._pte_omega_0_trim ///
                 + _pte_att_rho2 * L._pte_omega_02_trim ///
                 + _pte_att_rho3 * L._pte_omega_03_trim ///
                 + _pte_att_rho4 * L._pte_omega_04_trim ///
-                + _pte_eps0_trim_draw ///
+                + L._pte_eps0_trim_draw ///
                 if _pte_nt == `s'
         }
         if `_pte_clip_enabled' {
@@ -1574,8 +1766,13 @@ program define _pte_att, eclass
     // Check for unexpected missing values at nt>=0
     quietly count if missing(_pte_omega_0) & _pte_nt >= 0 & !missing(omega) & !missing(_pte_eps0_draw)
     local N_unexpected_miss = r(N)
+    quietly count if missing(_pte_omega_0_trim) & _pte_nt >= 0 & !missing(omega) & !missing(_pte_eps0_trim_draw)
+    local N_unexpected_miss_trim = r(N)
     if `N_unexpected_miss' > 0 & "`nodiagnose'" == "" {
         di as text "  Warning: `N_unexpected_miss' obs with valid inputs but missing omega_0"
+    }
+    if `N_unexpected_miss_trim' > 0 & "`nodiagnose'" == "" {
+        di as text "  Warning: `N_unexpected_miss_trim' obs with valid inputs but missing omega_0_trim"
     }
     
     // 5.5c Numerical precision check (optional, non-blocking)
@@ -2155,7 +2352,7 @@ program define _pte_att, eclass
     // For nsim>1: _pte_tt already contains path-averaged TT_mean
     // For nsim=1: _pte_tt is the direct firm-level TT
     
-    quietly count if _pte_nt >= 0 & !missing(_pte_tt)
+    quietly count if _pte_nt >= 0 & !missing(_pte_tt) & `_pte_target_sample'
     local N_valid_att = r(N)
     if `N_valid_att' == 0 {
         di as error "[pte] Error: no valid TT observations for ATT aggregation"
@@ -2240,7 +2437,7 @@ program define _pte_att, eclass
         matrix `att_raw_mat'[`row', 1] = `s'
         
         // Canonical raw aliases
-        quietly summarize _pte_tt_raw if _pte_nt == `s'
+        quietly summarize _pte_tt_raw if _pte_nt == `s' & `_pte_target_sample'
         local n_s = r(N)
         if `n_s' > 0 {
             local att_raw_s = r(mean)
@@ -2260,7 +2457,7 @@ program define _pte_att, eclass
         }
         
         // Canonical paper track
-        quietly summarize _pte_tt if _pte_nt == `s'
+        quietly summarize _pte_tt if _pte_nt == `s' & `_pte_target_sample'
         local n_s = r(N)
         if `n_s' > 0 {
             local att_s = r(mean)
@@ -2331,18 +2528,18 @@ program define _pte_att, eclass
     matrix `att_raw_vec'[1, `ncols_att'] = `att_raw_overall'
     
     // 8.3b Compute pooled SD across all nt>=0 (for att_sd last column)
-    quietly summarize _pte_tt_raw if _pte_nt >= 0
+    quietly summarize _pte_tt_raw if _pte_nt >= 0 & `_pte_target_sample'
     local att_raw_sd = r(sd)
     local att_raw_se = cond(r(N) > 0, r(sd) / sqrt(r(N)), .)
     matrix `att_sd_raw_vec'[1, `ncols_att'] = `att_raw_sd'
     
-    quietly summarize _pte_tt if _pte_nt >= 0
+    quietly summarize _pte_tt if _pte_nt >= 0 & `_pte_target_sample'
     local att_sd = r(sd)
     local att_se = cond(r(N) > 0, r(sd) / sqrt(r(N)), .)
     matrix `att_sd_vec'[1, `ncols_att'] = `att_sd'
     matrix `att_se_vec'[1, `ncols_att'] = `att_se'
     
-    quietly summarize _pte_tt_trim if _pte_nt >= 0
+    quietly summarize _pte_tt_trim if _pte_nt >= 0 & `_pte_target_sample'
     local att_trim_sd = r(sd)
     local att_trim_se = cond(r(N) > 0, r(sd) / sqrt(r(N)), .)
     matrix `att_sd_trim_vec'[1, `ncols_att'] = `att_trim_sd'
@@ -2499,9 +2696,9 @@ program define _pte_att, eclass
         di as text "{hline 70}"
         di as text ""
         di as text "  Dynamic ATT by Period (raw track):"
-        di as text "  {hline 55}"
-        di as text "  " _col(5) "nt" _col(15) "ATT" _col(30) "Std.Dev." _col(45) "N" _col(55) "SE"
-        di as text "  {hline 55}"
+        di as text "  " _col(4) "{hline 54}"
+        di as text "  " _col(4) %6s "nt" _col(11) %12s "ATT" _col(24) %12s "Std.Dev." _col(37) %8s "N" _col(46) %12s "SE"
+        di as text "  " _col(4) "{hline 54}"
         
         local _pte_disp_row = 0
         foreach s of local pte_att_support_periods {
@@ -2513,26 +2710,26 @@ program define _pte_att, eclass
             local se_s = `att_raw_mat'[`row', 5]
             
             if !missing(`att_s') {
-                di as text "  " _col(5) %3.0f `s' ///
-                    _col(12) as result %10.4f `att_s' ///
-                    _col(27) as result %10.4f `sd_s' ///
-                    _col(42) as result %6.0f `n_s' ///
-                    _col(52) as result %10.4f `se_s'
+                di as text "  " _col(4) %6.0f `s' ///
+                    _col(11) as result %12.4f `att_s' ///
+                    _col(24) as result %12.4f `sd_s' ///
+                    _col(37) as result %8.0f `n_s' ///
+                    _col(46) as result %12.4f `se_s'
             }
         }
         
-        di as text "  {hline 55}"
-        di as text "  " _col(5) "All" ///
-            _col(12) as result %10.4f `att_raw_overall' ///
-            _col(27) as result %10.4f `att_raw_sd' ///
-            _col(42) as result %6.0f `att_raw_N' ///
-            _col(52) as result %10.4f `att_raw_se'
+        di as text "  " _col(4) "{hline 54}"
+        di as text "  " _col(4) %6s "All" ///
+            _col(11) as result %12.4f `att_raw_overall' ///
+            _col(24) as result %12.4f `att_raw_sd' ///
+            _col(37) as result %8.0f `att_raw_N' ///
+            _col(46) as result %12.4f `att_raw_se'
         
         di as text ""
         di as text "  Dynamic ATT by Period (trim track):"
-        di as text "  {hline 55}"
-        di as text "  " _col(5) "nt" _col(15) "ATT" _col(30) "Std.Dev." _col(45) "N" _col(55) "SE"
-        di as text "  {hline 55}"
+        di as text "  " _col(4) "{hline 54}"
+        di as text "  " _col(4) %6s "nt" _col(11) %12s "ATT" _col(24) %12s "Std.Dev." _col(37) %8s "N" _col(46) %12s "SE"
+        di as text "  " _col(4) "{hline 54}"
         
         local _pte_disp_row = 0
         foreach s of local pte_att_support_periods {
@@ -2544,20 +2741,20 @@ program define _pte_att, eclass
             local se_s = `att_trim_mat'[`row', 5]
             
             if !missing(`att_s') {
-                di as text "  " _col(5) %3.0f `s' ///
-                    _col(12) as result %10.4f `att_s' ///
-                    _col(27) as result %10.4f `sd_s' ///
-                    _col(42) as result %6.0f `n_s' ///
-                    _col(52) as result %10.4f `se_s'
+                di as text "  " _col(4) %6.0f `s' ///
+                    _col(11) as result %12.4f `att_s' ///
+                    _col(24) as result %12.4f `sd_s' ///
+                    _col(37) as result %8.0f `n_s' ///
+                    _col(46) as result %12.4f `se_s'
             }
         }
         
-        di as text "  {hline 55}"
-        di as text "  " _col(5) "All" ///
-            _col(12) as result %10.4f `att_trim_overall' ///
-            _col(27) as result %10.4f `att_trim_sd' ///
-            _col(42) as result %6.0f `att_trim_N' ///
-            _col(52) as result %10.4f `att_trim_se'
+        di as text "  " _col(4) "{hline 54}"
+        di as text "  " _col(4) %6s "All" ///
+            _col(11) as result %12.4f `att_trim_overall' ///
+            _col(24) as result %12.4f `att_trim_sd' ///
+            _col(37) as result %8.0f `att_trim_N' ///
+            _col(46) as result %12.4f `att_trim_se'
         di as text "{hline 70}"
     }
     
@@ -2599,7 +2796,7 @@ program define _pte_att, eclass
     // simulation and must not enter the posted ATT estimation sample.
     tempvar _pte_att_esample
     quietly gen byte `_pte_att_esample' = !missing(_pte_tt) ///
-        & inrange(_pte_nt, 0, `attperiods')
+        & inrange(_pte_nt, 0, `attperiods') & `_pte_target_sample'
     quietly count if `_pte_att_esample'
     local N_att_esample = r(N)
 
@@ -2704,6 +2901,8 @@ program define _pte_att, eclass
     ereturn scalar N_treated_firms = `N_treated_firms'
     ereturn scalar N_counterfactual = `N_cf'
     ereturn scalar N_counterfactual_trim = `N_cf_trim'
+    ereturn scalar N_cf_missing_unexpected = `N_unexpected_miss'
+    ereturn scalar N_cf_trim_missing_unexpected = `N_unexpected_miss_trim'
     ereturn scalar N_eps0_pool = `N_eps0_pool'
     
     // --- Scalar returns: Configuration ---
@@ -2719,6 +2918,7 @@ program define _pte_att, eclass
     ereturn local seed_source "`seed_source'"
     ereturn scalar sigma_eps = `sigma_eps'
     ereturn scalar sigma_eps_trim = `sigma_eps_trim'
+    ereturn scalar trimeps = `upstream_trimeps'
     
     // --- Scalar returns: eps0 shock diagnostics ---
     ereturn scalar n_shocks = `eps0_N_all'

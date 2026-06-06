@@ -343,7 +343,8 @@ pte depvar, free(varname) state(varname) proxy(varname) treatment(varname) [opti
 | `bootstrap(#)` | 0 | Bootstrap replications (0 = point estimation only) |
 | `by(varname)` | — | Group-by variable (e.g., industry) |
 | `control(varlist)` | — | Controls for first-stage regression (e.g., a pre-generated `trend` variable) |
-| `seed(#)` | 123456 | Random number seed for ATT simulation. Bootstrap uses sequential seeds (1, 2, ...); grouped estimation uses pathway-specific seeds. See `help pte` for details |
+| `seed(#)` | 123456 | Public seed metadata and serial bootstrap outer-seed start. Serial point ATT uses the realized inner seed reported in `e(point_seed)`; bootstrap and grouped estimation use pathway-specific seed rules. See `help pte` for details |
+| `replicate(string)` | — | Paper/DO benchmark preset such as `order3`, `table1`, `table_e4`, or `pool_trlg`; see `help pte` for the exact seed, sample, and simulation settings |
 | `level(#)` | `c(level)` | Confidence level for bootstrap CIs |
 | `treatdependent` | — | Enable treatment-dependent production function |
 | `nolog` | — | Suppress progress output |
@@ -356,7 +357,7 @@ For complete syntax documentation, see `help pte` after installation.
 
 | Feature | Paper Reference | Description |
 |---------|----------------|-------------|
-| Treatment-dependent production function | Appendix C.1 | Support production functions that change with treatment status, via `treatdep(indexing\|benchmark)` option |
+| Treatment-dependent production function | Appendix C.1 | Support production functions that change with treatment status via the `treatdependent` option and optional `normalize()` modes |
 | Conditional parallel trends test | Section 5, Assumption 4.1 | Formal empirical test for the conditional parallel trends assumption |
 | Counterfactual policy evaluation | Appendix D.3 | Evaluate treatment effects under phased policy rollouts |
 | AR(1) process shortcut | Appendix D.1.1 | Dedicated moment conditions for AR(1) productivity evolution via `prod_process(ar1)` |
@@ -383,7 +384,7 @@ If you use `pte` in your research, please cite both the methodology paper and th
 > Chen, Z., Liao, M., & Schurter, K. (2026). Identifying Treatment Effects on Productivity: Theory with an Application to Production Digitalization. *RAND Journal of Economics*.
 
 **Software:**
-> Cai, X. (2026). *pte: Stata module for Productivity Treatment Effects estimation* (Version 1.0.0) [Computer software]. https://github.com/gorgeousfish/pte
+> Cai, X. & Xu, W. (2026). *pte: Stata module for Productivity Treatment Effects estimation* (Version 1.0.0) [Computer software]. https://github.com/gorgeousfish/pte
 
 **BibTeX:**
 
@@ -398,7 +399,7 @@ If you use `pte` in your research, please cite both the methodology paper and th
 
 @software{pte2026stata,
   title={pte: Stata module for Productivity Treatment Effects estimation},
-  author={Cai, Xuanyu},
+  author={Cai, Xuanyu and Xu, Wenli},
   year={2026},
   version={1.0.0},
   url={https://github.com/gorgeousfish/pte}
@@ -411,6 +412,9 @@ If you use `pte` in your research, please cite both the methodology paper and th
 
 - **Xuanyu Cai**, City University of Macau
   Email: [xuanyuCAI@outlook.com](mailto:xuanyuCAI@outlook.com)
+
+- **Wenli Xu**, City University of Macau
+  Email: [wlxu@cityu.edu.mo](mailto:wlxu@cityu.edu.mo)
 
 **Methodology:**
 

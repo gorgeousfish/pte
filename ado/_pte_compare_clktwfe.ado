@@ -231,11 +231,22 @@ program define _pte_compare_clktwfe, eclass
     // Ensure panel is set for lag operations
     qui xtset `pte_panelvar' `pte_timevar'`_pte_compare_live_delta_opt'
     
-    // CLK+TWFE always uses lagged treatment L.treatment
+    // Equation (18) in pte_paper.md uses the contemporaneous treatment
+    // indicator. Keep lagtreatment as an explicit replication/compatibility
+    // switch for DO paths that used L.treatment.
+    local treat_var "`treatment'"
+    local treatment_label "`treatment' (contemporaneous, Eq. 18)"
+    if "`lagtreatment'" != "" {
+        local treat_var "L.`treatment'"
+        local treatment_label "L.`treatment' (lagged, compatibility)"
+        di as text "    Using lagged treatment (L.`treatment')"
+    }
+    else {
+        di as text "    Using contemporaneous treatment (`treatment') per Eq. (18)"
+    }
     // Official DO uses if mid!=1 after trimming the working sample.
     // In-package, _pte_transition sets sample-out observations to _pte_mid=.,
     // so the package-consistent non-transition gate is _pte_mid == 0.
-    di as text "    Using lagged treatment (L.`treatment') per reproduction code"
     di as text "    Absorb: `absorb'"
     di as text "    Sample restriction: _pte_mid == 0 (package non-transition sample)"
     
@@ -246,22 +257,24 @@ program define _pte_compare_clktwfe, eclass
     matrix `ci_mat'   = J(3, 2, .)
     matrix `r2_mat'   = J(1, 3, .)
     matrix `n_mat'    = J(1, 3, .)
+    tempvar _pte_compare_esample
+    local _pte_compare_esample_ready = 0
     
     // Track errors
     local any_error = 0
     local first_error_rc = 0
     
     // Run each specification
-    // m7: reghdfe omega l.treat_post if mid!=1, absorb(firm year)
-    // m8: reghdfe omega l.omega l.treat_post if mid!=1, absorb(firm year)
-    // m9: reghdfe omega l.omega l.omega2 l.omega3 l.treat_post if mid!=1, absorb(firm year)
+    // m7: reghdfe omega treat_post if mid!=1, absorb(firm year)
+    // m8: reghdfe omega l.omega treat_post if mid!=1, absorb(firm year)
+    // m9: reghdfe omega l.omega l.omega2 l.omega3 treat_post if mid!=1, absorb(firm year)
     // Package implementation uses _pte_mid == 0 to avoid admitting _pte_mid=.
     
     foreach s of local specs {
         
         if `s' == 1 {
             // Spec 1 (m7): No controls, CLK omega, exclude transition
-            capture noisily reghdfe `omega_var' L.`treatment' ///
+            capture noisily reghdfe `omega_var' `treat_var' ///
                 if _pte_mid == 0, absorb(`absorb') `vce_opt'
             
             if _rc {
@@ -270,14 +283,33 @@ program define _pte_compare_clktwfe, eclass
                 if `first_error_rc' == 0 local first_error_rc = _rc
             }
             else {
-                local coef_s1 = _b[L.`treatment']
-                local se_s1   = _se[L.`treatment']
+                local coef_s1 = _b[`treat_var']
+                local se_s1   = _se[`treat_var']
                 matrix `coef_mat'[1, 1] = `coef_s1'
                 matrix `se_mat'[1, 1]   = `se_s1'
                 matrix `ci_mat'[1, 1]   = `coef_s1' - 1.96 * `se_s1'
                 matrix `ci_mat'[1, 2]   = `coef_s1' + 1.96 * `se_s1'
                 matrix `r2_mat'[1, 1]   = e(r2_a)
                 matrix `n_mat'[1, 1]    = e(N)
+
+                if !`_pte_compare_esample_ready' {
+                    capture quietly gen byte `_pte_compare_esample' = e(sample)
+                    local _pte_compare_esample_rc = _rc
+                    if `_pte_compare_esample_rc' {
+                        if `_pte_compare_had_xtset' {
+                            local _pte_compare_restore_delta_opt ""
+                            if `"`_pte_compare_prev_delta'"' != "" {
+                                local _pte_compare_restore_delta_opt "delta(`_pte_compare_prev_delta')"
+                            }
+                            capture quietly xtset `_pte_compare_prev_panel' `_pte_compare_prev_time', `_pte_compare_restore_delta_opt'
+                        }
+                        else {
+                            capture quietly xtset, clear
+                        }
+                        exit `_pte_compare_esample_rc'
+                    }
+                    local _pte_compare_esample_ready = 1
+                }
                 
                 estimates store _clktwfe_m7, nocopy
                 
@@ -288,7 +320,7 @@ program define _pte_compare_clktwfe, eclass
         
         if `s' == 2 {
             // Spec 2 (m8): 1st order lag control, CLK omega, exclude transition
-            capture noisily reghdfe `omega_var' L.`omega_var' L.`treatment' ///
+            capture noisily reghdfe `omega_var' L.`omega_var' `treat_var' ///
                 if _pte_mid == 0, absorb(`absorb') `vce_opt'
             
             if _rc {
@@ -297,14 +329,33 @@ program define _pte_compare_clktwfe, eclass
                 if `first_error_rc' == 0 local first_error_rc = _rc
             }
             else {
-                local coef_s2 = _b[L.`treatment']
-                local se_s2   = _se[L.`treatment']
+                local coef_s2 = _b[`treat_var']
+                local se_s2   = _se[`treat_var']
                 matrix `coef_mat'[1, 2] = `coef_s2'
                 matrix `se_mat'[1, 2]   = `se_s2'
                 matrix `ci_mat'[2, 1]   = `coef_s2' - 1.96 * `se_s2'
                 matrix `ci_mat'[2, 2]   = `coef_s2' + 1.96 * `se_s2'
                 matrix `r2_mat'[1, 2]   = e(r2_a)
                 matrix `n_mat'[1, 2]    = e(N)
+
+                if !`_pte_compare_esample_ready' {
+                    capture quietly gen byte `_pte_compare_esample' = e(sample)
+                    local _pte_compare_esample_rc = _rc
+                    if `_pte_compare_esample_rc' {
+                        if `_pte_compare_had_xtset' {
+                            local _pte_compare_restore_delta_opt ""
+                            if `"`_pte_compare_prev_delta'"' != "" {
+                                local _pte_compare_restore_delta_opt "delta(`_pte_compare_prev_delta')"
+                            }
+                            capture quietly xtset `_pte_compare_prev_panel' `_pte_compare_prev_time', `_pte_compare_restore_delta_opt'
+                        }
+                        else {
+                            capture quietly xtset, clear
+                        }
+                        exit `_pte_compare_esample_rc'
+                    }
+                    local _pte_compare_esample_ready = 1
+                }
                 
                 estimates store _clktwfe_m8, nocopy
                 
@@ -316,7 +367,7 @@ program define _pte_compare_clktwfe, eclass
         if `s' == 3 {
             // Spec 3 (m9): 3rd order polynomial control, CLK omega, exclude transition
             capture noisily reghdfe `omega_var' L.`omega_var' ///
-                L.`_pte_compare_omega2' L.`_pte_compare_omega3' L.`treatment' ///
+                L.`_pte_compare_omega2' L.`_pte_compare_omega3' `treat_var' ///
                 if _pte_mid == 0, absorb(`absorb') `vce_opt'
             
             if _rc {
@@ -325,14 +376,33 @@ program define _pte_compare_clktwfe, eclass
                 if `first_error_rc' == 0 local first_error_rc = _rc
             }
             else {
-                local coef_s3 = _b[L.`treatment']
-                local se_s3   = _se[L.`treatment']
+                local coef_s3 = _b[`treat_var']
+                local se_s3   = _se[`treat_var']
                 matrix `coef_mat'[1, 3] = `coef_s3'
                 matrix `se_mat'[1, 3]   = `se_s3'
                 matrix `ci_mat'[3, 1]   = `coef_s3' - 1.96 * `se_s3'
                 matrix `ci_mat'[3, 2]   = `coef_s3' + 1.96 * `se_s3'
                 matrix `r2_mat'[1, 3]   = e(r2_a)
                 matrix `n_mat'[1, 3]    = e(N)
+
+                if !`_pte_compare_esample_ready' {
+                    capture quietly gen byte `_pte_compare_esample' = e(sample)
+                    local _pte_compare_esample_rc = _rc
+                    if `_pte_compare_esample_rc' {
+                        if `_pte_compare_had_xtset' {
+                            local _pte_compare_restore_delta_opt ""
+                            if `"`_pte_compare_prev_delta'"' != "" {
+                                local _pte_compare_restore_delta_opt "delta(`_pte_compare_prev_delta')"
+                            }
+                            capture quietly xtset `_pte_compare_prev_panel' `_pte_compare_prev_time', `_pte_compare_restore_delta_opt'
+                        }
+                        else {
+                            capture quietly xtset, clear
+                        }
+                        exit `_pte_compare_esample_rc'
+                    }
+                    local _pte_compare_esample_ready = 1
+                }
                 
                 estimates store _clktwfe_m9, nocopy
                 
@@ -370,7 +440,7 @@ program define _pte_compare_clktwfe, eclass
         di as text ""
         di as text "  Production function: CLK-corrected productivity from the active pte state"
         di as text "  Absorb: `absorb'"
-        di as text "  Treatment: L.`treatment' (lagged, per reproduction code)"
+        di as text "  Treatment: `treatment_label'"
         di as text "  Sample: _pte_mid == 0 (package non-transition sample)"
         di as text ""
         di as text "  {hline 66}"
@@ -477,9 +547,14 @@ program define _pte_compare_clktwfe, eclass
     matrix colnames `ci_mat'   = ci_lower ci_upper
     matrix colnames `r2_mat'   = spec1 spec2 spec3
     matrix colnames `n_mat'    = spec1 spec2 spec3
-    tempvar _pte_compare_esample
-    capture quietly gen byte `_pte_compare_esample' = e(sample)
-    if _rc {
+    if !`_pte_compare_esample_ready' {
+        local _pte_compare_esample_rc = 459
+    }
+    else {
+        capture confirm variable `_pte_compare_esample', exact
+        local _pte_compare_esample_rc = _rc
+    }
+    if `_pte_compare_esample_rc' {
         if `_pte_compare_had_xtset' {
             local _pte_compare_restore_delta_opt ""
             if `"`_pte_compare_prev_delta'"' != "" {
@@ -490,11 +565,11 @@ program define _pte_compare_clktwfe, eclass
         else {
             capture quietly xtset, clear
         }
-        exit _rc
+        exit `_pte_compare_esample_rc'
     }
 
     // Method III needs a temporary firm-year panel declaration to evaluate
-    // lagged treatment and lagged omega controls, but compare is a public
+    // lagged omega controls and optional lagged treatment, but compare is a public
     // postestimation surface and must restore the caller's ambient xtset
     // contract once those lags have been materialized.
     if `_pte_compare_had_xtset' {
@@ -508,7 +583,6 @@ program define _pte_compare_clktwfe, eclass
         capture quietly xtset, clear
     }
     
-    ereturn clear
     ereturn post, esample(`_pte_compare_esample')
     
     // Scalars: ATT coefficients

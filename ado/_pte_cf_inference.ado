@@ -110,6 +110,10 @@ program define _pte_cf_inference, eclass
     // Step 1: Initialize result matrices
     // ================================================================
     local alpha = (100 - `level') / 200
+    // Percentile points (in percent) for the _pctile-based CI bounds, matching
+    // the official replication DOs (egen pctile(), p(.)).
+    local p_lo = 100 * `alpha'
+    local p_hi = 100 * (1 - `alpha')
 
     tempname se_att ci_lo_att ci_hi_att pval_att
     tempname se_ate ci_lo_ate ci_hi_ate pval_ate
@@ -167,14 +171,13 @@ program define _pte_cf_inference, eclass
         if r(N) >= 2 {
             matrix `se_att'[1, `j'] = r(sd)
 
-            // Percentile CI: sort and pick quantile indices
-            sort _att`j'
+            // Percentile CI: use _pctile so the bounds match the official
+            // replication DOs (egen pctile(), p(.)) exactly.
             quietly count if !missing(_att`j')
             local nv = r(N)
-            local lo_idx = max(1, ceil(`nv' * `alpha'))
-            local hi_idx = min(`nv', floor(`nv' * (1 - `alpha')) + 1)
-            matrix `ci_lo_att'[1, `j'] = _att`j'[`lo_idx']
-            matrix `ci_hi_att'[1, `j'] = _att`j'[`hi_idx']
+            quietly _pctile _att`j' if !missing(_att`j'), percentiles(`p_lo' `p_hi')
+            matrix `ci_lo_att'[1, `j'] = r(r1)
+            matrix `ci_hi_att'[1, `j'] = r(r2)
 
             // Count zero mass on both tails so a degenerate null distribution
             // does not spuriously reject at p = 0.
@@ -193,13 +196,11 @@ program define _pte_cf_inference, eclass
         if r(N) >= 2 {
             matrix `se_ate'[1, `j'] = r(sd)
 
-            sort _ate`j'
             quietly count if !missing(_ate`j')
             local nv = r(N)
-            local lo_idx = max(1, ceil(`nv' * `alpha'))
-            local hi_idx = min(`nv', floor(`nv' * (1 - `alpha')) + 1)
-            matrix `ci_lo_ate'[1, `j'] = _ate`j'[`lo_idx']
-            matrix `ci_hi_ate'[1, `j'] = _ate`j'[`hi_idx']
+            quietly _pctile _ate`j' if !missing(_ate`j'), percentiles(`p_lo' `p_hi')
+            matrix `ci_lo_ate'[1, `j'] = r(r1)
+            matrix `ci_hi_ate'[1, `j'] = r(r2)
 
             quietly count if _ate`j' >= 0 & !missing(_ate`j')
             local n_nonneg = r(N)
@@ -216,13 +217,11 @@ program define _pte_cf_inference, eclass
         if r(N) >= 2 {
             matrix `se_delta'[1, `j'] = r(sd)
 
-            sort _delta`j'
             quietly count if !missing(_delta`j')
             local nv = r(N)
-            local lo_idx = max(1, ceil(`nv' * `alpha'))
-            local hi_idx = min(`nv', floor(`nv' * (1 - `alpha')) + 1)
-            matrix `ci_lo_delta'[1, `j'] = _delta`j'[`lo_idx']
-            matrix `ci_hi_delta'[1, `j'] = _delta`j'[`hi_idx']
+            quietly _pctile _delta`j' if !missing(_delta`j'), percentiles(`p_lo' `p_hi')
+            matrix `ci_lo_delta'[1, `j'] = r(r1)
+            matrix `ci_hi_delta'[1, `j'] = r(r2)
 
             quietly count if _delta`j' >= 0 & !missing(_delta`j')
             local n_nonneg = r(N)

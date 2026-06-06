@@ -100,6 +100,7 @@ program define _pte_bygroup, eclass sortpreserve
     if "`control'" != "" {
         local _pf_control_opt "control(`control')"
     }
+    local _pf_group_stage_opt "industry(`by') byindustry"
     local _diag_opt ""
     if "`nodiagnose'" != "" {
         local _diag_opt "nodiagnose"
@@ -163,6 +164,13 @@ program define _pte_bygroup, eclass sortpreserve
         capture ereturn clear
         display as error "_pte_bygroup: nsim must be >= 1"
         exit 198
+    }
+
+    local _bg_eps0_legacy_opt ""
+    local _bg_att_legacy_opt ""
+    if `eps0window' == 0 {
+        local _bg_eps0_legacy_opt "legacypooledeps0"
+        local _bg_att_legacy_opt "legacyattgaussian"
     }
     
     // Validate bootstrap range
@@ -432,7 +440,8 @@ program define _pte_bygroup, eclass sortpreserve
             _pte_prodfunc, treatment(`treatment') id(`idvar') time(`timevar') ///
                 lny(`depvar') free(`free') state(`state') ///
                 proxy(`proxy') pfunc(`pfunc') poly(`poly') ///
-                omegapoly(`omegapoly') `_pf_control_opt' `_diag_opt' noreport replace
+                omegapoly(`omegapoly') dopooledz `_pf_group_stage_opt' ///
+                `_pf_control_opt' `_diag_opt' noreport replace
 
             capture drop _pte_pf_esample
             quietly gen byte _pte_pf_esample = e(sample)
@@ -501,7 +510,34 @@ program define _pte_bygroup, eclass sortpreserve
             // Stage 2: Evolution parameters + eps0 distribution [Task-4]
             _pte_omega, treatment(`treatment') omegapoly(`omegapoly') ///
                 eps0window(`eps0window') ///
-                `notrimeps' `_diag_opt'
+                `_bg_eps0_legacy_opt' `notrimeps' `_diag_opt'
+
+            if "`_bg_eps0_legacy_opt'" != "" & "`notrimeps'" == "" {
+                tempvar _bg_eps0_trim_work
+                quietly summarize _pte_eps0 if _pte_eps0_ind == 1
+                local _bg_sigma_eps = r(sd)
+                local _bg_N_eps0 = r(N)
+                quietly gen double `_bg_eps0_trim_work' = _pte_eps0 if _pte_eps0_ind == 1
+                capture which winsor2
+                if _rc == 0 {
+                    quietly winsor2 `_bg_eps0_trim_work', replace cuts(1 99) trim
+                }
+                else {
+                    quietly _pctile `_bg_eps0_trim_work', p(1 99)
+                    local _bg_p1 = r(r1)
+                    local _bg_p99 = r(r2)
+                    quietly replace `_bg_eps0_trim_work' = . if ///
+                        `_bg_eps0_trim_work' < `_bg_p1' | ///
+                        `_bg_eps0_trim_work' > `_bg_p99'
+                }
+                quietly summarize `_bg_eps0_trim_work'
+                local _bg_sigma_eps_trim = r(sd)
+                local _bg_N_eps0_trim = r(N)
+                ereturn scalar sigma_eps = `_bg_sigma_eps'
+                ereturn scalar sigma_eps_trim = `_bg_sigma_eps_trim'
+                ereturn scalar N_eps0 = `_bg_N_eps0'
+                ereturn scalar N_eps0_trim = `_bg_N_eps0_trim'
+            }
             
             // Interface verification [Task-4.3]
             tempname _rho_g
@@ -580,21 +616,37 @@ program define _pte_bygroup, eclass sortpreserve
                 // Use the user/default inner seed parsed by syntax.
                 _pte_att, treatment(`treatment') omegapoly(`omegapoly') ///
                     nsim(`nsim') attperiods(`attperiods') ///
-                    seed(`seed') `notrimeps' `_diag_opt'
+                    seed(`seed') `_bg_eps0_legacy_opt' ///
+                    `_bg_att_legacy_opt' `notrimeps' `_diag_opt'
                 
                 // Interface verification [Task-5.6]
-                tempname _att_g
+                tempname _att_g _att_full
                 matrix `_att_g' = e(att)
                 local _ncol_att = colsof(`_att_g')
-                if `_ncol_att' != `n_att' {
-                    display as error ///
-                        "ATT estimation returned `_ncol_att' ATT values, expected `n_att'"
-                    error 503
+                matrix `_att_full' = J(1, `n_att', .)
+                local _att_g_colnames : colnames `_att_g'
+                forvalues _pte_att_j = 1/`_ncol_att' {
+                    local _pte_att_name : word `_pte_att_j' of `_att_g_colnames'
+                    if "`_pte_att_name'" == "avg" {
+                        local _pte_att_col = `n_att'
+                    }
+                    else {
+                        local _pte_att_period = real("`_pte_att_name'")
+                        if missing(`_pte_att_period') | ///
+                            `_pte_att_period' != floor(`_pte_att_period') | ///
+                            `_pte_att_period' < 0 | `_pte_att_period' > `attperiods' {
+                            display as error ///
+                                "ATT period support out of grouped range: `_pte_att_name'"
+                            error 503
+                        }
+                        local _pte_att_col = `_pte_att_period' + 1
+                    }
+                    matrix `_att_full'[1, `_pte_att_col'] = `_att_g'[1, `_pte_att_j']
                 }
                 
                 // Store ATT [Task-5.7]
                 forvalues j = 1/`n_att' {
-                    matrix `ATT'[`g', `j'] = `_att_g'[1, `j']
+                    matrix `ATT'[`g', `j'] = `_att_full'[1, `j']
                 }
                 
                 // Refresh the internal worker snapshot so grouped ATT runs keep
@@ -866,11 +918,12 @@ program define _pte_bygroup, eclass sortpreserve
                             id(`idvar') time(`timevar') ///
                             lny(`depvar') free(`free') state(`state') ///
                             proxy(`proxy') pfunc(`pfunc') poly(`poly') ///
-                            omegapoly(`omegapoly') `_pf_control_opt' `_diag_opt' noreport replace
+                            omegapoly(`omegapoly') dopooledz `_pf_group_stage_opt' ///
+                            `_pf_control_opt' `_diag_opt' noreport replace
                         
                         _pte_omega, treatment(`treatment') ///
                             omegapoly(`omegapoly') eps0window(`eps0window') ///
-                            `notrimeps' `_diag_opt'
+                            `_bg_eps0_legacy_opt' `notrimeps' `_diag_opt'
                         
                         // Bootstrap must preserve the grouped RNG stream
                         // once the outer/group seed has been set. Resetting
@@ -879,7 +932,8 @@ program define _pte_bygroup, eclass sortpreserve
                         _pte_att, treatment(`treatment') ///
                             omegapoly(`omegapoly') nsim(`nsim') ///
                             attperiods(`attperiods') ///
-                            preserverng `notrimeps' `_diag_opt'
+                            preserverng `_bg_eps0_legacy_opt' ///
+                            `_bg_att_legacy_opt' `notrimeps' `_diag_opt'
                         
                         keep `idvar' `timevar' _pte_nt _pte_tt `by'
                         rename _pte_nt nt
@@ -975,18 +1029,20 @@ program define _pte_bygroup, eclass sortpreserve
                             id(`idvar') time(`timevar') ///
                             lny(`depvar') free(`free') state(`state') ///
                             proxy(`proxy') pfunc(`pfunc') poly(`poly') ///
-                            omegapoly(`omegapoly') `_pf_control_opt' `_diag_opt' noreport replace
+                            omegapoly(`omegapoly') dopooledz `_pf_group_stage_opt' ///
+                            `_pf_control_opt' `_diag_opt' noreport replace
                         
                         _pte_omega, treatment(`treatment') ///
                             omegapoly(`omegapoly') eps0window(`eps0window') ///
-                            `notrimeps' `_diag_opt'
+                            `_bg_eps0_legacy_opt' `notrimeps' `_diag_opt'
                         
                         // Keep the live grouped RNG stream inside bootstrap;
                         // the outer/group seed is already managed above.
                         _pte_att, treatment(`treatment') ///
                             omegapoly(`omegapoly') nsim(`nsim') ///
                             attperiods(`attperiods') ///
-                            preserverng `notrimeps' `_diag_opt'
+                            preserverng `_bg_eps0_legacy_opt' ///
+                            `_bg_att_legacy_opt' `notrimeps' `_diag_opt'
                         
                         keep `idvar' `timevar' _pte_nt _pte_tt `by'
                         rename _pte_nt nt

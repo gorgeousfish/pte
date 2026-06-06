@@ -20,7 +20,7 @@ program define _pte_mata_check, rclass
     // just low-level evaluator/accessor symbols; otherwise partial preload
     // states can skip autoload and fail later on missing MODEL_CLK* workers.
     // Note: avoid /// continuation with quoted strings (causes parsing issues)
-    local required_funcs "_pte_runtime_signature GMM_CLK MODEL_CLK MODEL_CLK_grid MODEL_CLK_multistart pte_setup_optimizer pte_execute_optimization pte_optimize_with_diagnostics generate_grid _pte_resolve_beta_init _pte_store_result _pte_report_result _pte_construct_gmm_matrices _pte_get_N _pte_get_X _pte_get_X_lag _pte_get_Z _pte_get_W _pte_get_PHI _pte_get_PHI_lag _pte_get_C _pte_get_TP_lag _pte_construct_omega_lag_pol"
+    local required_funcs "_pte_runtime_signature GMM_CLK MODEL_CLK MODEL_CLK_grid MODEL_CLK_multistart pte_setup_optimizer pte_execute_optimization pte_optimize_with_diagnostics generate_grid _pte_resolve_beta_init _pte_store_result _pte_report_result _pte_gmm_matrices_signature _pte_construct_gmm_matrices _pte_get_N _pte_get_X _pte_get_X_lag _pte_get_Z _pte_get_W _pte_get_PHI _pte_get_PHI_lag _pte_get_C _pte_get_TP_lag _pte_construct_omega_lag_pol"
 
     // Optional Mata functions (informational only)
     local optional_funcs "pte_simulate_paths pte_bootstrap_draw pte_mc_dgp _pte_hetero_qtest_compute _pte_simulate_omega1"
@@ -29,13 +29,24 @@ program define _pte_mata_check, rclass
     local missing_funcs ""
     local missing_objects ""
 
+    // Rebuild mlib index so newly added adopath entries are visible
+    quietly mata: mata mlib index
+
     // Check required functions
-    // Note: use "mata describe" instead of "mata which" because
-    // "mata which" only searches .mo files and .mlib libraries,
-    // NOT functions compiled into memory via do/run.
+    // Check both .mlib (mata which) and in-memory (mata describe).
     foreach func of local required_funcs {
-        capture mata: mata describe `func'()
-        if _rc != 0 {
+        local _found 0
+        capture mata: mata which `func'()
+        if _rc == 0 {
+            local _found 1
+        }
+        else {
+            capture mata: mata describe `func'()
+            if _rc == 0 {
+                local _found 1
+            }
+        }
+        if `_found' == 0 {
             local ++missing_count
             local missing_funcs "`missing_funcs' `func'"
             local missing_objects "`missing_objects' `func'"
@@ -50,8 +61,17 @@ program define _pte_mata_check, rclass
         }
     }
 
-    capture mata: mata describe OptimizationResult()
-    local struct_loaded = (_rc == 0)
+    local struct_loaded = 0
+    capture mata: mata which OptimizationResult()
+    if _rc == 0 {
+        local struct_loaded = 1
+    }
+    else {
+        capture mata: mata describe OptimizationResult()
+        if _rc == 0 {
+            local struct_loaded = 1
+        }
+    }
     if `struct_loaded' == 0 {
         local ++missing_count
         local missing_objects "`missing_objects' OptimizationResult"
@@ -84,6 +104,30 @@ program define _pte_mata_check, rclass
         if strpos(" `missing_objects' ", " runtime_signature ") == 0 {
             local ++missing_count
             local missing_objects "`missing_objects' runtime_signature"
+        }
+    }
+
+    local gmm_matrices_signature_ok = 0
+    local gmm_matrices_signature ""
+    capture mata: st_local("gmm_matrices_signature", _pte_gmm_matrices_signature())
+    if _rc == 0 & `"`gmm_matrices_signature'"' == "pte_gmm_matrices_v2_11args" {
+        local gmm_matrices_signature_ok = 1
+        if "`verbose'" != "" {
+            di as text "  [OK]      _pte_gmm_matrices_signature() = `gmm_matrices_signature'"
+        }
+    }
+    else {
+        if "`verbose'" != "" {
+            if _rc == 0 {
+                di as error "  [MISMATCH] _pte_gmm_matrices_signature() = `gmm_matrices_signature'"
+            }
+            else {
+                di as error "  [MISSING] _pte_gmm_matrices_signature() payload"
+            }
+        }
+        if strpos(" `missing_objects' ", " gmm_matrices_signature ") == 0 {
+            local ++missing_count
+            local missing_objects "`missing_objects' gmm_matrices_signature"
         }
     }
 
@@ -157,6 +201,7 @@ program define _pte_mata_check, rclass
     return scalar missing_count = `missing_count'
     return scalar struct_loaded = `struct_loaded'
     return scalar runtime_signature_ok = `runtime_signature_ok'
+    return scalar gmm_matrices_signature_ok = `gmm_matrices_signature_ok'
     return scalar grid_semantics_ok = `grid_semantics_ok'
     return local missing_funcs "`missing_funcs'"
     return local missing_objects "`missing_objects'"

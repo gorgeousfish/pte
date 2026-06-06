@@ -2,8 +2,11 @@
 *! pte_simulate.mata - US-E3-009 Task 9
 *! Mata function for omega^0 counterfactual path simulation (ATT estimation)
 *! Implements Proposition 4.3: single-phase recursive simulation using h_bar_0
-*!   ell=0:  omega0 = h_bar_0(omega_start)
-*!   ell>0:  omega0 = h_bar_0(omega0_lag) + lagged eps0 draw
+*!   ell=0:  omega0 = h_bar_0(omega_start) + eps0 draw
+*!   ell>0:  omega0 = h_bar_0(omega0_lag) + current eps0 draw
+*! This standalone Mata utility draws from the same untreated innovation
+*! product law as the Stata ATT worker, but it is not a row-for-row
+*! reproduction of _pte_att's DO-compatible lagged-row shock convention.
 *! The counterfactual asks "what if untreated?" so only the untreated
 *! evolution function h̄₀ is used — NO treatment interaction terms (γ, δ).
 *! Reference: Chen, Liao & Schurter (2026) Proposition 4.3
@@ -18,9 +21,9 @@ mata:
 //
 // Proposition 4.3 single-phase recursion (untreated evolution only):
 //   ell = 0:
-//     omega0 = h_bar_0(omega_start)
+//     omega0 = h_bar_0(omega_start) + eps0 draw
 //   ell > 0:
-//     omega0 = h_bar_0(omega0_lag) + lagged eps0 draw
+//     omega0 = h_bar_0(omega0_lag) + current eps0 draw
 //
 // where h_bar_0 is the polynomial:
 //   h_bar_0(omega) = rho[1] + rho[2]*omega + rho[3]*omega^2 + ... + rho[p+1]*omega^p
@@ -57,7 +60,7 @@ real matrix pte_simulate_paths(
 {
     // Local variable declarations
     real scalar N, p, m, j, ell, col_idx
-    real colvector eps0_draw, eps0_lag, h_val, omega0_cur, omega0_lag
+    real colvector eps0_draw, h_val, omega0_cur, omega0_lag
     real matrix result
 
     // Set random seed for reproducibility
@@ -74,12 +77,12 @@ real matrix pte_simulate_paths(
         // Initialize lag as starting omega values
         omega0_lag = omega_start
 
-        eps0_lag = J(N, 1, 0)
-
         // ============================================================
-        // All periods use h_bar_0 (untreated evolution function).
-        // ell=0 is the deterministic ATT onset benchmark; the draw made
-        // on that row is consumed by the next recursive state.
+        // All periods use h_bar_0 (untreated evolution function). This
+        // standalone simulator consumes one fresh untreated innovation per
+        // simulated event period. The Stata ATT worker carries the same
+        // i.i.d. law on the previous event-time row to mirror the official
+        // DO recursion with l.eps0.
         // ============================================================
         for (ell = 0; ell < n_periods; ell++) {
             eps0_draw = rnormal(N, 1, 0, sigma_eps)
@@ -90,12 +93,7 @@ real matrix pte_simulate_paths(
                 h_val = h_val + rho[j + 1] * (omega0_lag :^ j)
             }
 
-            if (ell == 0) {
-                omega0_cur = h_val
-            }
-            else {
-                omega0_cur = h_val + eps0_lag
-            }
+            omega0_cur = h_val + eps0_draw
 
             // Store in result matrix
             col_idx = (m - 1) * n_periods + ell + 1
@@ -103,7 +101,6 @@ real matrix pte_simulate_paths(
 
             // Update lag for next period
             omega0_lag = omega0_cur
-            eps0_lag = eps0_draw
         }
     }
 

@@ -75,7 +75,7 @@ void _pte_cf_divergent_boot_agg(
         real scalar lo_idx, hi_idx, n_v
         n_v = length(col_j)
         lo_idx = max((1, ceil(alpha_half * n_v)))
-        hi_idx = min((n_v, floor((1 - alpha_half) * n_v) + 1))
+        hi_idx = min((n_v, floor((1 - alpha_half) * n_v)))
 
         CI_lo[1, j] = col_j[lo_idx]
         CI_hi[1, j] = col_j[hi_idx]

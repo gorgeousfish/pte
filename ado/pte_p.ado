@@ -831,10 +831,11 @@ program define _pte_predict_residuals
                 local pte_delta_opt "delta(`pte_delta')"
             }
             capture quietly xtset `pte_panel' `pte_time', `pte_delta_opt'
-            if _rc {
+            local _pte_predict_xtset_rc = _rc
+            if `_pte_predict_xtset_rc' {
                 di as error "predict, residuals could not restore xtset `pte_panel' `pte_time'."
                 di as error "Ensure the current data still matches the last pte estimation sample."
-                exit _rc
+                exit `_pte_predict_xtset_rc'
             }
             local restore_xtset = 1
         }
@@ -1262,6 +1263,21 @@ program define _pte_predict_att
     local att_support_cols = colsof(`att_p')
     quietly _pte_attperiods_support `att_p' `att_support_cols' "predict, att"
     matrix `att_p' = e(attperiods)
+
+    // The stored event-time support must remain realized in the current
+    // treated bridge. Otherwise predict, att would silently publish a partial
+    // observation-level path after the current data dropped or damaged one of
+    // the supported ATT periods.
+    forvalues j = 1/`att_support_cols' {
+        local period = el(`att_p', 1, `j')
+        quietly count if _pte_treat == 1 & _pte_nt == `period'
+        if r(N) == 0 {
+            di as error "[pte] supported ATT period `period' has no treated observations in the current data"
+            di as error "[pte] predict, att requires every event time listed in e(attperiods) to remain realized in the stored _pte_nt/_pte_treat bridge"
+            di as error "[pte] Re-run pte so e(attperiods) reflects realized ATT support, or repair the damaged current data before prediction"
+            exit 198
+        }
+    }
 
     if `has_grouped_att' {
         tempname att_by_mat

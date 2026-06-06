@@ -2,8 +2,9 @@
 *! Bootstrap Inference Module
 *!
 *! Implements bootstrap inference for ATT estimation:
-*!   Outer loop: b = 1..B, set outer_seed = seed + b - 1
-*!     (default seed = 1, so omitted seed() matches official set seed b)
+*!   Outer loop: b = 1..B, set outer_seed = seed + b - 1.
+*!     Omitting seed() uses seed=1, which yields the official 1,2,...,B sequence;
+*!     seed(X) deliberately yields X,X+1,...,X+B-1.
 *!   Inner: stratified cluster resampling -> re-run full pipeline
 *!   Inner seed for ATT simulation defaults to 123456
 *!   except benchmark replicate translog order 1, which uses 10000
@@ -55,8 +56,12 @@ program define _pte_bootstrap, eclass
          prodfunc(string) ///
          poly(integer -1) ///
          control(varlist) ///
+         TTRENDBY(varname) ///
+         TTRENDVARS(varlist numeric) ///
+         DOPOOLEDZ ///
          level(cilevel) ///
          NOTRIMeps ///
+         LEGACYPOOLEDeps0 ///
          NOLOg ///
          NODIAGnose ///
          saving(string) ///
@@ -65,6 +70,7 @@ program define _pte_bootstrap, eclass
          TARGETgroup(varname) ///
          REFERENCEtime(integer 0) ///
          EXPANSIONtime(integer -2147483647) ///
+         ALLOWLOWBS ///
          TOUSE(name)]
 
     local _pte_treatment_resolved = lower(`"`treatment'"')
@@ -95,10 +101,15 @@ program define _pte_bootstrap, eclass
     // ================================================================
     // Step 0: Input validation
     // ================================================================
-    if `breps' < 2 {
-        di as error "[pte] Error: breps must be >= 2"
-        exit 198
-    }
+	    if `breps' < 2 {
+	        di as error "[pte] Error: breps must be >= 2"
+	        exit 198
+	    }
+	    if `breps' < 50 & "`allowlowbs'" == "" {
+	        di as error "[pte] Error: breps must be >= 50 for bootstrap inference"
+	        di as error "[pte]        Use at least 50 replications, preferably 200 or more for reported results"
+	        exit 198
+	    }
     if `level' < 10 | `level' > 99 {
         di as error "[pte] Error: level must be between 10 and 99"
         exit 198
@@ -148,6 +159,7 @@ program define _pte_bootstrap, eclass
     if regexm(lower(`"`_pte_cmdline'"'), "(^|[ ,])seed[(]") {
         local seed_source = "user"
     }
+    local legacy_pooled_bootstrap = ("`legacypooledeps0'" != "")
     if `eps0window' < 0 {
         di as error "[pte] Error: eps0window must be non-negative"
         exit 198
@@ -284,9 +296,13 @@ program define _pte_bootstrap, eclass
         exit
     }
 
-    // Official translog order-1 bootstrap DOs switch the ATT simulation seed
-    // to 10000 under benchmark replicate mode; higher orders stay at 123456.
-    if "`replicate'" != "" & "`prodfunc'" == "translog" & `omegapoly' == 1 {
+    // Official legacy benchmark branches switch the ATT simulation seed to
+    // 10000 under replicate mode; higher non-legacy orders stay at 123456.
+    if `legacy_pooled_bootstrap' {
+        local inner_seed = 10000
+        local inner_seed_source "replicate"
+    }
+    else if "`replicate'" != "" & "`prodfunc'" == "translog" & `omegapoly' == 1 {
         local inner_seed = 10000
         local inner_seed_source "replicate"
     }
@@ -357,6 +373,10 @@ program define _pte_bootstrap, eclass
     // ================================================================
     capture drop _pte_treat_firm
     quietly bysort `panelvar': egen _pte_treat_firm = max(`treatment')
+    quietly count if _pte_treat_firm == 0
+    local _pte_orig_control_firm_obs = r(N)
+    quietly count if _pte_treat_firm == 1
+    local _pte_orig_treated_firm_obs = r(N)
     tempfile orig_data
     quietly save `orig_data', replace
     
@@ -374,6 +394,8 @@ program define _pte_bootstrap, eclass
     tempname pt_beta_controls_mat
     local has_pt_beta_controls = 0
     local pt_n_beta_controls = 0
+    tempname pt_gmm_init_mat
+    local pt_gmm_init ""
     capture {
         // Build _pte_prodfunc options
         local _pf_opts "treatment(`treatment') id(`id') time(`time')"
@@ -383,8 +405,29 @@ program define _pte_bootstrap, eclass
         if "`control'" != "" {
             local _pf_opts "`_pf_opts' control(`control')"
         }
+        if "`ttrendby'" != "" {
+            local _pf_opts "`_pf_opts' ttrendby(`ttrendby')"
+        }
+        if "`ttrendvars'" != "" {
+            local _pf_opts "`_pf_opts' ttrendvars(`ttrendvars')"
+        }
+        if "`legacypooledeps0'" != "" {
+            local _pf_opts "`_pf_opts' legacyfloatphi"
+        }
+        if "`dopooledz'" != "" {
+            local _pf_opts "`_pf_opts' dopooledz"
+        }
         local _pf_opts "`_pf_opts' noreport nodiagnose"
         quietly _pte_prodfunc, `_pf_opts'
+        capture matrix `pt_gmm_init_mat' = e(beta_init)
+        if _rc == 0 {
+            local _pte_init_cols = colsof(`pt_gmm_init_mat')
+            forvalues _pte_init_j = 1/`_pte_init_cols' {
+                local _pte_init_val : display %21.17g `pt_gmm_init_mat'[1, `_pte_init_j']
+                local pt_gmm_init "`pt_gmm_init' `_pte_init_val'"
+            }
+            local pt_gmm_init = strtrim("`pt_gmm_init'")
+        }
         // Store point estimate betas
         local pt_beta_l = _b[`free']
         local pt_beta_k = _b[`state']
@@ -408,6 +451,10 @@ program define _pte_bootstrap, eclass
         local _om_opts "treatment(`treatment') omegapoly(`omegapoly') nodiagnose"
         local _om_opts "`_om_opts' beta_l(`pt_beta_l') beta_k(`pt_beta_k') eps0window(`eps0window')"
         local _om_opts "`_om_opts' touse(`_pte_bs_sample')"
+        if "`legacypooledeps0'" != "" {
+            local _om_opts "`_om_opts' legacypooledeps0"
+            local _om_opts "`_om_opts' legacyfloatomega"
+        }
         if "`prodfunc'" == "translog" {
             local _om_opts "`_om_opts' beta_ll(`pt_beta_ll') beta_kk(`pt_beta_kk') beta_lk(`pt_beta_lk')"
             local _om_opts "`_om_opts' prodfunc(translog)"
@@ -416,10 +463,20 @@ program define _pte_bootstrap, eclass
             local _om_opts "`_om_opts' notrimeps"
         }
         quietly _pte_omega, `_om_opts'
+        local pt_sigma_eps = e(sigma_eps)
+        local pt_sigma_eps_trim = e(sigma_eps_trim)
+        local pt_N_eps0 = e(N_eps0)
+        local pt_N_eps0_trim = e(N_eps0_trim)
+        local pt_eps0_p1 = e(eps0_p1)
+        local pt_eps0_p99 = e(eps0_p99)
+        local pt_trimeps = e(trimeps)
         local _att_opts "treatment(`treatment') omegapoly(`omegapoly')"
         local _att_opts "`_att_opts' attperiods(`attperiods') nsim(`nsim') seed(`inner_seed')"
         local _att_opts "`_att_opts' touse(`_pte_bs_sample')"
         local _att_opts "`_att_opts' nodiagnose nostabilitycheck"
+        if "`legacypooledeps0'" != "" {
+            local _att_opts "`_att_opts' legacypooledeps0"
+        }
         if "`notrimeps'" != "" {
             local _att_opts "`_att_opts' notrimeps"
         }
@@ -454,7 +511,10 @@ program define _pte_bootstrap, eclass
         }
         preserve
         local _pte_point_keep "`id' `time'"
-        foreach _v in _pte_nt _pte_tt _pte_tt_trim _pte_tt_raw {
+        foreach _v in _pte_nt _pte_omega_0 _pte_omega_0_trim ///
+            _pte_tt _pte_tt_trim _pte_tt_raw ///
+            _pte_eps0_draw _pte_eps0_trim_draw ///
+            _pte_tt_raw_sd _pte_tt_sd _pte_tt_trim_sd {
             capture confirm variable `_v'
             if _rc == 0 {
                 local _pte_point_keep "`_pte_point_keep' `_v'"
@@ -529,6 +589,10 @@ program define _pte_bootstrap, eclass
     
     // Set bootstrap flag for downstream modules ( IMPL-010)
     scalar _pte_in_bootstrap = 1
+
+    if `legacy_pooled_bootstrap' {
+        set seed `seed'
+    }
     
     forvalues b = 1/`breps' {
         // 6.1 Progress display
@@ -537,15 +601,25 @@ program define _pte_bootstrap, eclass
         }
         // 6.2 Restore original data
         quietly use `orig_data', clear
-        // 6.3 Set outer seed
+        capture drop phi phi_raw omega
+        capture drop _pte_phi _pte_omega _pte_eps0 _pte_eps0_trim _pte_eps0_ind
+        capture drop _pte_eps0_draw _pte_eps0_trim_draw
+        capture drop _pte_omega_0 _pte_omega_0_trim _pte_omega_02 _pte_omega_03 _pte_omega_04
+        capture drop _pte_omega_02_trim _pte_omega_03_trim _pte_omega_04_trim
+        capture drop _pte_tt _pte_tt_trim _pte_tt_raw _pte_nt _pte_treat_year treat_yr0
+        // 6.3 Set outer seed. The historical pooled translog DO sets the
+        // bootstrap seed once before the loop and then consumes the live RNG
+        // stream across bsample and ATT simulation.
         local outer_seed = `seed' + `b' - 1
-        set seed `outer_seed'
+        if !`legacy_pooled_bootstrap' {
+            set seed `outer_seed'
+        }
         // Task 6c/8: Debug mode seed log (when nolog is not specified)
         if `show_diagnostics' & "`nolog'" == "" {
             di as text "    [seed] b=`b': outer_seed=`outer_seed', inner_seed=`inner_seed' (`inner_seed_source')"
         }
         // Task 6d/9: Seed checksum for deterministic verification (debug mode)
-        if `show_diagnostics' & "`nolog'" == "" & `b' <= 3 {
+        if `show_diagnostics' & "`nolog'" == "" & `b' <= 3 & !`legacy_pooled_bootstrap' {
             // Generate checksum from first random draw after set seed
             // Same seed must produce same checksum — verifies seed was set correctly
             tempvar _ck_tmp
@@ -557,25 +631,55 @@ program define _pte_bootstrap, eclass
             set seed `outer_seed'
         }
         // 6.4 Stratified cluster bootstrap resampling
+        local bs_ok = 1
         capture drop _pte_firm_bs
         quietly bsample, strata(_pte_treat_firm) cluster(`panelvar') idcluster(_pte_firm_bs)
-        // 6.5 Re-xtset with bootstrap firm IDs
-        quietly xtset _pte_firm_bs `timevar'`_pte_boot_delta_opt'
-        // 6.6 Re-run full pipeline with error handling
-        local bs_ok = 1
-        capture {
-            local _pf_bs "treatment(`treatment') id(_pte_firm_bs) time(`timevar')"
-            local _pf_bs "`_pf_bs' lny(`depvar') free(`free') state(`state') proxy(`proxy')"
-            local _pf_bs "`_pf_bs' pfunc(`prodfunc') poly(`poly') omegapoly(`omegapoly')"
-            local _pf_bs "`_pf_bs' touse(`_pte_bs_sample')"
-            if "`control'" != "" {
-                local _pf_bs "`_pf_bs' control(`control')"
-            }
-            local _pf_bs "`_pf_bs' noreport nodiagnose"
-            _pte_prodfunc, `_pf_bs'
-        }
-        if _rc != 0 {
+        quietly count if _pte_treat_firm == 0
+        local n_control_bs = r(N)
+        quietly count if _pte_treat_firm == 1
+        local n_treated_bs = r(N)
+        if (`_pte_orig_control_firm_obs' > 0 & `n_control_bs' == 0) | ///
+            (`_pte_orig_treated_firm_obs' > 0 & `n_treated_bs' == 0) {
             local bs_ok = 0
+            if `show_diagnostics' & "`nolog'" == "" {
+                di as error " [FAILED: bootstrap draw lost an original treatment stratum]"
+            }
+        }
+        // 6.5 Re-xtset with bootstrap firm IDs
+        if `bs_ok' == 1 {
+            quietly xtset _pte_firm_bs `timevar'`_pte_boot_delta_opt'
+        }
+        // 6.6 Re-run full pipeline with error handling
+        if `bs_ok' == 1 {
+            capture {
+                local _pf_bs "treatment(`treatment') id(_pte_firm_bs) time(`timevar')"
+                local _pf_bs "`_pf_bs' lny(`depvar') free(`free') state(`state') proxy(`proxy')"
+                local _pf_bs "`_pf_bs' pfunc(`prodfunc') poly(`poly') omegapoly(`omegapoly')"
+                local _pf_bs "`_pf_bs' touse(`_pte_bs_sample')"
+                if "`control'" != "" {
+                    local _pf_bs "`_pf_bs' control(`control')"
+                }
+                if "`ttrendby'" != "" {
+                    local _pf_bs "`_pf_bs' ttrendby(`ttrendby')"
+                }
+                if "`ttrendvars'" != "" {
+                    local _pf_bs "`_pf_bs' ttrendvars(`ttrendvars')"
+                }
+                if "`legacypooledeps0'" != "" {
+                    local _pf_bs "`_pf_bs' legacyfloatphi"
+                }
+                if "`dopooledz'" != "" {
+                    local _pf_bs "`_pf_bs' dopooledz"
+                }
+                if `legacy_pooled_bootstrap' & "`pt_gmm_init'" != "" {
+                    local _pf_bs "`_pf_bs' gmminit(`pt_gmm_init')"
+                }
+                local _pf_bs "`_pf_bs' noreport nodiagnose"
+                _pte_prodfunc, `_pf_bs'
+            }
+            if _rc != 0 {
+                local bs_ok = 0
+            }
         }
         if `bs_ok' == 1 {
             // Store bootstrap betas
@@ -622,6 +726,10 @@ program define _pte_bootstrap, eclass
                 local _om_bs "treatment(`treatment') omegapoly(`omegapoly') nodiagnose"
                 local _om_bs "`_om_bs' beta_l(`bs_beta_l') beta_k(`bs_beta_k') eps0window(`eps0window')"
                 local _om_bs "`_om_bs' touse(`_pte_bs_sample')"
+                if "`legacypooledeps0'" != "" {
+                    local _om_bs "`_om_bs' legacypooledeps0"
+                    local _om_bs "`_om_bs' legacyfloatomega"
+                }
                 if "`prodfunc'" == "translog" {
                     local _om_bs "`_om_bs' beta_ll(`bs_beta_ll') beta_kk(`bs_beta_kk') beta_lk(`bs_beta_lk')"
                     local _om_bs "`_om_bs' prodfunc(translog)"
@@ -634,6 +742,23 @@ program define _pte_bootstrap, eclass
             if _rc != 0 {
                 local bs_ok = 0
             }
+            if `bs_ok' == 1 {
+                capture confirm numeric variable omega
+                if _rc != 0 {
+                    local bs_ok = 0
+                }
+                capture confirm numeric variable _pte_eps0
+                if _rc != 0 {
+                    local bs_ok = 0
+                }
+                capture confirm numeric variable _pte_eps0_ind
+                if _rc != 0 {
+                    local bs_ok = 0
+                }
+                if `bs_ok' == 0 & `show_diagnostics' & "`nolog'" == "" {
+                    di as error " [FAILED: omega state incomplete after _pte_omega]"
+                }
+            }
         }
         if `bs_ok' == 1 {
             // Task 13: Inner seed consistency verification (debug mode)
@@ -642,9 +767,18 @@ program define _pte_bootstrap, eclass
             }
             capture {
                 local _att_bs "treatment(`treatment') omegapoly(`omegapoly')"
-                local _att_bs "`_att_bs' attperiods(`attperiods') nsim(`nsim') seed(`inner_seed')"
+                local _att_bs "`_att_bs' attperiods(`attperiods') nsim(`nsim')"
+                if `legacy_pooled_bootstrap' {
+                    local _att_bs "`_att_bs' preserverng"
+                }
+                else {
+                    local _att_bs "`_att_bs' seed(`inner_seed')"
+                }
                 local _att_bs "`_att_bs' touse(`_pte_bs_sample')"
                 local _att_bs "`_att_bs' nodiagnose nostabilitycheck"
+                if "`legacypooledeps0'" != "" {
+                    local _att_bs "`_att_bs' legacypooledeps0"
+                }
                 if "`notrimeps'" != "" {
                     local _att_bs "`_att_bs' notrimeps"
                 }
@@ -758,8 +892,45 @@ program define _pte_bootstrap, eclass
         }
         exit 2000
     }
+    local min_success = max(50, ceil(0.8 * `breps'))
+    if "`allowlowbs'" != "" {
+        local min_success = 2
+    }
+    if `n_success' < `min_success' {
+        di as error "[pte] Error: only `n_success' successful bootstrap iterations"
+        di as error "[pte]        Minimum required successful draws: `min_success'"
+        di as error "[pte]        Bootstrap failures at this rate make SE and percentile CI unreliable"
+        quietly use `full_data', clear
+        quietly xtset `panelvar' `timevar'`_pte_boot_delta_opt'
+        if `_pte_has_prev_est' {
+            capture estimates restore `_pte_prev_est'
+            capture estimates drop `_pte_prev_est'
+        }
+        else {
+            capture ereturn clear
+        }
+        exit 2000
+    }
+    if `n_success' < 50 {
+        di as text "{bf:Warning}: only `n_success' successful bootstrap iterations"
+        di as text "  Bootstrap standard errors and percentile intervals are unstable below 50 successful draws"
+    }
+    local low_success_warning = (`n_success' < 50)
+    if `low_success_warning' {
+        di as text "{bf:Warning}: fewer than 50 successful bootstrap iterations"
+        di as text "  SE and percentile CI are reported for smoke testing only; use at least 50 successful draws for inference."
+    }
+    local min_horizon_success = `n_success'
+    if `n_success' >= 50 {
+        local min_horizon_success = max(50, ceil(0.5 * `n_success'))
+    }
+    local raw_horizon_suppressed = 0
+    local trim_horizon_suppressed = 0
     // 7.1 Compute SE, CI for raw track
     local alpha = (100 - `level') / 200
+    // Percentile points (in percent) for the _pctile-based CI bounds.
+    local p_lo = 100 * `alpha'
+    local p_hi = 100 * (1 - `alpha')
     tempname se_raw ci_lo_raw ci_hi_raw mean_raw
     matrix `se_raw' = J(1, `ncols', .)
     matrix `ci_lo_raw' = J(1, `ncols', .)
@@ -803,35 +974,47 @@ program define _pte_bootstrap, eclass
     forvalues j = 1/`ncols' {
         // --- Raw track ---
         quietly summarize _raw`j'
-        if r(N) >= 2 {
-            matrix `mean_raw'[1, `j'] = r(mean)
-            matrix `se_raw'[1, `j'] = r(sd)
-            // Percentile CI
-            sort _raw`j'
-            quietly count if !missing(_raw`j')
-            local nv = r(N)
-            local lo_idx = max(1, ceil(`nv' * `alpha'))
-            local hi_idx = min(`nv', floor(`nv' * (1 - `alpha')) + 1)
-            matrix `ci_lo_raw'[1, `j'] = _raw`j'[`lo_idx']
-            matrix `ci_hi_raw'[1, `j'] = _raw`j'[`hi_idx']
-        }
+            local _raw_valid_j = r(N)
+            if `_raw_valid_j' >= 2 & (`j' == 1 | `_raw_valid_j' >= `min_horizon_success') {
+                matrix `mean_raw'[1, `j'] = r(mean)
+                matrix `se_raw'[1, `j'] = r(sd)
+                // Percentile CI: use _pctile so the bounds match the official
+                // replication DOs (egen pctile(), p(.)) exactly, including the
+                // interpolation at non-integer order-statistic positions.
+                quietly _pctile _raw`j' if !missing(_raw`j'), percentiles(`p_lo' `p_hi')
+                matrix `ci_lo_raw'[1, `j'] = r(r1)
+                matrix `ci_hi_raw'[1, `j'] = r(r2)
+            }
+            else if `j' > 1 & `_raw_valid_j' >= 2 {
+                local ++raw_horizon_suppressed
+            }
         // --- Trim track ---
         if `do_trim' {
             quietly summarize _trim`j'
-            if r(N) >= 2 {
+            local _trim_valid_j = r(N)
+            if `_trim_valid_j' >= 2 & (`j' == 1 | `_trim_valid_j' >= `min_horizon_success') {
                 matrix `mean_trim'[1, `j'] = r(mean)
                 matrix `se_trim'[1, `j'] = r(sd)
-                sort _trim`j'
-                quietly count if !missing(_trim`j')
-                local nv = r(N)
-                local lo_idx = max(1, ceil(`nv' * `alpha'))
-                local hi_idx = min(`nv', floor(`nv' * (1 - `alpha')) + 1)
-                matrix `ci_lo_trim'[1, `j'] = _trim`j'[`lo_idx']
-                matrix `ci_hi_trim'[1, `j'] = _trim`j'[`hi_idx']
+                quietly _pctile _trim`j' if !missing(_trim`j'), percentiles(`p_lo' `p_hi')
+                matrix `ci_lo_trim'[1, `j'] = r(r1)
+                matrix `ci_hi_trim'[1, `j'] = r(r2)
+            }
+            else if `j' > 1 & `_trim_valid_j' >= 2 {
+                local ++trim_horizon_suppressed
             }
         }
     }
     restore
+    if `raw_horizon_suppressed' > 0 | `trim_horizon_suppressed' > 0 {
+        di as text "{bf:Warning}: dynamic bootstrap inference suppressed for thin late-horizon support"
+        di as text "  Minimum valid draws per dynamic period: `min_horizon_success'"
+        if `raw_horizon_suppressed' > 0 {
+            di as text "  Raw periods suppressed: `raw_horizon_suppressed'"
+        }
+        if `trim_horizon_suppressed' > 0 {
+            di as text "  Trim periods suppressed: `trim_horizon_suppressed'"
+        }
+    }
     // ================================================================
     // Step 8: Display results
     // ================================================================
@@ -956,7 +1139,10 @@ program define _pte_bootstrap, eclass
     // Step 9: Restore original data
     // ================================================================
     quietly use `full_data', clear
-    foreach _v in _pte_nt _pte_tt _pte_tt_trim _pte_tt_raw {
+    foreach _v in _pte_nt _pte_omega_0 _pte_omega_0_trim ///
+        _pte_tt _pte_tt_trim _pte_tt_raw ///
+        _pte_eps0_draw _pte_eps0_trim_draw ///
+        _pte_tt_raw_sd _pte_tt_sd _pte_tt_trim_sd {
         capture drop `_v'
     }
     quietly merge 1:1 `id' `time' using `pte_boot_point_outputs', nogen
@@ -1134,6 +1320,12 @@ program define _pte_bootstrap, eclass
     // --- Scalar returns: Bootstrap diagnostics ---
     ereturn scalar n_success = `n_success'
     ereturn scalar n_fail = `n_fail'
+    ereturn scalar low_success_warning = `low_success_warning'
+    ereturn scalar min_horizon_success = `min_horizon_success'
+    ereturn scalar raw_horizon_suppressed = `raw_horizon_suppressed'
+    if `do_trim' {
+        ereturn scalar trim_horizon_suppressed = `trim_horizon_suppressed'
+    }
     ereturn scalar bootstrap = `breps'
     ereturn scalar breps = `breps'
     ereturn scalar rngstate_saved = 1
@@ -1147,6 +1339,18 @@ program define _pte_bootstrap, eclass
     ereturn scalar seed_inner = `inner_seed'
     ereturn scalar point_seed = `inner_seed'
     ereturn scalar eps0window = `eps0window'
+    local legacy_pooled_eps0_flag 0
+    if "`legacypooledeps0'" != "" {
+        local legacy_pooled_eps0_flag 1
+    }
+    ereturn scalar legacy_pooled_eps0 = `legacy_pooled_eps0_flag'
+    ereturn scalar sigma_eps = `pt_sigma_eps'
+    ereturn scalar sigma_eps_trim = `pt_sigma_eps_trim'
+    ereturn scalar N_eps0 = `pt_N_eps0'
+    ereturn scalar N_eps0_trim = `pt_N_eps0_trim'
+    ereturn scalar eps0_p1 = `pt_eps0_p1'
+    ereturn scalar eps0_p99 = `pt_eps0_p99'
+    ereturn scalar trimeps = `pt_trimeps'
     ereturn local seed_source "`seed_source'"
     ereturn local inner_seed_source "`inner_seed_source'"
     ereturn scalar level = `level'
@@ -1296,4 +1500,7 @@ program define _pte_bootstrap, eclass
     ereturn local cmd "_pte_bootstrap"
     ereturn local title "PTE Bootstrap Inference"
     ereturn local seed_outer_strategy "start_plus_index"
+    if "`notrimeps'" != "" {
+        ereturn local notrimeps "notrimeps"
+    }
 end

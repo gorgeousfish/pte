@@ -498,7 +498,7 @@ program define _pte_nonabs_ereturn, eclass
 
         di as text ""
         di as text "{hline 78}"
-        di as text "ATT- (Exit Effects: Effect of exiting treatment)"
+        di as text "ATT- (Exit Switchers: Staying treated vs observed exit)"
         di as text "{hline 78}"
 
         if `has_ci_minus' {

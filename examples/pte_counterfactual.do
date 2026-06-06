@@ -36,12 +36,28 @@ quietly adopath + "`root'/ado"
 
 use "`root'/data/复现数据.dta", clear
 
-// Encode string industry code to numeric
-capture confirm numeric variable Scode
+// Encode string industry code to numeric (if Scode exists in dataset)
+capture confirm variable Scode
+if _rc == 0 {
+    capture confirm numeric variable Scode
+    if _rc {
+        encode Scode, gen(industry_id)
+        drop Scode
+        rename industry_id Scode
+    }
+}
+
+// Ensure firm and panel structure are set
+capture confirm variable firm
 if _rc {
-    encode Scode, gen(industry_id)
-    drop Scode
-    rename industry_id Scode
+    // If no firm variable, generate from panel structure
+    capture confirm variable Scode
+    if _rc == 0 {
+        egen firm = group(Scode)
+    }
+    else {
+        gen firm = _n
+    }
 }
 
 xtset firm year

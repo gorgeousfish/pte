@@ -387,10 +387,11 @@ program define _pte_evolution, eclass
     // denotes observations outside the active estimation sample, and lagged
     // regressors must also come from rows with touse()==1.
     capture quietly reg omega `varlist' if `_pte_evo_regsample'
-    if _rc != 0 {
-        di as error "[pte] Error: evolution regression failed (rc = " _rc ")"
+    local _pte_evo_reg_rc = _rc
+    if `_pte_evo_reg_rc' != 0 {
+        di as error "[pte] Error: evolution regression failed (rc = `_pte_evo_reg_rc')"
         `_pte_clear_eclass'
-        exit _rc
+        exit `_pte_evo_reg_rc'
     }
 
     local lag_treated_supported_raw = (`n_lag_treated' > 0)

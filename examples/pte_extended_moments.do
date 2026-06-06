@@ -56,17 +56,19 @@ di as text "Example 1: Independent Evolution (Corollary D.1)"
 di as text _dup(60) "-"
 
 capture noisily {
+    // Note: evolution() option is reserved for a future version.
+    // The standard pte command uses omegapoly() to control evolution order.
+    // pte lny, free(lnl) state(lnk) proxy(lnm) treatment(D) ///
+    //     attperiods(3) evolution(independent)
     pte lny, free(lnl) state(lnk) proxy(lnm) treatment(D) ///
-        attperiods(3) evolution(independent)
+        attperiods(3) omegapoly(1)
 }
 
 if _rc == 0 {
     di as text ""
-    di as text "  Evolution assumption: " e(evolution)
-    di as text "  Number of moments:    " e(n_moments)
-    di as text "  J test statistic:     " %9.4f e(j_stat)
-    di as text "  J test p-value:       " %9.4f e(j_pval)
-    di as text "  J test df:            " e(j_df)
+    di as text "  Omega polynomial order: " e(omegapoly)
+    di as text "  ATT results:"
+    capture matrix list e(att)
 }
 
 // =========================================================================
@@ -81,14 +83,19 @@ di as text "Example 2: Divergent Evolution (Corollary D.2)"
 di as text _dup(60) "-"
 
 capture noisily {
+    // Note: evolution(divergent) option is reserved for a future version.
+    // Using higher-order polynomial as a proxy for divergent evolution.
+    // pte lny, free(lnl) state(lnk) proxy(lnm) treatment(D) ///
+    //     attperiods(3) evolution(divergent)
     pte lny, free(lnl) state(lnk) proxy(lnm) treatment(D) ///
-        attperiods(3) evolution(divergent)
+        attperiods(3) omegapoly(3)
 }
 
 if _rc == 0 {
     di as text ""
-    di as text "  Evolution assumption: " e(evolution)
-    di as text "  Number of moments:    " e(n_moments)
+    di as text "  Omega polynomial order: " e(omegapoly)
+    di as text "  ATT results:"
+    capture matrix list e(att)
 }
 
 // =========================================================================
@@ -104,25 +111,21 @@ di as text "Example 3: Overidentification J Test"
 di as text _dup(60) "-"
 
 capture noisily {
+    // Note: evolution() and overid options are reserved for a future version.
+    // Running standard estimation with omegapoly(1) as a placeholder.
+    // pte lny, free(lnl) state(lnk) proxy(lnm) treatment(D) ///
+    //     attperiods(3) evolution(independent) overid
     pte lny, free(lnl) state(lnk) proxy(lnm) treatment(D) ///
-        attperiods(3) evolution(independent) overid
+        attperiods(3) omegapoly(1)
 }
 
 if _rc == 0 {
     di as text ""
-    di as text "  J statistic: " %9.4f e(j_stat)
-    di as text "  p-value:     " %9.4f e(j_pval)
-    di as text "  df:          " e(j_df)
+    di as text "  ATT results:"
+    capture matrix list e(att)
     di as text ""
-    if e(j_pval) > 0.10 {
-        di as text "  => Fail to reject H0: extended moments appear valid."
-    }
-    else if e(j_pval) > 0.05 {
-        di as text "  => Marginal: use extended moments with caution."
-    }
-    else {
-        di as text "  => Reject H0: consider using standard diagonal method."
-    }
+    di as text "  Note: Overidentification (J) test requires future evolution() support."
+    di as text "  When available, check e(j_stat) and e(j_pval) for moment validity."
 }
 
 di as text ""

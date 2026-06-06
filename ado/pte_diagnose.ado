@@ -157,6 +157,42 @@ program define pte_diagnose, rclass
         }
     }
 
+    local pte_diag_needs_helpers = ///
+        (`do_parallel' | `do_kstest' | `do_conditional' | `do_cdf' | ///
+         `do_assumption33')
+    if `pte_diag_needs_helpers' {
+        local pte_diag_have_helper = 0
+        foreach helper in _pte_D _pte_treat _pte_nt _pte_mid _pte_cohort ///
+            _pte_treat_year _pte_first_treat_year {
+            capture confirm variable `helper', exact
+            if _rc == 0 {
+                local pte_diag_have_helper = 1
+                continue, break
+            }
+        }
+        local pte_diag_setup_panel : char _dta[_pte_setup_panelvar]
+        local pte_diag_setup_time : char _dta[_pte_setup_timevar]
+        local pte_diag_setup_treatment : char _dta[_pte_setup_treatment]
+        local pte_diag_setup_treatsig : char _dta[_pte_setup_treatsig]
+        local pte_diag_setup_xtdelta : char _dta[_pte_setup_xtdelta]
+        local pte_diag_have_setup = ///
+            (`"`pte_diag_setup_panel'"' != "") | ///
+            (`"`pte_diag_setup_time'"' != "") | ///
+            (`"`pte_diag_setup_treatment'"' != "") | ///
+            (`"`pte_diag_setup_treatsig'"' != "") | ///
+            (`"`pte_diag_setup_xtdelta'"' != "")
+        local pte_diag_have_live = ("`e(cmd)'" == "pte")
+
+        if `pte_diag_have_helper' | `pte_diag_have_setup' | `pte_diag_have_live' {
+            capture noisily _pte_diag_panel_contract, ///
+                context("pte_diagnose") allowsetupmissingxtdelta
+            local pte_diag_contract_rc = _rc
+            if `pte_diag_contract_rc' != 0 {
+                exit `pte_diag_contract_rc'
+            }
+        }
+    }
+
     // Reset wrapper r() state so the current diagnostic subset does not
     // inherit stale returns from an earlier pte_diagnose call.
     return clear
@@ -230,6 +266,9 @@ program define pte_diagnose, rclass
 
     if `do_assumption33' {
         local n_tests = `n_tests' + 1
+
+        _pte_diag_panel_contract, context("Assumption 3.3 diagnostics") ///
+            allowsetupmissingxtdelta
 
         capture confirm numeric variable _pte_D, exact
         if _rc != 0 {
@@ -314,10 +353,11 @@ program define pte_diagnose, rclass
             }
         }
         else {
+            local _pte_pretrend_rc = _rc
             if "`quietly'" == "" {
-                di as error "Pre-trend test failed (rc = " _rc ")"
+                di as error "Pre-trend test failed (rc = `_pte_pretrend_rc')"
             }
-            exit _rc
+            exit `_pte_pretrend_rc'
         }
     }
     

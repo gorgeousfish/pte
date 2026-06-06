@@ -8,8 +8,10 @@
 
 version 14.0
 // ================================================================
-// Mata: Pure quantile function (T-001)
-// Linear interpolation matching Stata _pctile, altdef
+// Mata: percentile helpers. Cohort/pool CIs use _pte_boot_ci_bound, which
+// reproduces Stata's default _pctile (egen pctile(), p(.)). The legacy
+// _pte_boot_quantile (altdef interpolation) is retained for reference only
+// and is not on the active CI path.
 // ================================================================
 mata:
 mata set matastrict on
@@ -67,9 +69,9 @@ real rowvector _pte_boot_quantile(real matrix X, real scalar p)
     return(result)
 }
 
-real rowvector _pte_boot_ci_bound(real matrix X, real scalar p, real scalar upper)
+real rowvector _pte_boot_ci_bound(real matrix X, real scalar p)
 {
-    real scalar K, k, n, idx
+    real scalar K, k, n, pos, fl
     real colvector col_k, sorted_k
     real rowvector result
 
@@ -86,15 +88,20 @@ real rowvector _pte_boot_ci_bound(real matrix X, real scalar p, real scalar uppe
         }
 
         sorted_k = sort(col_k, 1)
-        if (upper) {
-            idx = floor(p * n) + 1
+        // Interpolated quantile matching Stata's default _pctile (the algorithm
+        // behind the official replication DOs' egen pctile(), p(.)). Position
+        // n*p landing on an integer i (1<=i<n) averages order statistics i and
+        // i+1; otherwise the floor(n*p)+1 order statistic is used (clamped).
+        pos = p * n
+        if (pos == floor(pos) & pos >= 1 & pos < n) {
+            result[1, k] = (sorted_k[pos] + sorted_k[pos + 1]) / 2
         }
         else {
-            idx = ceil(p * n)
+            fl = floor(pos) + 1
+            if (fl < 1) fl = 1
+            if (fl > n) fl = n
+            result[1, k] = sorted_k[fl]
         }
-        if (idx < 1) idx = 1
-        if (idx > n) idx = n
-        result[1, k] = sorted_k[idx]
     }
 
     return(result)
@@ -216,13 +223,13 @@ void _pte_bootstrap_compute_ci(real scalar p_lo, real scalar p_hi,
 {
     external real matrix ATT_cohort_boot, ATT_pool_boot
 
-    // Match the main bootstrap CI contract used by the serial and grouped
-    // ATT paths: the lower bound is the ceil(n * p_lo) order statistic and
-    // the upper bound is the floor(n * p_hi) + 1 order statistic.
-    st_matrix(cohort_lo_name, _pte_boot_ci_bound(ATT_cohort_boot, p_lo, 0))
-    st_matrix(cohort_hi_name, _pte_boot_ci_bound(ATT_cohort_boot, p_hi, 1))
-    st_matrix(pool_lo_name, _pte_boot_ci_bound(ATT_pool_boot, p_lo, 0))
-    st_matrix(pool_hi_name, _pte_boot_ci_bound(ATT_pool_boot, p_hi, 1))
+    // Match the main bootstrap CI contract used by the serial and grouped ATT
+    // paths: percentile bounds computed via Stata's default _pctile algorithm
+    // (egen pctile(), p(.)) with linear interpolation between order statistics.
+    st_matrix(cohort_lo_name, _pte_boot_ci_bound(ATT_cohort_boot, p_lo))
+    st_matrix(cohort_hi_name, _pte_boot_ci_bound(ATT_cohort_boot, p_hi))
+    st_matrix(pool_lo_name, _pte_boot_ci_bound(ATT_pool_boot, p_lo))
+    st_matrix(pool_hi_name, _pte_boot_ci_bound(ATT_pool_boot, p_hi))
 }
 
 void _pte_bootstrap_point_ivw(string scalar att_name,

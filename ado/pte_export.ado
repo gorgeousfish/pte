@@ -479,6 +479,22 @@ program define _pte_export_latex
     if `"`title'"' == "" {
         local title "Treatment Effects on Productivity"
     }
+    local _pte_tex_bs = char(92)
+    local _pte_tex_dollar = char(36)
+    local title_tex `"`title'"'
+    local title_tex : subinstr local title_tex "&"  "`_pte_tex_bs'&",  all
+    local title_tex : subinstr local title_tex "%"  "`_pte_tex_bs'%",  all
+    local title_tex : subinstr local title_tex "`_pte_tex_dollar'"  "`_pte_tex_bs'`_pte_tex_dollar'",  all
+    local title_tex : subinstr local title_tex "#"  "`_pte_tex_bs'#",  all
+    local title_tex : subinstr local title_tex "_"  "`_pte_tex_bs'_",  all
+    local note_tex `"`note'"'
+    if `"`note_tex'"' != "" {
+        local note_tex : subinstr local note_tex "&"  "`_pte_tex_bs'&",  all
+        local note_tex : subinstr local note_tex "%"  "`_pte_tex_bs'%",  all
+        local note_tex : subinstr local note_tex "`_pte_tex_dollar'"  "`_pte_tex_bs'`_pte_tex_dollar'",  all
+        local note_tex : subinstr local note_tex "#"  "`_pte_tex_bs'#",  all
+        local note_tex : subinstr local note_tex "_"  "`_pte_tex_bs'_",  all
+    }
 
     // Open/overwrite is controlled by replace.
     tempname fh
@@ -487,7 +503,7 @@ program define _pte_export_latex
     // Table header and column layout.
     file write `fh' "\begin{table}[htbp]" _n
     file write `fh' "\centering" _n
-    file write `fh' `"\caption{`title'}"' _n
+    file write `fh' `"\caption{`title_tex'}"' _n
     file write `fh' "\begin{threeparttable}" _n
 
     // Column spec depends on whether ATE^count is available and whether
@@ -734,7 +750,7 @@ program define _pte_export_latex
         file write `fh' "\small" _n
 
         if `"`note'"' != "" {
-            file write `fh' `"\item `note'"' _n
+            file write `fh' `"\item `note_tex'"' _n
         }
 
         local default_note ""

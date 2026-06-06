@@ -55,29 +55,18 @@ program define _pte_gmm_wrapper, rclass
         }
     }
 
-    // Reconfirm that the package-wide Mata namespace is live before calling
-    // MODEL_CLK* helpers. This avoids failing midway after Stata-side setup has
-    // already built the matrix cache.
-    // Reuse the package-wide Mata readiness gate so partial preload states
-    // cannot slip past this wrapper and fail later on missing MODEL_CLK*.
-    // If not ready, derive mata/ path from this ado file's own location
-    // (c(pwd) is unreliable; profile.do may change it).
-    local _gmm_ok 0
-    capture quietly _pte_mata_check
-    if _rc == 0 & r(all_loaded) == 1 {
-        local _gmm_ok 1
-    }
-    
-    if "`_gmm_ok'" != "1" {
-        // Recompile through the shared initializer so stale Mata symbols are
-        // dropped consistently instead of leaving a half-loaded namespace.
-        capture quietly _pte_mata_init, force nolog
-        if _rc != 0 | r(all_loaded) != 1 {
-            di as error "{bf:_pte_gmm_wrapper}: Cannot load mata/pte_gmm_clk.mata"
-            di as error "  Ensure Mata functions are loaded before calling this module"
-            di as error "  Current working directory: `c(pwd)'"
-            exit 601
-        }
+    // Rebuild the package-owned Mata runtime at the optimizer boundary.
+    // The official DO files define same-name GMM_CLK()/MODEL_CLK() helpers
+    // after `clear mata'. A readiness check based only on symbol names can then
+    // see a mixed namespace: package accessors loaded from the mlib and stale
+    // DO evaluators in memory. Force reloading here preserves the invariant
+    // that MODEL_CLK() consumes the cached matrices built by _pte_gmm_matrices.
+    capture quietly _pte_mata_init, force nolog
+    if _rc != 0 | r(all_loaded) != 1 {
+        di as error "{bf:_pte_gmm_wrapper}: Cannot load package-owned Mata GMM runtime"
+        di as error "  Ensure mata/pte_gmm_clk.mata and mata/pte_gmm_matrices.mata are available"
+        di as error "  Current working directory: `c(pwd)'"
+        exit 601
     }
 
     // The optimizer reads globals populated by _pte_gmm_matrices. Failing
@@ -162,6 +151,9 @@ program define _pte_gmm_wrapper, rclass
     // finite fval alone does not tell the caller whether the simplex settled.
     if converged == 0 {
         _pte_convergence_warning `=fval' `=iterations' `maxiter'
+        di as error "{bf:_pte_gmm_wrapper}: GMM optimization did not converge"
+        di as error "  Refusing to publish production-function coefficients for downstream omega/ATT recovery"
+        exit 430
     }
     else if iterations > 5000 {
         // A large iteration count usually signals a flat criterion or weak
@@ -197,6 +189,15 @@ program define _pte_gmm_wrapper, rclass
         exit 504
     }
 
+    mata: _pte_store_gmm_final_diagnostics(st_matrix("beta"))
+    scalar cond_OLtOL = gmm_diag_cond_OLtOL
+    scalar rank_OLtOL = gmm_diag_rank_OLtOL
+    scalar xi_mean = gmm_diag_xi_mean
+    scalar xi_sd = gmm_diag_xi_sd
+    scalar xi_max_abs = gmm_diag_xi_max_abs
+    matrix beta_init_return = beta_init_resolved
+    matrix beta_start_actual_return = beta_start_actual
+
     // Echo the estimated coefficients so callers can compare the final point
     // estimate against the stage-one seeds without opening the return matrix.
     if "`nolog'" == "" {
@@ -228,7 +229,14 @@ program define _pte_gmm_wrapper, rclass
     return scalar fval = fval
     return scalar converged = converged
     return scalar iterations = iterations
+    return scalar cond_OLtOL = cond_OLtOL
+    return scalar rank_OLtOL = rank_OLtOL
+    return scalar xi_mean = xi_mean
+    return scalar xi_sd = xi_sd
+    return scalar xi_max_abs = xi_max_abs
     return scalar omegapoly = `omegapoly'
+    return matrix beta_init = beta_init_return
+    return matrix beta_start_actual = beta_start_actual_return
     return local prodfunc "`prodfunc'"
 
 end

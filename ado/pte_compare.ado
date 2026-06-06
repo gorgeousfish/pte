@@ -31,7 +31,35 @@ program define pte_compare, eclass
     // =========================================================================
     // Validate prerequisites
     // =========================================================================
-    
+
+    local _pte_compare_entry_cmd `"`e(cmd)'"'
+    local _pte_compare_entry_was_compare = (`"`_pte_compare_entry_cmd'"' == "pte_compare")
+    tempname _pte_compare_entry_est
+
+    if `"`_pte_compare_entry_cmd'"' == "pte" {
+        capture estimates drop _pte_compare_pte_state
+        capture estimates store _pte_compare_pte_state
+        if _rc {
+            di as error "Error 498: unable to snapshot the active pte result for pte_compare reentry."
+            di as error "Re-run {bf:pte} and then call {bf:pte_compare} again."
+            exit 498
+        }
+    }
+    else if `_pte_compare_entry_was_compare' {
+        capture estimates store `_pte_compare_entry_est'
+        if _rc {
+            di as error "Error 498: unable to snapshot the active pte_compare result before reentry."
+            exit 498
+        }
+        capture estimates restore _pte_compare_pte_state
+        if _rc {
+            capture estimates restore `_pte_compare_entry_est'
+            di as error "Error 301: pte_compare cannot find the prior pte baseline state."
+            di as error "Re-run {bf:pte} before calling {bf:pte_compare} again."
+            exit 301
+        }
+    }
+
     if "`e(cmd)'" != "pte" {
         di as error "Error 301: pte has not been run."
         di as error "Please run {bf:pte} first."
@@ -290,12 +318,25 @@ program define pte_compare, eclass
     if "`method'" == "" local method "expost"
 
     // The paper/DO compare bundle for method(all) is the full Table 3
-    // lattice m1-m9. Allowing subset specs() here publishes a partial
-    // compare contract that downstream graph consumers correctly reject.
-    if "`method'" == "all" & "`specs'" != "" & strtrim("`specs'") != "1 2 3" {
-        di as error "Error 198: method(all) requires the full compare bundle specs(1 2 3)."
-        di as error "Use standalone methods for subset specifications, or omit specs() with {bf:method(all)}."
-        exit 198
+    // lattice m1-m9. Treat specs() as a set at the public router, then
+    // canonicalize to the package's fixed Table 3 display order.
+    if "`method'" == "all" & "`specs'" != "" {
+        local _pte_compare_nspecs : word count `specs'
+        local _pte_compare_has_spec1 = 0
+        local _pte_compare_has_spec2 = 0
+        local _pte_compare_has_spec3 = 0
+        foreach _pte_compare_spec of local specs {
+            local _pte_compare_has_spec`_pte_compare_spec' = 1
+        }
+        if `_pte_compare_nspecs' != 3 | ///
+            !`_pte_compare_has_spec1' | ///
+            !`_pte_compare_has_spec2' | ///
+            !`_pte_compare_has_spec3' {
+            di as error "Error 198: method(all) requires the full compare bundle specs(1 2 3)."
+            di as error "Use standalone methods for subset specifications, or omit specs() with {bf:method(all)}."
+            exit 198
+        }
+        local specs "1 2 3"
     }
 
     // Match the live-order contract used elsewhere in the package: when the
@@ -527,12 +568,21 @@ program define pte_compare, eclass
             if !_rc capture estimates store _clktwfe_m9
             capture estimates drop `_pte_compare_hold_clktwfe_m9'
         }
-        capture estimates restore `_pte_compare_prior_est'
+        if `_pte_compare_entry_was_compare' {
+            capture estimates restore `_pte_compare_entry_est'
+            capture estimates drop `_pte_compare_entry_est'
+        }
+        else {
+            capture estimates restore `_pte_compare_prior_est'
+        }
         capture estimates drop `_pte_compare_prior_est'
         exit `_pte_compare_dispatch_rc'
     }
 
     capture estimates drop `_pte_compare_prior_est'
+    if `_pte_compare_entry_was_compare' {
+        capture estimates drop `_pte_compare_entry_est'
+    }
 
     if `has_pte_att' {
         tempname pte_att_restore

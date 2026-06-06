@@ -29,7 +29,7 @@ program define _pte_mata_findpath, rclass
         local _caller_path `"${PTE_MATA_FINDPATH_FILE}"'
     }
     if `"`_caller_path'"' != "" {
-        if regexm(`"`_caller_path'"', "^(.*)/ado/_pte_mata_findpath\\.ado$") {
+        if regexm(`"`_caller_path'"', "^(.*)/ado/_pte_mata_findpath[.]ado$") {
             local _pte_candidate_root `"`=regexs(1)'"'
             capture confirm file "`_pte_candidate_root'/ado/_pte_mata_findpath.ado"
             if _rc == 0 {
@@ -41,7 +41,7 @@ program define _pte_mata_findpath, rclass
         capture quietly findfile pte.ado
         if _rc == 0 {
             local _pte_ado_path "`r(fn)'"
-            if regexm(`"`_pte_ado_path'"', "^(.*)/ado/pte\\.ado$") {
+            if regexm(`"`_pte_ado_path'"', "^(.*)/ado/pte[.]ado$") {
                 local _pte_candidate_root `"`=regexs(1)'"'
                 capture confirm file "`_pte_candidate_root'/ado/_pte_mata_findpath.ado"
                 if _rc == 0 {
@@ -80,7 +80,7 @@ program define _pte_mata_findpath, rclass
         }
     }
     if "`project_root'" == "" & `"`_ado_path'"' != "" {
-        if regexm(`"`_ado_path'"', "^(.*)/ado/_pte_mata_findpath\\.ado$") {
+        if regexm(`"`_ado_path'"', "^(.*)/ado/_pte_mata_findpath[.]ado$") {
             local project_root `"`=regexs(1)'"'
         }
     }

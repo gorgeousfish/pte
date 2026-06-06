@@ -73,8 +73,9 @@ directly.
 {cmd:_pte_nonabs_ereturn} stores non-absorbing treatment effect estimation
 results in {cmd:e()} for downstream use by {cmd:pte_graph}, {cmd:esttab},
 and other post-estimation commands. It is the final step in the non-absorbing
-estimation pipeline, called after ATT{sup:+} (entry effects) and ATT{sup:-}
-(exit effects) have been computed.
+estimation pipeline, called after ATT{sup:+} (entry switch effects) and
+ATT{sup:-} (staying-treated counterfactuals for exit switchers) have been
+computed.
 
 {pstd}
 The program performs the following:

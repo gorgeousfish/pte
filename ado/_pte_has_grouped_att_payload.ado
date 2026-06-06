@@ -11,7 +11,7 @@ program define _pte_has_grouped_att_payload, rclass
 
     foreach _pte_mat in ///
         att_by att_by_point att_pool att_pool_trim att_pool_raw ///
-        att_sd att_N ///
+        att_N ///
         att_mean_pool att_mean_pool_trim ///
         att_se_pool att_se_pool_trim ///
         att_ci_lower_pool att_ci_upper_pool ///

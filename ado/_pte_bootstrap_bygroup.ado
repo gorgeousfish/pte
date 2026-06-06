@@ -265,18 +265,11 @@ program define _pte_bootstrap_bygroup, eclass
         local att_colnames "`att_colnames' ATT`s'"
     }
     local att_colnames "`att_colnames' ATT"
-    local beta_ncols = cond("`pfunc'" == "cd", 3, 6)
-    local beta_colnames "beta_l beta_k beta_t"
+    local beta_pf_cols = cond("`pfunc'" == "cd", 2, 5)
+    local beta_ncols = `beta_pf_cols' + 1 + `_pte_n_controls'
+    local beta_colnames "beta_l beta_k beta_t `control'"
     if "`pfunc'" != "cd" {
-        local beta_colnames "beta_l beta_k beta_l2 beta_k2 beta_lk beta_t"
-    }
-    if `_pte_n_controls' > 1 {
-        local beta_ncols = cond("`pfunc'" == "cd", 2, 5) + `_pte_n_controls'
-        local beta_colnames "beta_l beta_k"
-        if "`pfunc'" != "cd" {
-            local beta_colnames "beta_l beta_k beta_l2 beta_k2 beta_lk"
-        }
-        local beta_colnames "`beta_colnames' `control'"
+        local beta_colnames "beta_l beta_k beta_l2 beta_k2 beta_lk beta_t `control'"
     }
 
     // =========================================================================
@@ -544,11 +537,12 @@ program define _pte_bootstrap_bygroup, eclass
             if `total_success' == 0 | `_pte_complete_draws' != `total_success' {
                 if "`nolog'" == "" {
                     if `total_success' == 0 {
-                        di as text "[pte] Parallel helper returned no complete grouped draws, falling back to serial"
+                        di as text "{bf:Warning}: parallel helper returned no complete grouped draws; falling back to serial"
                     }
                     else {
-                        di as text "[pte] Parallel helper payload mismatch (`_pte_complete_draws' complete rows vs `total_success' reported successes), falling back to serial"
+                        di as text "{bf:Warning}: parallel helper payload mismatch (`_pte_complete_draws' complete rows vs `total_success' reported successes); falling back to serial"
                     }
+                    di as text "          The final e(parallel_fallback) and e(parallel_fallback_reason) record this execution-path change."
                 }
                 local _did_parallel = 0
                 local parallel_fallback = 1
@@ -558,26 +552,33 @@ program define _pte_bootstrap_bygroup, eclass
                 else {
                     local parallel_fallback_reason "payload_mismatch"
                 }
-                local parallel_method "serial"
-                local parallel_nproc = 1
-                local g_idx = 0
-                foreach grp of local groups {
-                    local ++g_idx
-                    matrix `att_boot_g`g_idx'' = J(`nboot', `ncols', .)
-                    matrix colnames `att_boot_g`g_idx'' = `att_colnames'
-                    if `do_trim' {
-                        matrix `att_trim_boot_g`g_idx'' = J(`nboot', `ncols', .)
-                        matrix colnames `att_trim_boot_g`g_idx'' = `att_colnames'
-                    }
-                    matrix `beta_boot_g`g_idx'' = J(`nboot', `beta_ncols', .)
-                    matrix colnames `beta_boot_g`g_idx'' = `beta_colnames'
-                }
-                local total_success = 0
-                local total_fail = 0
                 quietly use `orig_data', clear
                 quietly xtset `idvar' `timevar'`_pte_boot_delta_opt'
-                quietly save `orig_data', replace
-                scalar _pte_in_bootstrap = 1
+                capture set rngstate `orig_rngstate'
+                capture scalar drop _pte_in_bootstrap
+                capture noisily _pte_bootstrap_bygroup `depvar' if `touse', ///
+                    `_pte_serial_retry_opts'
+                local _pte_retry_rc = _rc
+                if `_pte_retry_rc' != 0 {
+                    if `_pte_has_prev_est' {
+                        capture estimates restore `_pte_prev_est'
+                        capture estimates drop `_pte_prev_est'
+                    }
+                    else {
+                        capture ereturn clear
+                    }
+                    exit `_pte_retry_rc'
+                }
+                if `_pte_has_prev_est' {
+                    capture estimates drop `_pte_prev_est'
+                }
+                capture ereturn scalar parallel_requested_nproc = `parallel_requested_nproc'
+                capture ereturn scalar parallel_fallback = 1
+                capture ereturn scalar parallel_nproc = 1
+                ereturn local parallel_requested_method "`parallel_requested_method'"
+                ereturn local parallel_fallback_reason "`parallel_fallback_reason'"
+                ereturn local parallel_method "serial"
+                exit 0
             }
             
             // Restore data (parallel may have changed it)
@@ -592,7 +593,8 @@ program define _pte_bootstrap_bygroup, eclass
             local parallel_fallback_reason "helper_rc"
             local parallel_helper_rc = _rc
             if "`nolog'" == "" {
-                di as text "[pte] Parallel execution failed (rc=" _rc "), falling back to serial"
+                di as text "{bf:Warning}: parallel execution failed (rc=" _rc "); falling back to serial"
+                di as text "          The final e(parallel_fallback) and e(parallel_helper_rc) record this execution-path change."
             }
             local parallel_method "serial"
             local parallel_nproc = 1
@@ -710,44 +712,35 @@ program define _pte_bootstrap_bygroup, eclass
                 }
                 local bs_beta_t = .
                 local _pte_beta_payload_ctrl_ready = 1
+                local _pte_expected_beta_controls = `_pte_n_controls' + 1
                 capture matrix _pte_beta_ctrl = e(beta_controls)
                 if _rc == 0 {
+                    local _pte_beta_ctrl_ncols = colsof(_pte_beta_ctrl)
                     local _pte_beta_ctrl_names : colnames _pte_beta_ctrl
-                    if `_pte_n_controls' > 1 {
-                        foreach _ctrl of local control {
-                            local _ctrl_pos : list posof "`_ctrl'" in _pte_beta_ctrl_names
-                            if `_ctrl_pos' < 1 {
-                                local _pte_beta_payload_ctrl_ready = 0
-                            }
-                        }
+                    if `_pte_beta_ctrl_ncols' != `_pte_expected_beta_controls' {
+                        local _pte_beta_payload_ctrl_ready = 0
                     }
-                    else if "`control'" != "" {
-                        local _only_ctrl : word 1 of `control'
-                        local _ctrl_pos : list posof "`_only_ctrl'" in _pte_beta_ctrl_names
+                    foreach _ctrl of local control {
+                        local _ctrl_pos : list posof "`_ctrl'" in _pte_beta_ctrl_names
                         if `_ctrl_pos' < 1 {
                             local _pte_beta_payload_ctrl_ready = 0
                         }
-                        else {
-                            local bs_beta_t = _pte_beta_ctrl[1, `_ctrl_pos']
-                        }
                     }
-                    else if colsof(_pte_beta_ctrl) >= 1 {
+                    if `_pte_beta_payload_ctrl_ready' & `_pte_beta_ctrl_ncols' >= 1 {
                         local bs_beta_t = _pte_beta_ctrl[1, 1]
                     }
                 }
                 else {
                     capture local bs_beta_t = _b[t]
-                    if `_pte_n_controls' > 1 {
+                    if `_pte_n_controls' > 0 {
                         local _pte_beta_payload_ctrl_ready = 0
+                    }
+                    else if _rc == 0 & !missing(`bs_beta_t') {
+                        matrix _pte_beta_ctrl = J(1, 1, `bs_beta_t')
                     }
                 }
                 if "`pfunc'" == "cd" {
-                    if `_pte_n_controls' > 1 {
-                        if `_pte_beta_payload_ctrl_ready' == 0 {
-                            local _pte_beta_payload_ok = 0
-                        }
-                    }
-                    else if missing(`bs_beta_t') {
+                    if `_pte_beta_payload_ctrl_ready' == 0 | missing(`bs_beta_t') {
                         local _pte_beta_payload_ok = 0
                     }
                 }
@@ -759,12 +752,7 @@ program define _pte_bootstrap_bygroup, eclass
                         missing(`bs_beta_lk') {
                         local _pte_beta_payload_ok = 0
                     }
-                    if `_pte_n_controls' > 1 {
-                        if `_pte_beta_payload_ctrl_ready' == 0 {
-                            local _pte_beta_payload_ok = 0
-                        }
-                    }
-                    else if missing(`bs_beta_t') {
+                    if `_pte_beta_payload_ctrl_ready' == 0 | missing(`bs_beta_t') {
                         local _pte_beta_payload_ok = 0
                     }
                 }
@@ -896,32 +884,30 @@ program define _pte_bootstrap_bygroup, eclass
                     matrix `beta_boot_g`g_idx''[`b', 1] = `bs_beta_l'
                     matrix `beta_boot_g`g_idx''[`b', 2] = `bs_beta_k'
                     if "`pfunc'" == "cd" {
-                        if `_pte_n_controls' > 1 {
+                        matrix `beta_boot_g`g_idx''[`b', 3] = `bs_beta_t'
+                        if `_pte_n_controls' > 0 {
+                            local _ctrl_j = 0
                             foreach _ctrl of local control {
-                                local _ctrl_j = `: list posof "`_ctrl'" in control'
+                                local ++_ctrl_j
                                 local _ctrl_pos : list posof "`_ctrl'" in _pte_beta_ctrl_names
-                                matrix `beta_boot_g`g_idx''[`b', 2 + `_ctrl_j'] = ///
+                                matrix `beta_boot_g`g_idx''[`b', 3 + `_ctrl_j'] = ///
                                     _pte_beta_ctrl[1, `_ctrl_pos']
                             }
-                        }
-                        else {
-                            matrix `beta_boot_g`g_idx''[`b', 3] = `bs_beta_t'
                         }
                     }
                     else {
                         matrix `beta_boot_g`g_idx''[`b', 3] = `bs_beta_ll'
                         matrix `beta_boot_g`g_idx''[`b', 4] = `bs_beta_kk'
                         matrix `beta_boot_g`g_idx''[`b', 5] = `bs_beta_lk'
-                        if `_pte_n_controls' > 1 {
+                        matrix `beta_boot_g`g_idx''[`b', 6] = `bs_beta_t'
+                        if `_pte_n_controls' > 0 {
+                            local _ctrl_j = 0
                             foreach _ctrl of local control {
-                                local _ctrl_j = `: list posof "`_ctrl'" in control'
+                                local ++_ctrl_j
                                 local _ctrl_pos : list posof "`_ctrl'" in _pte_beta_ctrl_names
-                                matrix `beta_boot_g`g_idx''[`b', 5 + `_ctrl_j'] = ///
+                                matrix `beta_boot_g`g_idx''[`b', 6 + `_ctrl_j'] = ///
                                     _pte_beta_ctrl[1, `_ctrl_pos']
                             }
-                        }
-                        else {
-                            matrix `beta_boot_g`g_idx''[`b', 6] = `bs_beta_t'
                         }
                     }
                     local ++grp_success
@@ -1117,7 +1103,11 @@ program define _pte_bootstrap_bygroup, eclass
     }
     
     local alpha = (100 - `level') / 200
-    
+    // Percentile points (in percent) for the _pctile-based CI bounds, matching
+    // the official replication DOs (egen pctile(), p(.)).
+    local p_lo = 100 * `alpha'
+    local p_hi = 100 * (1 - `alpha')
+
     // Compute SE, CI for pooled raw track
     tempname se_pool ci_lo_pool ci_hi_pool mean_pool
     matrix `se_pool' = J(1, `ncols', .)
@@ -1187,14 +1177,11 @@ program define _pte_bootstrap_bygroup, eclass
         if r(N) >= 2 {
             matrix `mean_pool'[1, `j'] = r(mean)
             matrix `se_pool'[1, `j'] = r(sd)
-            // Percentile CI
-            sort _raw`j'
-            quietly count if !missing(_raw`j')
-            local nv = r(N)
-            local lo_idx = max(1, ceil(`nv' * `alpha'))
-            local hi_idx = min(`nv', floor(`nv' * (1 - `alpha')) + 1)
-            matrix `ci_lo_pool'[1, `j'] = _raw`j'[`lo_idx']
-            matrix `ci_hi_pool'[1, `j'] = _raw`j'[`hi_idx']
+            // Percentile CI: use _pctile so the bounds match the official
+            // replication DOs (egen pctile(), p(.)) exactly.
+            quietly _pctile _raw`j' if !missing(_raw`j'), percentiles(`p_lo' `p_hi')
+            matrix `ci_lo_pool'[1, `j'] = r(r1)
+            matrix `ci_hi_pool'[1, `j'] = r(r2)
         }
         
         // Trim track
@@ -1203,13 +1190,9 @@ program define _pte_bootstrap_bygroup, eclass
             if r(N) >= 2 {
                 matrix `mean_pool_trim'[1, `j'] = r(mean)
                 matrix `se_pool_trim'[1, `j'] = r(sd)
-                sort _trim`j'
-                quietly count if !missing(_trim`j')
-                local nv = r(N)
-                local lo_idx = max(1, ceil(`nv' * `alpha'))
-                local hi_idx = min(`nv', floor(`nv' * (1 - `alpha')) + 1)
-                matrix `ci_lo_trim'[1, `j'] = _trim`j'[`lo_idx']
-                matrix `ci_hi_trim'[1, `j'] = _trim`j'[`hi_idx']
+                quietly _pctile _trim`j' if !missing(_trim`j'), percentiles(`p_lo' `p_hi')
+                matrix `ci_lo_trim'[1, `j'] = r(r1)
+                matrix `ci_hi_trim'[1, `j'] = r(r2)
             }
         }
     }
@@ -1517,6 +1500,7 @@ program define _pte_bootstrap_bygroup, eclass
     ereturn scalar nsim = `nsim'
     ereturn scalar poly = `poly'
     ereturn scalar eps0window = `eps0window'
+    ereturn scalar trimeps = `do_trim'
     ereturn scalar parallel_requested_nproc = `parallel_requested_nproc'
     ereturn scalar parallel_fallback = `parallel_fallback'
     if !missing(`parallel_helper_rc') {
@@ -1543,6 +1527,9 @@ program define _pte_bootstrap_bygroup, eclass
     ereturn local parallel_fallback_reason "`parallel_fallback_reason'"
     ereturn local parallel_method "`parallel_method'"
     ereturn scalar parallel_nproc = `parallel_nproc'
+    if "`notrimeps'" != "" {
+        ereturn local notrimeps "notrimeps"
+    }
     ereturn local cmd_bootstrap "_pte_bootstrap_bygroup"
     ereturn local cmd "_pte_bootstrap_bygroup"
     ereturn local title "PTE Bygroup Bootstrap Inference"

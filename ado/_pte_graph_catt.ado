@@ -23,22 +23,6 @@ program define _pte_graph_catt, rclass
     if "`scheme'" == "" local scheme "s1color"
     if `"`ytitle'"' == "" local ytitle "CATT"
     
-    // Validate required variables
-    foreach var in _pte_tt _pte_omega _pte_nt {
-        capture confirm variable `var', exact
-        if _rc {
-            di as error "pte: variable `var' not found."
-            di as error "  Please run {bf:pte} estimation first."
-            exit 111
-        }
-    }
-
-    _pte_validate_internal_state _pte_tt numeric ///
-        "pte_graph, catt requires _pte_tt to remain the numeric firm-level TT bridge."
-
-    _pte_validate_internal_state _pte_nt integer ///
-        "pte_graph, catt requires _pte_nt to remain the integer event-time bridge."
-
     // Resolve the panel id through the shared diagnostics contract so CATT
     // graphs keep honoring the setup-selected panel axis after pte_setup or
     // postestimation flows that restore the caller's xtset state.
@@ -98,6 +82,15 @@ program define _pte_graph_catt, rclass
         (`"`setup_treatment'"' != "") | ///
         (`"`setup_treatsig'"' != "") | ///
         (`"`setup_xtdelta'"' != "")
+    local have_setup_helper_bundle = 0
+    foreach helper in _pte_D _pte_mid _pte_cohort _pte_treat_year ///
+        _pte_first_treat_year {
+        capture confirm variable `helper', exact
+        if _rc == 0 {
+            local have_setup_helper_bundle = 1
+            continue, break
+        }
+    }
     if "`currentlawchecked'" == "" {
         capture quietly _pte_diag_panel_contract, context("pte_graph catt") ///
             allowsetupmissingxtdelta
@@ -111,7 +104,7 @@ program define _pte_graph_catt, rclass
                 }
             }
         }
-        else if `have_setup_fragment' | `have_live_pte' {
+        else if `have_setup_fragment' | `have_live_pte' | `have_setup_helper_bundle' {
             exit `panel_contract_rc'
         }
     }
@@ -141,6 +134,22 @@ program define _pte_graph_catt, rclass
         di as error "  Re-run {bf:pte} or {bf:xtset} the current panel data."
         exit 111
     }
+
+    // Validate required variables
+    foreach var in _pte_tt _pte_omega _pte_nt {
+        capture confirm variable `var', exact
+        if _rc {
+            di as error "pte: variable `var' not found."
+            di as error "  Please run {bf:pte} estimation first."
+            exit 111
+        }
+    }
+
+    _pte_validate_internal_state _pte_tt numeric ///
+        "pte_graph, catt requires _pte_tt to remain the numeric firm-level TT bridge."
+
+    _pte_validate_internal_state _pte_nt integer ///
+        "pte_graph, catt requires _pte_nt to remain the integer event-time bridge."
     
     // Validate pre-treatment observations exist
     quietly count if _pte_nt == -1

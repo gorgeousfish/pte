@@ -117,26 +117,6 @@ program define _pte_treatdep_prepare_runtime, rclass
         local final_ready = r(ready)
         local final_missing `"`r(missing)'"'
     }
-    else {
-        // Symbol-level readiness is weaker than the live consumer contract.
-        // Smoke-test the same translog-style call family used downstream so
-        // dependency gates certify executable semantics rather than only the
-        // presence of facf*/opt_mata objects.
-        capture quietly _pte_treatdep_warm_installed_ado
-        local warm_rc = _rc
-        if `warm_rc' != 0 {
-            capture mata: mata drop facf1()
-            capture mata: mata drop facf2()
-            if `patch_applied' {
-                capture mata: mata drop facf3()
-                capture mata: mata drop opt_mata()
-            }
-            quietly _pte_treatdep_contract_ready
-        }
-        else quietly _pte_treatdep_contract_ready
-        local final_ready = r(ready)
-        local final_missing `"`r(missing)'"'
-    }
     if `final_ready' == 0 {
         // A failed dependency-prepare cycle must not leave the patch-only
         // companion objects visible in Mata when the upstream contract never

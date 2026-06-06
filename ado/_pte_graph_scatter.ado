@@ -71,6 +71,15 @@ program define _pte_graph_scatter, rclass
         (`"`setup_treatment'"' != "") | ///
         (`"`setup_treatsig'"' != "") | ///
         (`"`setup_xtdelta'"' != "")
+    local have_setup_helper_bundle = 0
+    foreach helper in _pte_D _pte_mid _pte_cohort _pte_treat_year ///
+        _pte_first_treat_year {
+        capture confirm variable `helper', exact
+        if _rc == 0 {
+            local have_setup_helper_bundle = 1
+            continue, break
+        }
+    }
     local have_live_panel_contract = ///
         (`"`live_id'"' != "") | (`"`live_time'"' != "") | (`"`live_treatsig'"' != "")
     local have_live_payload = ///
@@ -86,7 +95,7 @@ program define _pte_graph_scatter, rclass
             local timevar "`r(timevar)'"
             local xtdelta "`r(xtdelta)'"
         }
-        else if `have_setup_fragment' | `have_live_pte' {
+        else if `have_setup_fragment' | `have_live_pte' | `have_setup_helper_bundle' {
             exit `panel_contract_rc'
         }
     }

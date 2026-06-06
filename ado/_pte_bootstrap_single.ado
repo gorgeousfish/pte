@@ -181,6 +181,16 @@ program define _pte_bootstrap_single, rclass
 
         capture drop _pte_firm_bs
         quietly bsample, strata(_pte_treat_firm) cluster(`id') idcluster(_pte_firm_bs)
+        quietly count if _pte_treat_firm == 0
+        local n_control_bs = r(N)
+        quietly count if _pte_treat_firm == 1
+        local n_treated_bs = r(N)
+        if `n_control_bs' == 0 | `n_treated_bs' == 0 {
+            di as error "[pte] Error: bootstrap draw lacks treated or control observations"
+            di as error "[pte]        Control observations: `n_control_bs'"
+            di as error "[pte]        Treated observations: `n_treated_bs'"
+            exit 2001
+        }
         quietly xtset _pte_firm_bs `time'`_pte_boot_delta_opt'
 
         // ================================================================

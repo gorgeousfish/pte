@@ -70,6 +70,14 @@ program define _pte_het_parse_groups, rclass
     
     // Count number of groups
     local n_groups : word count `group_list'
+
+    // Public summary contract: very fine subgroup partitions remain legal,
+    // but the user should be warned before Table 2 style output becomes
+    // unreadably long or substantively too fragmented.
+    if `n_groups' > 50 {
+        display as text "Warning: `groupvar' has more than 50 unique values;"
+        display as text "  consider a coarser discrete grouping variable instead"
+    }
     
     // =========================================================================
     // Step 5: Validate minimum group count (need >= 2 for heterogeneity)
@@ -88,13 +96,14 @@ program define _pte_het_parse_groups, rclass
     // Check if the variable has a value label attached
     local vallbl : value label `byvar_use'
     
-    if "`vallbl'" != "" {
+    if `is_string' {
+        local group_labels `"`group_tokens'"'
+    }
+    else if "`vallbl'" != "" {
         // Variable has value labels: retrieve label for each group value
         foreach g of local group_list {
             local lbl : label `vallbl' `g'
-            local lbl_clean = subinstr(`"`lbl'"', " ", "_", .)
-            local lbl_clean = subinstr(`"`lbl_clean'"', `"""', "", .)
-            local group_labels "`group_labels' `lbl_clean'"
+            local group_labels `"`group_labels' `"`lbl'"'"'
         }
     }
     else {

@@ -30,19 +30,7 @@ program define _pte_graph_tt, rclass
     _pte_validate_internal_state _pte_tt numeric ///
         "pte_graph, tt requires _pte_tt to remain the numeric firm-level TT bridge."
     
-    // Check that the canonical event-time track exists exactly.
-    capture confirm variable _pte_nt, exact
-    if _rc {
-        di as error "pte: variable _pte_nt not found."
-        di as error "  Please run {bf:pte} estimation before using graph options."
-        exit 111
-    }
-
-    _pte_validate_internal_state _pte_treat binary ///
-        "pte_graph, tt requires _pte_treat to identify treated observations."
-
-    _pte_validate_internal_state _pte_nt integer ///
-        "pte_graph, tt requires _pte_nt to be the integer event-time bridge."
+    _pte_graph_evtreat, context("pte_graph, tt")
     
     // Check that _pte_tt has non-missing values
     quietly count if !missing(_pte_tt) & _pte_treat == 1

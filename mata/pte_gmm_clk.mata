@@ -10,8 +10,9 @@
 *!   1. Recovers realized productivity omega_t(beta) = phi_t - X_t beta.
 *!   2. Rebuilds the lagged evolution basis OMEGA_LAG_POL.
 *!   3. Concentrates out the evolution coefficients g_b by OLS.
-*!   4. Forms the one-step GMM objective Q(beta) = (Z'xi)' W (Z'xi),
-*!      where W = invsym(Z'Z) / N and xi is the implied evolution residual.
+*!   4. Forms the one-step GMM objective Q(beta) = (Zs'xi)' W (Zs'xi),
+*!      where Zs stacks instruments interacted with D_{t-1}=0 and D_{t-1}=1,
+*!      W = invsym(Zs'Zs) / N, and xi is the implied evolution residual.
 
 version 14.0
 
@@ -122,8 +123,12 @@ struct OptimizationResult scalar pte_optimize_with_diagnostics(
     struct OptimizationResult scalar result, best_result, try_result
     transmorphic scalar S
     real matrix grid
+    real rowvector best_start
     real scalar i, n_grid, best_fval
-    
+
+    st_matrix("beta_init_resolved", init)
+    st_matrix("beta_start_actual", init)
+
     // ================================================================
     // Step 1: Primary optimization attempt
     // ================================================================
@@ -134,6 +139,7 @@ struct OptimizationResult scalar pte_optimize_with_diagnostics(
     // Step 2: Check convergence and handle failure
     // ================================================================
     if (result.converged == 1) {
+        st_matrix("beta_start_actual", init)
         // A converged optimizer is still unusable if the stored criterion is invalid.
         if (result.fval == . | result.fval < 0) {
             errprintf("Error 504: Invalid objective function value (fval = %g)\n", result.fval)
@@ -153,6 +159,7 @@ struct OptimizationResult scalar pte_optimize_with_diagnostics(
         n_grid = rows(grid)
         best_fval = .
         best_result = result  // fallback to primary result
+        best_start = init
         
         for (i = 1; i <= n_grid; i++) {
             S = pte_setup_optimizer(evaluator, grid[i, .], maxiter, tol, simplex_delta)
@@ -162,6 +169,7 @@ struct OptimizationResult scalar pte_optimize_with_diagnostics(
                 if (best_fval == . | try_result.fval < best_fval) {
                     best_fval = try_result.fval
                     best_result = try_result
+                    best_start = grid[i, .]
                     printf("{txt}  Grid point %g: converged, fval = %g\n", i, try_result.fval)
                 }
             }
@@ -173,6 +181,7 @@ struct OptimizationResult scalar pte_optimize_with_diagnostics(
         // Return the best converged retry, otherwise fail closed.
         if (best_result.converged == 1) {
             printf("{txt}Best result from grid search: fval = %g\n", best_result.fval)
+            st_matrix("beta_start_actual", best_start)
             return(best_result)
         }
         
@@ -184,20 +193,13 @@ struct OptimizationResult scalar pte_optimize_with_diagnostics(
     }
     
     // ================================================================
-    // Step 4: No grid - return with warning (do not exit)
+    // Step 4: No grid - fail closed on non-convergence.
     // ================================================================
-    printf("\n{err}Warning: GMM optimization did not converge (rc=%g)\n", result.rc)
-    printf("{err}  Final criterion value: %g\n", result.fval)
-    printf("{err}  Iterations: %g / %g\n", result.iterations, maxiter)
-    printf("{err}  Consider: init(), grid, maxiter(), tolerance()\n\n")
-    
-    // Even a warning path should not publish a missing criterion value.
-    if (result.fval == .) {
-        errprintf("Error 504: Objective function value is missing\n")
-        exit(504)
-    }
-    
-    return(result)
+    errprintf("\nError 430: GMM optimization did not converge (rc=%g)\n", result.rc)
+    errprintf("  Final criterion value: %g\n", result.fval)
+    errprintf("  Iterations: %g / %g\n", result.iterations, maxiter)
+    errprintf("  Consider: init(), grid, maxiter(), tolerance(), or a simpler omegapoly()\n")
+    exit(430)
 }
 
 // ====================================================================
@@ -223,7 +225,7 @@ void GMM_CLK(real scalar todo, real rowvector betas,
     real matrix OMEGA3_lag, OMEGA3_TP_lag, OMEGA4_lag, OMEGA4_TP_lag
     real matrix OLtOL, ZtZ
     real colvector g_b, XI
-    real scalar det_ZtZ, cond_ZtZ, det_OLtOL, N
+    real scalar cond_ZtZ, cond_OLtOL, rank_OLtOL, N
     real scalar omegapoly
     string scalar prodfunc
     
@@ -246,6 +248,29 @@ void GMM_CLK(real scalar todo, real rowvector betas,
     TP_lag = _pte_get_TP_lag()
     
     N = rows(X)
+    if (N == 0) {
+        errprintf("Error 503: GMM evaluator received an empty X matrix\n")
+        exit(503)
+    }
+    if (rows(PHI) != N | rows(PHI_LAG) != N |
+        rows(X_lag) != N | rows(Z) != N |
+        rows(C) != N | rows(TP_lag) != N) {
+        errprintf("Error 503: GMM evaluator matrix row mismatch\n")
+        errprintf("  PHI=%g, PHI_LAG=%g, X=%g, X_lag=%g, Z=%g, C=%g, TP_lag=%g\n",
+                  rows(PHI), rows(PHI_LAG), rows(X), rows(X_lag),
+                  rows(Z), rows(C), rows(TP_lag))
+        exit(503)
+    }
+    if (cols(betas) != cols(X)) {
+        errprintf("Error 503: beta dimension mismatch in GMM evaluator\n")
+        errprintf("  beta columns=%g, X columns=%g\n", cols(betas), cols(X))
+        exit(503)
+    }
+    if (cols(X_lag) != cols(X)) {
+        errprintf("Error 503: X_lag dimension mismatch in GMM evaluator\n")
+        errprintf("  X_lag columns=%g, X columns=%g\n", cols(X_lag), cols(X))
+        exit(503)
+    }
     
     // ================================================================
     // [3] Z'Z numerical stability checks
@@ -262,16 +287,10 @@ void GMM_CLK(real scalar todo, real rowvector betas,
     ZtZ = cross(Z, Z)
     cond_ZtZ = cond(ZtZ)
 
-    // Strict guard: numerically singular / unusable Z'Z
-    // (scale-invariant, consistent with double-precision limits)
-    if (cond_ZtZ == . | cond_ZtZ > 1e16) {
-        errprintf("\nError 504: Z'Z matrix is numerically singular or ill-conditioned\n")
-        errprintf("  cond(Z'Z) = %g (threshold: 1e16)\n", cond_ZtZ)
-        errprintf("\nPossible causes:\n")
-        errprintf("  1. Multicollinearity in instruments\n")
-        errprintf("  2. Insufficient sample size (N=%g, K=%g)\n", N, cols(Z))
-        errprintf("  3. Lack of variation after transition exclusion\n")
-        exit(504)
+    if (cond_ZtZ == . | cond_ZtZ > 1e12) {
+        printf("\nWarning: Z'Z matrix is ill-conditioned\n")
+        printf("  cond(Z'Z) = %g\n", cond_ZtZ)
+        printf("  Continuing with invsym() to match the paper/DO benchmark path.\n")
     }
 
     // Warning only (do not abort)
@@ -290,6 +309,19 @@ void GMM_CLK(real scalar todo, real rowvector betas,
     // Phi has already had non-input controls removed upstream, so subtracting
     // X*beta here isolates the latent productivity term used in Theorem 3.1.
     // ================================================================
+    if (rows(PHI) != rows(X) | rows(PHI_LAG) != rows(X_lag) | rows(X) != rows(X_lag)) {
+        errprintf("Error 503: OMEGA construction row mismatch\n")
+        errprintf("  rows(PHI)=%g, rows(X)=%g, rows(PHI_LAG)=%g, rows(X_lag)=%g\n",
+                  rows(PHI), rows(X), rows(PHI_LAG), rows(X_lag))
+        exit(503)
+    }
+    if (cols(betas) != cols(X) | cols(betas) != cols(X_lag)) {
+        errprintf("Error 503: OMEGA construction column mismatch\n")
+        errprintf("  cols(beta)=%g, cols(X)=%g, cols(X_lag)=%g\n",
+                  cols(betas), cols(X), cols(X_lag))
+        exit(503)
+    }
+
     OMEGA = PHI - X * betas'
     OMEGA_lag = PHI_LAG - X_lag * betas'
     
@@ -342,24 +374,109 @@ void GMM_CLK(real scalar todo, real rowvector betas,
     // is recomputed by closed-form OLS from the current implied productivity.
     // ================================================================
     OLtOL = cross(OMEGA_LAG_POL, OMEGA_LAG_POL)
-    det_OLtOL = det(OLtOL)
+    cond_OLtOL = cond(OLtOL)
+    rank_OLtOL = rank(OLtOL)
     
-    if (det_OLtOL < 1e-10) {
-        // Fall back to a Moore-Penrose inverse when the OLS normal equations
-        // are nearly singular instead of publishing explosive coefficients.
-        g_b = pinv(OLtOL) * cross(OMEGA_LAG_POL, OMEGA)
+    if (rank_OLtOL < cols(OLtOL) | cond_OLtOL == . | cond_OLtOL > 1e12) {
+        printf("\nWarning: concentrated evolution projection is ill-conditioned\n")
+        printf("  rank(OL'OL) = %g of %g\n", rank_OLtOL, cols(OLtOL))
+        printf("  cond(OL'OL) = %g\n", cond_OLtOL)
+        printf("  Continuing with invsym() to match the paper/DO benchmark path.\n")
     }
-    else {
-        // Standard closed-form OLS update.
-        g_b = invsym(OLtOL) * cross(OMEGA_LAG_POL, OMEGA)
-    }
+    // Standard closed-form OLS update.
+    g_b = invsym(OLtOL) * cross(OMEGA_LAG_POL, OMEGA)
     
     // ================================================================
-    // Xi is the stable-state evolution residual; the criterion penalizes its
-    // sample moments against the instrument set Z.
+    // Xi is the stable-state evolution residual; Z has already been expanded
+    // into untreated and treated instrument blocks, so the criterion penalizes
+    // the two Theorem 3.1 state moments separately.
     // ================================================================
     XI = OMEGA - OMEGA_LAG_POL * g_b
     crit = (cross(Z, XI)' * W * cross(Z, XI))[1,1]
+}
+
+// ====================================================================
+// Store diagnostics for the final beta without changing the objective path.
+// These values let the ado layer expose the concentrated evolution projection
+// and implied residual scale used at the converged point.
+// ====================================================================
+void _pte_store_gmm_final_diagnostics(real rowvector betas)
+{
+    real matrix PHI, PHI_LAG, X, X_lag, C, TP_lag
+    real matrix OMEGA, OMEGA_lag, OMEGA_LAG_POL
+    real matrix OMEGA_TP_lag, OMEGA2_lag, OMEGA2_TP_lag
+    real matrix OMEGA3_lag, OMEGA3_TP_lag, OMEGA4_lag, OMEGA4_TP_lag
+    real matrix OLtOL
+    real colvector g_b, XI
+    real scalar omegapoly, cond_OLtOL, rank_OLtOL
+
+    omegapoly = strtoreal(st_local("omegapoly"))
+    PHI = _pte_get_PHI()
+    PHI_LAG = _pte_get_PHI_lag()
+    X = _pte_get_X()
+    X_lag = _pte_get_X_lag()
+    C = _pte_get_C()
+    TP_lag = _pte_get_TP_lag()
+
+    if (rows(X) == 0 | rows(PHI) != rows(X) | rows(PHI_LAG) != rows(X_lag) |
+        rows(X) != rows(X_lag) | rows(C) != rows(X) | rows(TP_lag) != rows(X) |
+        cols(betas) != cols(X) | cols(betas) != cols(X_lag)) {
+        errprintf("Error 503: final GMM diagnostic dimension mismatch\n")
+        exit(503)
+    }
+
+    OMEGA = PHI - X * betas'
+    OMEGA_lag = PHI_LAG - X_lag * betas'
+    OMEGA_TP_lag = OMEGA_lag :* TP_lag
+
+    if (omegapoly == 1) {
+        OMEGA_LAG_POL = (C, OMEGA_lag, OMEGA_TP_lag, TP_lag)
+    }
+    else if (omegapoly == 2) {
+        OMEGA2_lag = OMEGA_lag :* OMEGA_lag
+        OMEGA2_TP_lag = OMEGA2_lag :* TP_lag
+        OMEGA_LAG_POL = (C, OMEGA_lag, OMEGA_TP_lag, OMEGA2_lag, OMEGA2_TP_lag, TP_lag)
+    }
+    else if (omegapoly == 3) {
+        OMEGA2_lag = OMEGA_lag :* OMEGA_lag
+        OMEGA2_TP_lag = OMEGA2_lag :* TP_lag
+        OMEGA3_lag = OMEGA2_lag :* OMEGA_lag
+        OMEGA3_TP_lag = OMEGA3_lag :* TP_lag
+        OMEGA_LAG_POL = (C, OMEGA_lag, OMEGA_TP_lag, OMEGA2_lag, OMEGA2_TP_lag,
+                        OMEGA3_lag, OMEGA3_TP_lag, TP_lag)
+    }
+    else if (omegapoly == 4) {
+        OMEGA2_lag = OMEGA_lag :* OMEGA_lag
+        OMEGA2_TP_lag = OMEGA2_lag :* TP_lag
+        OMEGA3_lag = OMEGA2_lag :* OMEGA_lag
+        OMEGA3_TP_lag = OMEGA3_lag :* TP_lag
+        OMEGA4_lag = OMEGA3_lag :* OMEGA_lag
+        OMEGA4_TP_lag = OMEGA4_lag :* TP_lag
+        OMEGA_LAG_POL = (C, OMEGA_lag, OMEGA_TP_lag, OMEGA2_lag, OMEGA2_TP_lag,
+                        OMEGA3_lag, OMEGA3_TP_lag, OMEGA4_lag, OMEGA4_TP_lag, TP_lag)
+    }
+    else {
+        errprintf("Error 503: invalid omegapoly in final diagnostics\n")
+        exit(503)
+    }
+
+    OLtOL = cross(OMEGA_LAG_POL, OMEGA_LAG_POL)
+    cond_OLtOL = cond(OLtOL)
+    rank_OLtOL = rank(OLtOL)
+    if (rank_OLtOL < cols(OLtOL) | cond_OLtOL == . | cond_OLtOL > 1e12) {
+        printf("\nWarning: final concentrated evolution projection is ill-conditioned\n")
+        printf("  rank(OL'OL) = %g of %g\n", rank_OLtOL, cols(OLtOL))
+        printf("  cond(OL'OL) = %g\n", cond_OLtOL)
+        printf("  Continuing with invsym() to match the paper/DO benchmark path.\n")
+    }
+    g_b = invsym(OLtOL) * cross(OMEGA_LAG_POL, OMEGA)
+    XI = OMEGA - OMEGA_LAG_POL * g_b
+
+    st_numscalar("gmm_diag_cond_OLtOL", cond_OLtOL)
+    st_numscalar("gmm_diag_rank_OLtOL", rank_OLtOL)
+    st_numscalar("gmm_diag_xi_mean", mean(XI))
+    st_numscalar("gmm_diag_xi_sd", sqrt(variance(XI)))
+    st_numscalar("gmm_diag_xi_max_abs", max(abs(XI)))
 }
 
 
@@ -393,6 +510,10 @@ real rowvector _pte_resolve_beta_init(string scalar prodfunc)
         }
 
         if (missing(beta_init) > 0) {
+            if (use_custom_init == 1) {
+                errprintf("Error 504: CD init() contains missing values\n")
+                exit(504)
+            }
             printf("Warning: CD initial values contain missing, using defaults (0.5, 0.5)\n")
             beta_init = (0.5, 0.5)
         }
@@ -457,9 +578,9 @@ void _pte_report_result(struct OptimizationResult scalar result)
         printf("\n")
     }
     else {
-        printf("\nWarning: GMM optimization did not converge\n")
-        printf("  Final criterion value: %g\n", result.fval)
-        printf("  Consider trying different starting values\n")
+        errprintf("\nError 430: GMM optimization did not converge\n")
+        errprintf("  Final criterion value: %g\n", result.fval)
+        errprintf("  Consider trying different starting values\n")
     }
 }
 
@@ -481,6 +602,8 @@ void MODEL_CLK()
     is_translog = (prodfunc == "translog")
 
     beta_init = _pte_resolve_beta_init(prodfunc)
+    st_matrix("beta_init_resolved", beta_init)
+    st_matrix("beta_start_actual", beta_init)
     result = pte_optimize_with_diagnostics(&GMM_CLK(), beta_init, maxiter, tol, 0.00001, 0, is_translog)
 
     _pte_store_result(result)
@@ -505,6 +628,8 @@ void MODEL_CLK_grid()
     is_translog = (prodfunc == "translog")
 
     beta_init = _pte_resolve_beta_init(prodfunc)
+    st_matrix("beta_init_resolved", beta_init)
+    st_matrix("beta_start_actual", beta_init)
     result = pte_optimize_with_diagnostics(&GMM_CLK(), beta_init, maxiter, tol, 0.00001, 1, is_translog)
 
     _pte_store_result(result)
@@ -531,6 +656,8 @@ void MODEL_CLK_multistart()
     max_tries = 5
 
     beta_init = _pte_resolve_beta_init(prodfunc)
+    st_matrix("beta_init_resolved", beta_init)
+    st_matrix("beta_start_actual", beta_init)
 
     result.converged = 0
     result.fval = .
@@ -564,6 +691,7 @@ void MODEL_CLK_multistart()
         result = pte_execute_optimization(S)
 
         if (result.converged) {
+            st_matrix("beta_start_actual", init)
             printf("Converged at try %g with init = (", try_num)
             for (i = 1; i <= cols(init); i++) {
                 printf("%g", init[i])

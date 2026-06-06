@@ -214,10 +214,11 @@ program define _pte_evolution_separate, eclass sortpreserve
     }
     
     capture qui regress `omega' `regvars' if `sample_h0'
-    
-    if _rc != 0 {
-        di as error "[pte] h_bar_0 regression failed (error code " _rc ")"
-        exit _rc
+    local _pte_h0_reg_rc = _rc
+
+    if `_pte_h0_reg_rc' != 0 {
+        di as error "[pte] h_bar_0 regression failed (error code `_pte_h0_reg_rc')"
+        exit `_pte_h0_reg_rc'
     }
     
     // Extract coefficients into matrix
@@ -256,10 +257,11 @@ program define _pte_evolution_separate, eclass sortpreserve
     }
     
     capture qui regress `omega' `regvars' if `sample_h1'
-    
-    if _rc != 0 {
-        di as error "[pte] h_bar_1 regression failed (error code " _rc ")"
-        exit _rc
+    local _pte_h1_reg_rc = _rc
+
+    if `_pte_h1_reg_rc' != 0 {
+        di as error "[pte] h_bar_1 regression failed (error code `_pte_h1_reg_rc')"
+        exit `_pte_h1_reg_rc'
     }
     
     // Extract coefficients into matrix

@@ -54,6 +54,79 @@ program define _pte_graph_eps0_diag, rclass
 
     local timevar ""
     if `do_cdf' & `has_treat' {
+        local setup_panel_pre : char _dta[_pte_setup_panelvar]
+        local setup_time_pre : char _dta[_pte_setup_timevar]
+        local setup_treatment_pre : char _dta[_pte_setup_treatment]
+        local setup_treatsig_pre : char _dta[_pte_setup_treatsig]
+        local setup_xtdelta_pre : char _dta[_pte_setup_xtdelta]
+        local live_id_pre ""
+        local live_time_pre ""
+        local live_treatsig_pre ""
+        local live_predict_pre ""
+        local live_treatment_pre ""
+        if "`e(cmd)'" == "pte" {
+            capture local live_id_pre = e(idvar)
+            if _rc != 0 | inlist("`live_id_pre'", "", ".") {
+                capture local live_id_pre = e(id)
+            }
+            if "`live_id_pre'" == "." {
+                local live_id_pre ""
+            }
+            capture local live_time_pre = e(timevar)
+            if _rc != 0 | inlist("`live_time_pre'", "", ".") {
+                capture local live_time_pre = e(time)
+            }
+            if "`live_time_pre'" == "." {
+                local live_time_pre ""
+            }
+            capture local live_treatsig_pre = e(treatsig)
+            if _rc != 0 | "`live_treatsig_pre'" == "." {
+                local live_treatsig_pre ""
+            }
+            capture local live_predict_pre = e(predict)
+            if _rc != 0 | "`live_predict_pre'" == "." {
+                local live_predict_pre ""
+            }
+            capture local live_treatment_pre = e(treatment)
+            if _rc != 0 | "`live_treatment_pre'" == "." {
+                local live_treatment_pre ""
+            }
+        }
+        local have_setup_fragment_pre = ///
+            (`"`setup_panel_pre'"' != "") | ///
+            (`"`setup_time_pre'"' != "") | ///
+            (`"`setup_treatment_pre'"' != "") | ///
+            (`"`setup_treatsig_pre'"' != "") | ///
+            (`"`setup_xtdelta_pre'"' != "")
+        local have_setup_helper_bundle_pre = 0
+        foreach helper in _pte_D _pte_mid _pte_cohort _pte_treat_year ///
+            _pte_first_treat_year {
+            capture confirm variable `helper', exact
+            if _rc == 0 {
+                local have_setup_helper_bundle_pre = 1
+                continue, break
+            }
+        }
+        local have_live_panel_contract_pre = ///
+            (`"`live_id_pre'"' != "") | (`"`live_time_pre'"' != "") | ///
+            (`"`live_treatsig_pre'"' != "")
+        local have_live_payload_pre = (`"`live_predict_pre'"' != "")
+        local have_live_pte_pre = ///
+            (`have_live_panel_contract_pre' | `have_live_payload_pre')
+
+        if `have_setup_fragment_pre' | `have_live_pte_pre' | ///
+            `have_setup_helper_bundle_pre' {
+            capture noisily _pte_diag_panel_contract, ///
+                context("pte_graph eps0_diagnostic") allowsetupmissingxtdelta
+            local panel_contract_pre_rc = _rc
+            if `panel_contract_pre_rc' == 0 {
+                local timevar "`r(timevar)'"
+            }
+            else {
+                exit `panel_contract_pre_rc'
+            }
+        }
+
         _pte_validate_internal_state _pte_treat binary ///
             "pte_graph eps0_diagnostic CDF path requires _pte_treat to remain the certified binary ever-treated indicator."
         capture confirm variable _pte_nt, exact

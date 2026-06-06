@@ -36,27 +36,24 @@
 complete for all treated firms in the current dataset. This validation is
 required before ATT estimation because the counterfactual simulation
 (Proposition 4.3) starts from the lagged productivity value at nt=0.
-The nt=0 counterfactual is deterministic under Proposition 4.1 / C.1;
-simulated epsilon-zero shocks enter only when recursing to nt>=1.
+The nt=-1 anchor is required because the simulated nt=0 counterfactual path
+uses the lagged untreated innovation draw under Proposition 4.3.
 Both the main ATT simulation and cohort instant objects require nt=-1
 to be present.
 
 {pstd}
-If some firms are missing nt=-1 while others are complete, the current live
-implementation issues a warning, drops the incomplete firms from the working
-dataset, and continues with the validated sample. A hard error is raised only
-when no nt=-1 observations exist at all, or when none remain after incomplete
-firms are dropped.
+If any treated firm in the active ATT sample is missing nt=-1, validation fails.
+Dropping those firms would change the ATT target, so the helper reports the
+affected firms and exits rather than continuing on a silently narrowed sample.
 
 {pstd}
-In short: firms with missing nt=-1 are {bf:warning and dropped}, not treated
-as an automatic fatal error when other valid firms remain.
+In short: firms with missing nt=-1 are treated as a fatal support failure.
 
 {pstd}
 When {opt omega()} is supplied, the helper also requires an observed
 omega at nt=-1 for each firm because the ATT simulation starts from the
 realized pre-treatment productivity anchor. Firms that have an nt=-1 row
-but missing observed omega at that anchor are warned and dropped even when
+but missing observed omega at that anchor also cause a fatal error even when
 {opt debug} is omitted.
 
 {pstd}
@@ -66,12 +63,11 @@ The validation performs four checks:
 
 {phang2}2. {bf:Completeness check}: Every treated firm should have an nt=-1
 observation. Firms that fail this check are reported, dropped, and excluded
-from subsequent ATT simulation.{p_end}
+observation. Firms that fail this check are reported and the command exits.{p_end}
 
 {phang2}3. {bf:Observed omega anchor check}: When {opt omega()} is supplied,
 every treated firm must also have observed omega at nt=-1. Firms that fail
-this check are reported, dropped, and excluded from subsequent ATT
-simulation even outside debug mode.{p_end}
+this check are reported and the command exits even outside debug mode.{p_end}
 
 {phang2}4. {bf:L.omega check} (debug mode only, when {opt omega()} is supplied):
 L.omega at nt=0 equals omega at nt=-1 for each firm, with tolerance 1e-10.{p_end}
@@ -121,14 +117,11 @@ even if {opt debug} is omitted.
 {title:Error codes}
 
 {pstd}
-{bf:E-3002}: Missing nt=-1 observations{break}
-Raised only when no nt=-1 observations exist in the data, or when none
-remain after dropping firms with incomplete nt=-1 histories. If only some
-treated firms are missing nt=-1, the program warns, drops those firms, and
-continues with the validated sample. Check that the data includes
-year = treat_year - 1 for all treated firms kept for ATT estimation. When
-{opt omega()} is supplied, the same error can also arise after the helper
-drops firms whose nt=-1 row exists but lacks observed omega at the anchor.
+{bf:E-3002}: Missing nt=-1 support{break}
+Raised when no nt=-1 observations exist, when any treated firm lacks nt=-1,
+or when {opt omega()} is supplied and any treated firm lacks observed omega
+at nt=-1. Check that the data includes year = treat_year - 1 and nonmissing
+productivity for all treated firms kept for ATT estimation.
 
 {pstd}
 {bf:E-3003}: L.omega mismatch{break}
@@ -156,17 +149,17 @@ Check that the data is correctly sorted and tsset.
 
 {pstd}
 The main {_bf:_pte_att} simulation worker starts from the lagged
-productivity value at nt=0. Proposition 4.1 / C.1 identifies the
-onset counterfactual from the untreated conditional mean, so the nt=0
-counterfactual is deterministic in the main ATT simulation. Simulated
-epsilon-zero shocks enter only when recursing to nt>=1. For the main
-simulation chain, the nt=0 counterfactual is:
+productivity value at nt=0 and consumes the lagged untreated innovation draw
+on that first simulated transition. Proposition 4.1 / C.1 identifies the
+conditional-mean onset benchmark, but the main dynamic ATT path follows
+Proposition 4.3 and the official DO-style recursion:
 
 {pmore}
-omega_0 = h_bar_0(L.omega)
+omega_0 = h_bar_0(L.omega) + L.eps0
 
 {pstd}
-where L.omega at nt=0 retrieves the observed productivity at nt=-1.
+where L.omega and L.eps0 at nt=0 retrieve the observed productivity and
+simulated untreated innovation draw from nt=-1.
 Firms without nt=-1 cannot supply this starting value, so they are removed
 from the validated ATT sample. The helper only aborts when no valid nt=-1
 starting points remain.

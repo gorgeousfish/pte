@@ -853,7 +853,11 @@ program define _pte_bootstrap_nonabs, eclass
     // with missing-row filtering for independent failure handling
     // ================================================================
     local alpha = (100 - `level') / 200
-    
+    // Percentile points (in percent) for the _pctile-based CI bounds, matching
+    // the official replication DOs (egen pctile(), p(.)).
+    local p_lo = 100 * `alpha'
+    local p_hi = 100 * (1 - `alpha')
+
     // ATT+ SE/CI
     if `do_att_plus' {
         tempname se_plus ci_lo_plus ci_hi_plus mean_plus n_valid_plus
@@ -932,14 +936,11 @@ program define _pte_bootstrap_nonabs, eclass
                 if `j' == 1 {
                     local nboot_valid_plus = r(N)
                 }
-                // Percentile CI (Task 26)
-                sort _plus`j'
-                qui count if !missing(_plus`j')
-                local nv = r(N)
-                local lo_idx = max(1, ceil(`nv' * `alpha'))
-                local hi_idx = min(`nv', floor(`nv' * (1 - `alpha')) + 1)
-                matrix `ci_lo_plus'[1, `j'] = _plus`j'[`lo_idx']
-                matrix `ci_hi_plus'[1, `j'] = _plus`j'[`hi_idx']
+                // Percentile CI (Task 26): use _pctile so the bounds match the
+                // official replication DOs (egen pctile(), p(.)) exactly.
+                qui _pctile _plus`j' if !missing(_plus`j'), percentiles(`p_lo' `p_hi')
+                matrix `ci_lo_plus'[1, `j'] = r(r1)
+                matrix `ci_hi_plus'[1, `j'] = r(r2)
             }
         }
     }
@@ -956,14 +957,11 @@ program define _pte_bootstrap_nonabs, eclass
                 if `j' == 1 {
                     local nboot_valid_minus = r(N)
                 }
-                // Percentile CI
-                sort _minus`j'
-                qui count if !missing(_minus`j')
-                local nv = r(N)
-                local lo_idx = max(1, ceil(`nv' * `alpha'))
-                local hi_idx = min(`nv', floor(`nv' * (1 - `alpha')) + 1)
-                matrix `ci_lo_minus'[1, `j'] = _minus`j'[`lo_idx']
-                matrix `ci_hi_minus'[1, `j'] = _minus`j'[`hi_idx']
+                // Percentile CI: use _pctile so the bounds match the official
+                // replication DOs (egen pctile(), p(.)) exactly.
+                qui _pctile _minus`j' if !missing(_minus`j'), percentiles(`p_lo' `p_hi')
+                matrix `ci_lo_minus'[1, `j'] = r(r1)
+                matrix `ci_hi_minus'[1, `j'] = r(r2)
             }
         }
     }

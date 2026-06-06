@@ -55,8 +55,9 @@ program define _pte_pool_bootstrap, rclass
             local first_grp : word 1 of `groups'
             use "`tempdir'/tt_`first_grp'_boot`b'.dta", clear
             capture confirm variable TT_mean
-            if _rc {
-                exit _rc
+            local _pte_tt_rc = _rc
+            if `_pte_tt_rc' {
+                exit `_pte_tt_rc'
             }
             quietly count if nt >= 0 & nt <= `L' & !missing(TT_mean)
             if r(N) == 0 {
@@ -64,8 +65,9 @@ program define _pte_pool_bootstrap, rclass
             }
             if `has_trim' {
                 capture confirm variable TT_mean_trim
-                if _rc {
-                    exit _rc
+                local _pte_tt_trim_rc = _rc
+                if `_pte_tt_trim_rc' {
+                    exit `_pte_tt_trim_rc'
                 }
                 quietly count if nt >= 0 & nt <= `L' & !missing(TT_mean_trim)
                 if r(N) == 0 {
@@ -75,8 +77,9 @@ program define _pte_pool_bootstrap, rclass
             foreach grp of local groups {
                 if "`grp'" != "`first_grp'" {
                     capture confirm file "`tempdir'/tt_`grp'_boot`b'.dta"
-                    if _rc {
-                        exit _rc
+                    local _pte_tt_file_rc = _rc
+                    if `_pte_tt_file_rc' {
+                        exit `_pte_tt_file_rc'
                     }
                     preserve
                     capture quietly use "`tempdir'/tt_`grp'_boot`b'.dta", clear

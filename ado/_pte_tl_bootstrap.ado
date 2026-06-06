@@ -25,10 +25,10 @@ program define _pte_tl_bootstrap, eclass
     // ================================================================
     // Syntax parsing
     // ================================================================
-    syntax, free(varname) state(varname) proxy(varname) ///
+    syntax [if] [in], free(varname) state(varname) proxy(varname) ///
         depvar(varname) treatment(varname) ///
         [CONTROLvars(varlist) omegapoly(integer 3) ///
-         reps(integer 500) pooled noreport NOLOg]
+         reps(integer 500) pooled noreport NOLOg TOUSE(varname)]
 
     // ================================================================
     // Step 0: Retrieve panel variables from xtset
@@ -42,20 +42,62 @@ program define _pte_tl_bootstrap, eclass
     local timevar  "`r(tvar)'"
 
     // ================================================================
-    // Step 1: Generate treat stratification variable
+    // Step 1: Build the caller's estimation sample
+    // ================================================================
+    marksample _pte_tl_bs_ifin, novarlist
+    tempvar _pte_tl_bs_sample
+    qui gen byte `_pte_tl_bs_sample' = (`_pte_tl_bs_ifin' != 0 & !missing(`_pte_tl_bs_ifin'))
+    if "`touse'" != "" {
+        capture confirm variable `touse', exact
+        if _rc {
+            di as error "{bf:_pte_tl_bootstrap}: touse variable {bf:`touse'} not found"
+            exit 111
+        }
+        capture confirm numeric variable `touse'
+        if _rc {
+            di as error "{bf:_pte_tl_bootstrap}: touse variable {bf:`touse'} must be numeric"
+            exit 109
+        }
+        qui replace `_pte_tl_bs_sample' = 0 if `touse' == 0 | missing(`touse')
+    }
+    markout `_pte_tl_bs_sample' `depvar' `free' `state' `proxy' `treatment'
+    if "`controlvars'" != "" {
+        markout `_pte_tl_bs_sample' `controlvars'
+    }
+    qui count if `_pte_tl_bs_sample'
+    if r(N) == 0 {
+        di as error "{bf:_pte_tl_bootstrap}: touse() excludes all observations"
+        exit 2000
+    }
+    qui count if `_pte_tl_bs_sample' & !inlist(`treatment', 0, 1) & !missing(`treatment')
+    if r(N) > 0 {
+        di as error "{bf:_pte_tl_bootstrap}: treatment variable {bf:`treatment'} must be binary (0/1)"
+        di as error "  Found `r(N)' non-binary observations in the estimation sample"
+        exit 450
+    }
+
+    // Save the full caller data, then restrict the bootstrap workspace to
+    // the validated estimation sample. This matches keep-if semantics.
+    tempfile full_data
+    qui save `full_data', replace
+    qui keep if `_pte_tl_bs_sample'
+    qui replace `_pte_tl_bs_sample' = 1
+
+    // ================================================================
+    // Step 2: Generate treat stratification variable
     // ================================================================
     tempvar treat_strata
     qui bysort `panelvar': egen byte `treat_strata' = max(`treatment')
     label variable `treat_strata' "Bootstrap stratification (ever-treated)"
 
     // ================================================================
-    // Step 2: Save original data to tempfile
+    // Step 3: Save sample-restricted original data to tempfile
     // ================================================================
     tempfile orig_data
     qui save `orig_data', replace
 
     // ================================================================
-    // Step 3: Bootstrap loop header
+    // Step 4: Bootstrap loop header
     // ================================================================
     if "`nolog'" == "" {
         di as text ""
@@ -162,12 +204,14 @@ program define _pte_tl_bootstrap, eclass
             if "`pooled'" != "" {
                 qui _pte_tl_estimate, depvar(`depvar') free(`free') ///
                     state(`state') proxy(`proxy') treatment(`treatment') ///
-                    `_ctrl_opt' omegapoly(`omegapoly') pooled nolog
+                    `_ctrl_opt' omegapoly(`omegapoly') pooled ///
+                    touse(`_pte_tl_bs_sample') nolog
             }
             else {
                 qui _pte_tl_estimate, depvar(`depvar') free(`free') ///
                     state(`state') proxy(`proxy') treatment(`treatment') ///
-                    `_ctrl_opt' omegapoly(`omegapoly') nolog
+                    `_ctrl_opt' omegapoly(`omegapoly') ///
+                    touse(`_pte_tl_bs_sample') nolog
             }
         }
 
@@ -256,12 +300,14 @@ program define _pte_tl_bootstrap, eclass
     if "`pooled'" != "" {
         qui _pte_tl_estimate, depvar(`depvar') free(`free') ///
             state(`state') proxy(`proxy') treatment(`treatment') ///
-            `_ctrl_opt' omegapoly(`omegapoly') pooled nolog
+            `_ctrl_opt' omegapoly(`omegapoly') pooled ///
+            touse(`_pte_tl_bs_sample') nolog
     }
     else {
         qui _pte_tl_estimate, depvar(`depvar') free(`free') ///
             state(`state') proxy(`proxy') treatment(`treatment') ///
-            `_ctrl_opt' omegapoly(`omegapoly') nolog
+            `_ctrl_opt' omegapoly(`omegapoly') ///
+            touse(`_pte_tl_bs_sample') nolog
     }
     local pt_beta_t = e(beta_t)
 
@@ -302,6 +348,13 @@ program define _pte_tl_bootstrap, eclass
     local timevar_est "`e(timevar)'"
     local mode_est "`e(mode)'"
     local byvar_est "`e(byvar)'"
+    tempfile _pte_tl_point_esample
+    keep `panelvar' `timevar' `_pte_tl_bs_esample'
+    qui save `_pte_tl_point_esample', replace
+    qui use `full_data', clear
+    qui merge 1:1 `panelvar' `timevar' using `_pte_tl_point_esample', ///
+        keep(master match) nogen
+    qui replace `_pte_tl_bs_esample' = 0 if missing(`_pte_tl_bs_esample')
     matrix colnames `V_boot' = `b_colnames'
     matrix rownames `V_boot' = `b_colnames'
     matrix colnames `b_mean' = `b_colnames'

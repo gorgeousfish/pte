@@ -142,18 +142,11 @@ program define _pte_bygroup_parallel, rclass
     }
     
     // Beta dimensions
-    local beta_ncols = cond("`prodfunc'" == "cd", 3, 6)
-    local beta_colnames "beta_l beta_k beta_t"
+    local beta_pf_cols = cond("`prodfunc'" == "cd", 2, 5)
+    local beta_ncols = `beta_pf_cols' + 1 + `_pte_n_controls'
+    local beta_colnames "beta_l beta_k beta_t `control'"
     if "`prodfunc'" != "cd" {
-        local beta_colnames "beta_l beta_k beta_l2 beta_k2 beta_lk beta_t"
-    }
-    if `_pte_n_controls' > 1 {
-        local beta_ncols = cond("`prodfunc'" == "cd", 2, 5) + `_pte_n_controls'
-        local beta_colnames "beta_l beta_k"
-        if "`prodfunc'" != "cd" {
-            local beta_colnames "beta_l beta_k beta_l2 beta_k2 beta_lk"
-        }
-        local beta_colnames "`beta_colnames' `control'"
+        local beta_colnames "beta_l beta_k beta_l2 beta_k2 beta_lk beta_t `control'"
     }
     // Helper payload validation must require the full public grouped width.
     local beta_required_cols = `beta_ncols'
@@ -405,64 +398,50 @@ program define _pte_bygroup_parallel, rclass
     file write `fh' `"            local bs_beta_k = _b[`state']"' _n
     file write `fh' `"            local bs_beta_t = ."' _n
     file write `fh' `"            local _pte_beta_payload_ctrl_ready = 1"' _n
+    file write `fh' `"            local _pte_expected_beta_controls = `_pte_n_controls' + 1"' _n
     file write `fh' `"            capture matrix _pte_beta_ctrl = e(beta_controls)"' _n
     file write `fh' `"            if _rc == 0 {"' _n
+    file write `fh' `"                local _pte_beta_ctrl_ncols = colsof(_pte_beta_ctrl)"' _n
     file write `fh' `"                local _pte_beta_ctrl_names : colnames _pte_beta_ctrl"' _n
-    if `_pte_n_controls' > 1 {
-        foreach _ctrl of local control {
-            file write `fh' `"                local _ctrl_pos : list posof "`_ctrl'" in _pte_beta_ctrl_names"' _n
-            file write `fh' `"                if \`_ctrl_pos' < 1 {"' _n
-            file write `fh' `"                    local _pte_beta_payload_ctrl_ready = 0"' _n
-            file write `fh' `"                }"' _n
-        }
-    }
-    else if "`control'" != "" {
-        local _only_ctrl : word 1 of `control'
-        file write `fh' `"                local _ctrl_pos : list posof "`_only_ctrl'" in _pte_beta_ctrl_names"' _n
+    file write `fh' `"                if \`_pte_beta_ctrl_ncols' != \`_pte_expected_beta_controls' {"' _n
+    file write `fh' `"                    local _pte_beta_payload_ctrl_ready = 0"' _n
+    file write `fh' `"                }"' _n
+    foreach _ctrl of local control {
+        file write `fh' `"                local _ctrl_pos : list posof "`_ctrl'" in _pte_beta_ctrl_names"' _n
         file write `fh' `"                if \`_ctrl_pos' < 1 {"' _n
         file write `fh' `"                    local _pte_beta_payload_ctrl_ready = 0"' _n
         file write `fh' `"                }"' _n
-        file write `fh' `"                else {"' _n
-        file write `fh' `"                    local bs_beta_t = _pte_beta_ctrl[1, \`_ctrl_pos']"' _n
-        file write `fh' `"                }"' _n
     }
-    else {
-        file write `fh' `"                if colsof(_pte_beta_ctrl) >= 1 {"' _n
-        file write `fh' `"                    local bs_beta_t = _pte_beta_ctrl[1, 1]"' _n
-        file write `fh' `"                }"' _n
-    }
+    file write `fh' `"                if \`_pte_beta_payload_ctrl_ready' & \`_pte_beta_ctrl_ncols' >= 1 {"' _n
+    file write `fh' `"                    local bs_beta_t = _pte_beta_ctrl[1, 1]"' _n
+    file write `fh' `"                }"' _n
     file write `fh' `"            }"' _n
     file write `fh' `"            else {"' _n
     file write `fh' `"                capture local bs_beta_t = _b[t]"' _n
-    if `_pte_n_controls' > 1 {
+    if `_pte_n_controls' > 0 {
         file write `fh' `"                local _pte_beta_payload_ctrl_ready = 0"' _n
+    }
+    else {
+        file write `fh' `"                if _rc == 0 & !missing(\`bs_beta_t') {"' _n
+        file write `fh' `"                    matrix _pte_beta_ctrl = J(1, 1, \`bs_beta_t')"' _n
+        file write `fh' `"                }"' _n
     }
     file write `fh' `"            }"' _n
     file write `fh' `"            matrix _BETA_G\`g_idx'[\`b', 1] = \`bs_beta_l'"' _n
     file write `fh' `"            matrix _BETA_G\`g_idx'[\`b', 2] = \`bs_beta_k'"' _n
-    if `_pte_n_controls' > 1 {
-        file write `fh' `"            if \`_pte_beta_payload_ctrl_ready' == 0 {"' _n
-        file write `fh' `"                local bs_ok = 0"' _n
-        file write `fh' `"            }"' _n
-    }
-    else {
-        file write `fh' `"            if missing(\`bs_beta_t') {"' _n
-        file write `fh' `"                local bs_ok = 0"' _n
-        file write `fh' `"            }"' _n
-    }
+    file write `fh' `"            if \`_pte_beta_payload_ctrl_ready' == 0 | missing(\`bs_beta_t') {"' _n
+    file write `fh' `"                local bs_ok = 0"' _n
+    file write `fh' `"            }"' _n
 
     if "`prodfunc'" == "cd" {
-        if `_pte_n_controls' > 1 {
+        file write `fh' `"            matrix _BETA_G\`g_idx'[\`b', 3] = \`bs_beta_t'"' _n
+        if `_pte_n_controls' > 0 {
+            local _ctrl_j = 0
             foreach _ctrl of local control {
-                local _ctrl_j = `: list posof "`_ctrl'" in control'
+                local ++_ctrl_j
                 file write `fh' `"            local _ctrl_pos : list posof "`_ctrl'" in _pte_beta_ctrl_names"' _n
-                file write `fh' `"            matrix _BETA_G\`g_idx'[\`b', `=2 + `_ctrl_j''] = _pte_beta_ctrl[1, \`_ctrl_pos']"' _n
+                file write `fh' `"            matrix _BETA_G\`g_idx'[\`b', `=3 + `_ctrl_j''] = _pte_beta_ctrl[1, \`_ctrl_pos']"' _n
             }
-        }
-        else {
-            file write `fh' `"            if !missing(\`bs_beta_t') {"' _n
-            file write `fh' `"                matrix _BETA_G\`g_idx'[\`b', 3] = \`bs_beta_t'"' _n
-            file write `fh' `"            }"' _n
         }
     }
     else {
@@ -472,17 +451,14 @@ program define _pte_bygroup_parallel, rclass
         file write `fh' `"            matrix _BETA_G\`g_idx'[\`b', 3] = \`bs_beta_ll'"' _n
         file write `fh' `"            matrix _BETA_G\`g_idx'[\`b', 4] = \`bs_beta_kk'"' _n
         file write `fh' `"            matrix _BETA_G\`g_idx'[\`b', 5] = \`bs_beta_lk'"' _n
-        if `_pte_n_controls' > 1 {
+        file write `fh' `"            matrix _BETA_G\`g_idx'[\`b', 6] = \`bs_beta_t'"' _n
+        if `_pte_n_controls' > 0 {
+            local _ctrl_j = 0
             foreach _ctrl of local control {
-                local _ctrl_j = `: list posof "`_ctrl'" in control'
+                local ++_ctrl_j
                 file write `fh' `"            local _ctrl_pos : list posof "`_ctrl'" in _pte_beta_ctrl_names"' _n
-                file write `fh' `"            matrix _BETA_G\`g_idx'[\`b', `=5 + `_ctrl_j''] = _pte_beta_ctrl[1, \`_ctrl_pos']"' _n
+                file write `fh' `"            matrix _BETA_G\`g_idx'[\`b', `=6 + `_ctrl_j''] = _pte_beta_ctrl[1, \`_ctrl_pos']"' _n
             }
-        }
-        else {
-            file write `fh' `"            if !missing(\`bs_beta_t') {"' _n
-            file write `fh' `"                matrix _BETA_G\`g_idx'[\`b', 6] = \`bs_beta_t'"' _n
-            file write `fh' `"            }"' _n
         }
     }
     file write `fh' "" _n

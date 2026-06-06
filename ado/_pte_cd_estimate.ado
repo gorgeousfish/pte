@@ -9,11 +9,12 @@ program define _pte_cd_estimate, eclass
     version 14.0
 
     // Parse inputs before inspecting the panel state or helper variables.
-    syntax, depvar(name) free(name) state(name) proxy(name) ///
+    local _pte_cd_raw_opts `"`0'"'
+    syntax [if] [in], depvar(name) free(name) state(name) proxy(name) ///
         treatment(name) [control(varlist) id(varname) t(varname) ///
         pooled by(varname) omegapoly(integer 1) maxiter(integer 10000) ///
         TOLerance(real 1e-6) INIT(numlist) GRID ///
-        phi(varname) NODIAGnose NOLOG]
+        phi(varname) NODIAGnose NOLOG TOUSE(varname)]
 
     // ----------------------------------------------------------------
     // 0a: Check xtset panel structure
@@ -36,13 +37,14 @@ program define _pte_cd_estimate, eclass
     if "`t'" != "" {
         local timevar "`t'"
     }
+    unab _pte_cd_allvars : _all
 
     // ----------------------------------------------------------------
     // 0b: Validate all required variables exist and are numeric
     // ----------------------------------------------------------------
     foreach var in `depvar' `free' `state' `proxy' `treatment' {
-        capture confirm variable `var', exact
-        if _rc {
+        local _pte_cd_has_required : list posof "`var'" in _pte_cd_allvars
+        if !`_pte_cd_has_required' {
             di as error "{bf:_pte_cd_estimate}: variable {bf:`var'} not found"
             exit 111
         }
@@ -53,51 +55,107 @@ program define _pte_cd_estimate, eclass
         }
     }
 
-    // The transition helper may arrive under the package name or the legacy alias.
-    local midvar "_pte_mid"
-    capture confirm variable `midvar'
-    if _rc {
-        local midvar "mid"
-        capture confirm variable `midvar'
+    marksample _pte_cd_ifin, novarlist
+    tempvar _pte_cd_sample
+    qui gen byte `_pte_cd_sample' = (`_pte_cd_ifin' != 0 & !missing(`_pte_cd_ifin'))
+    if "`touse'" != "" {
+        capture confirm variable `touse', exact
         if _rc {
-            di as error "{bf:_pte_cd_estimate}: neither {bf:_pte_mid} nor legacy {bf:mid} found"
-            di as error "  Run {bf:_pte_transition} first"
+            di as error "{bf:_pte_cd_estimate}: touse variable {bf:`touse'} not found"
             exit 111
         }
+        capture confirm numeric variable `touse'
+        if _rc {
+            di as error "{bf:_pte_cd_estimate}: touse variable {bf:`touse'} must be numeric"
+            exit 109
+        }
+        qui replace `_pte_cd_sample' = 0 if `touse' == 0 | missing(`touse')
+    }
+    markout `_pte_cd_sample' `depvar' `free' `state' `proxy' `treatment'
+
+    // The transition helper may arrive under the package name or the legacy alias.
+    local _pte_cd_has_mid : list posof "_pte_mid" in _pte_cd_allvars
+    local _pte_cd_has_legacy_mid : list posof "mid" in _pte_cd_allvars
+    if `_pte_cd_has_mid' {
+        local midvar "_pte_mid"
+    }
+    else if `_pte_cd_has_legacy_mid' {
+        local midvar "mid"
+    }
+    else {
+        di as error "{bf:_pte_cd_estimate}: neither {bf:_pte_mid} nor legacy {bf:mid} found"
+        di as error "  Run {bf:_pte_transition} first"
+        exit 111
     }
 
     // ----------------------------------------------------------------
     // 0d: Validate treatment is binary (0/1)
     // ----------------------------------------------------------------
-    qui count if !inlist(`treatment', 0, 1) & !mi(`treatment')
+    qui count if `_pte_cd_sample' & !inlist(`treatment', 0, 1) & !mi(`treatment')
     if r(N) > 0 {
         di as error "{bf:_pte_cd_estimate}: treatment variable {bf:`treatment'} must be binary (0/1)"
         di as error "  Found `r(N)' non-binary observations"
         exit 450
     }
 
+    // Theorem 3.1 requires transition periods to be computed from the same
+    // treatment path consumed by this production-function call.
+    capture noisily _pte_validate_mid_contract, midvar(`midvar') ///
+        treatment(`treatment') panelvar(`panelvar') timevar(`timevar') ///
+        touse(`_pte_cd_sample') context("_pte_cd_estimate")
+    if _rc != 0 {
+        local _pte_mid_contract_rc = _rc
+        exit `_pte_mid_contract_rc'
+    }
+
     // ----------------------------------------------------------------
     // 0e: Validate optional control variables
     // ----------------------------------------------------------------
     if "`control'" != "" {
+        local _pte_cd_control_literal ""
+        if regexm(`"`_pte_cd_raw_opts'"', "(^|[ ,])control[ ]*[(]([^)]*)[)]") {
+            local _pte_cd_control_literal `"`=strtrim(regexs(2))'"'
+        }
+        if `"`_pte_cd_control_literal'"' != "" {
+            foreach var of local _pte_cd_control_literal {
+                local _pte_cd_has_control : list posof "`var'" in _pte_cd_allvars
+                if !`_pte_cd_has_control' {
+                    di as error "{bf:_pte_cd_estimate}: control variable {bf:`var'} not found"
+                    exit 111
+                }
+            }
+        }
         foreach var of local control {
-            capture confirm variable `var'
+            capture confirm variable `var', exact
             if _rc {
                 di as error "{bf:_pte_cd_estimate}: control variable {bf:`var'} not found"
                 exit 111
             }
         }
+        markout `_pte_cd_sample' `control'
     }
 
     // ----------------------------------------------------------------
     // 0f: Validate by() variable if pooled mode
     // ----------------------------------------------------------------
     if "`by'" != "" {
-        capture confirm variable `by'
+        local _pte_cd_by_literal ""
+        if regexm(`"`_pte_cd_raw_opts'"', "(^|[ ,])by[ ]*[(]([^)]*)[)]") {
+            local _pte_cd_by_literal `"`=strtrim(regexs(2))'"'
+        }
+        if `"`_pte_cd_by_literal'"' != "" & `"`_pte_cd_by_literal'"' != `"`by'"' {
+            local _pte_cd_has_by_literal : list posof "`_pte_cd_by_literal'" in _pte_cd_allvars
+            if !`_pte_cd_has_by_literal' {
+                di as error "{bf:_pte_cd_estimate}: by() variable {bf:`_pte_cd_by_literal'} not found"
+                exit 111
+            }
+        }
+        capture confirm variable `by', exact
         if _rc {
             di as error "{bf:_pte_cd_estimate}: by() variable {bf:`by'} not found"
             exit 111
         }
+        markout `_pte_cd_sample' `by'
     }
 
     // by() is only admissible in by-industry mode when the active sample has
@@ -108,7 +166,7 @@ program define _pte_cd_estimate, eclass
             local by_guard_vars "`by_guard_vars' `control'"
         }
         local by_guard_args : subinstr local by_guard_vars " " ", ", all
-        quietly levelsof `by' if !missing(`by_guard_args'), ///
+        quietly levelsof `by' if `_pte_cd_sample' & !missing(`by_guard_args'), ///
             local(by_levels)
         local n_by_levels : word count `by_levels'
         if `n_by_levels' == 0 {
@@ -294,6 +352,7 @@ program define _pte_cd_estimate, eclass
         }
 
         // Execute first-stage regression
+        local stage1_opts "`stage1_opts' touse(`_pte_cd_sample')"
         _pte_stage1, `stage1_opts'
 
         // Capture first-stage results before they are overwritten
@@ -334,7 +393,8 @@ program define _pte_cd_estimate, eclass
 
     _pte_gmm_matrices, phi(`phi_var') lnl(`free') lnk(`state') ///
         treatpost(`treatment') mid(`midvar') t(_pte_t) ///
-        id(`panelvar') time(`timevar') prodfunc(cd) omegapoly(`omegapoly')
+        id(`panelvar') time(`timevar') prodfunc(cd) omegapoly(`omegapoly') ///
+        gmmsample(`_pte_cd_sample')
 
     // Capture GMM matrix results
     local N_gmm = r(N)
@@ -389,7 +449,7 @@ program define _pte_cd_estimate, eclass
         local ols_controls "`ols_controls' `control'"
         local ols_controls : list uniq ols_controls
     }
-    qui reg `depvar' `free' `state' `ols_controls'
+    qui reg `depvar' `free' `state' `ols_controls' if `_pte_cd_sample'
 
     // Extract OLS initial values for logging
     local beta_l_init = _b[`free']
@@ -514,8 +574,10 @@ program define _pte_cd_estimate, eclass
     qui by `panelvar' (`timevar'): gen byte `_pte_cd_gap' = ///
         (abs((`timevar' - `timevar'[_n-1]) - `_cd_tsdelta') > `_cd_tsdelta_tol') if _n > 1
     qui by `panelvar' (`timevar'): replace `_pte_cd_gap' = 1 if _n == 1
+    qui by `panelvar' (`timevar'): replace `_pte_cd_gap' = 1 if _n > 1 & ///
+        (`_pte_cd_sample'[_n-1] == 0 | missing(`_pte_cd_sample'[_n-1]))
 
-    qui gen byte `_pte_cd_esample' = (`midvar' == 0)
+    qui gen byte `_pte_cd_esample' = (`_pte_cd_sample' & `midvar' == 0)
     qui replace `_pte_cd_esample' = 0 if `_pte_cd_gap' == 1
     qui replace `_pte_cd_esample' = 0 if ///
         mi(`phi_var') | mi(`phi_var'[_n-1]) | ///

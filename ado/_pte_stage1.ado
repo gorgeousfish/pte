@@ -25,6 +25,7 @@ program define _pte_stage1, rclass
     
     syntax, depvar(name) pfunc(string) ///
             [control(varlist) TVARS(varlist) industry(varname) BYINDustry NODIAGnose STRICT ///
+             LEGACYFLOATPHI ///
              TOUSE(varname)]
 
     if !inlist("`pfunc'", "cd", "translog") {
@@ -119,7 +120,9 @@ program define _pte_stage1, rclass
     }
     
     // Use explicit polynomial names instead of wildcards so generated lag
-    // helpers such as l1k_lag never leak into the Stage-1 sieve.
+    // helpers such as l1k_lag never leak into the Stage-1 sieve. Keep this list
+    // complete: every name here is treated as an input polynomial and is blocked
+    // from tvars()/control(), whose coefficients are subtracted from phi_raw.
     local regvars_base ""
     local default_time_controls ""
     if "`pfunc'" == "cd" {
@@ -280,9 +283,19 @@ program define _pte_stage1, rclass
     // predict-created tempvars are safer than writing phi_raw directly
     // because later replacement steps expect a persistent named variable.
     tempvar phi_temp
-    quietly predict double `phi_temp' if e(sample), xb
+    if "`legacyfloatphi'" != "" {
+        quietly predict `phi_temp' if e(sample), xb
+    }
+    else {
+        quietly predict double `phi_temp' if e(sample), xb
+    }
 
-    quietly generate double phi_raw = `phi_temp'
+    if "`legacyfloatphi'" != "" {
+        quietly generate phi_raw = `phi_temp'
+    }
+    else {
+        quietly generate double phi_raw = `phi_temp'
+    }
 
     quietly count if missing(phi_raw) & e(sample)
     if r(N) > 0 {
@@ -293,7 +306,12 @@ program define _pte_stage1, rclass
     // phi is the fitted Stage-1 object net of external controls only. The
     // labor, capital, and materials terms stay inside phi because later
     // stages recover beta and omega from that exact decomposition.
-    quietly generate double phi = phi_raw
+    if "`legacyfloatphi'" != "" {
+        quietly generate phi = phi_raw
+    }
+    else {
+        quietly generate double phi = phi_raw
+    }
 
     local n_control : word count `control_vars'
     matrix beta_controls = J(1, `n_control', .)
@@ -305,9 +323,10 @@ program define _pte_stage1, rclass
         
         capture scalar _pte_beta_`var' = _b[`var']
         if _rc | missing(_pte_beta_`var') {
-            di as text "[pte] Note: coefficient for `var' is missing; set to 0"
-            scalar _pte_beta_`var' = 0
-            local missing_coef_vars "`missing_coef_vars' `var'"
+            di as error "[pte] Error: Stage-1 control coefficient for `var' is missing"
+            di as error "[pte]        phi cannot be netted of an unidentified control."
+            di as error "[pte]        Remove collinear controls, change the sample, or provide an identified tvars()/control() set."
+            exit 498
         }
 
         quietly replace phi = phi - _pte_beta_`var' * `var'

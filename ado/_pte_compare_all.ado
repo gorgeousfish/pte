@@ -25,11 +25,22 @@ program define _pte_compare_all, eclass
          EXPort(string) REPLACE]
 
     if "`specs'" == "" local specs "1 2 3"
-    if strtrim("`specs'") != "1 2 3" {
+    local _pte_compare_all_nspecs : word count `specs'
+    local _pte_compare_all_has_spec1 = 0
+    local _pte_compare_all_has_spec2 = 0
+    local _pte_compare_all_has_spec3 = 0
+    foreach _pte_compare_all_spec of local specs {
+        local _pte_compare_all_has_spec`_pte_compare_all_spec' = 1
+    }
+    if `_pte_compare_all_nspecs' != 3 | ///
+        !`_pte_compare_all_has_spec1' | ///
+        !`_pte_compare_all_has_spec2' | ///
+        !`_pte_compare_all_has_spec3' {
         di as error "Error 198: _pte_compare_all requires specs(1 2 3)."
         di as error "The combined compare workflow implements the full Table 3 bundle only."
         exit 198
     }
+    local specs "1 2 3"
 
     if `omegapoly' == -1 & !`_pte_compare_all_has_omegapoly' {
         capture local omegapoly = e(omegapoly)
@@ -79,7 +90,7 @@ program define _pte_compare_all, eclass
     // Save pte ATT for bias calculation (T-010)
     // Must capture before sub-methods overwrite e()
     local pte_att_saved = .
-    capture local pte_att_saved = e(att_avg)
+    capture local pte_att_saved = e(ATT_avg)
     if missing(`pte_att_saved') {
         capture {
             tempname _att_mat
@@ -106,7 +117,10 @@ program define _pte_compare_all, eclass
     if "`lagtreatment'" != "" local common_opts "`common_opts' lagtreatment"
     if "`diagnose'" != "" local common_opts "`common_opts' diagnose"
     local endog_opts "`common_opts' omegapoly(`omegapoly')"
-    local treatment_label "L.`treatment'"
+    local treatment_label "`treatment'"
+    if "`lagtreatment'" != "" {
+        local treatment_label "L.`treatment'"
+    }
     local treatment_label_tex = subinstr(`"`treatment_label'"', "_", "\_", .)
     
     // =========================================================================

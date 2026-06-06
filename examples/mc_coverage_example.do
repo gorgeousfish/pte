@@ -40,6 +40,7 @@ if _rc {
 }
 
 quietly adopath + "`root'/ado"
+quietly adopath + "`root'/mata"
 
 // --- Example 1: Set up calibrated parameters ---
 

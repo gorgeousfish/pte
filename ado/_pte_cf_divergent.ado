@@ -1205,6 +1205,32 @@ end
 
 mata:
 
+// Quantile function reproducing Stata's default _pctile (the algorithm behind
+// egen pctile(), p(.)) so Mata-side percentile CIs match the .ado-side and the
+// official replication DOs. For a sorted-ascending vector and probability q in
+// [0,1]: position = n*q; if it lands exactly on an integer i with 1<=i<n the
+// bound is the average of the i-th and (i+1)-th order statistics, otherwise it
+// is the floor(n*q)+1 order statistic (clamped to [1, n]).
+real scalar _pte_pctile_default(real colvector x, real scalar q)
+{
+    real colvector s
+    real scalar n, pos, fl
+
+    s = sort(x, 1)
+    n = rows(s)
+    if (n < 1) return(.)
+    if (n == 1) return(s[1])
+
+    pos = n * q
+    if (pos == floor(pos) & pos >= 1 & pos < n) {
+        return((s[pos] + s[pos + 1]) / 2)
+    }
+    fl = floor(pos) + 1
+    if (fl < 1) fl = 1
+    if (fl > n) fl = n
+    return(s[fl])
+}
+
 void _pte_cf_divergent_boot_agg(
     string scalar ate_boot_name,
     string scalar ate_se_name,
@@ -1215,7 +1241,7 @@ void _pte_cf_divergent_boot_agg(
     real rowvector SE, CI_lo, CI_hi
     real scalar B, n_periods, n_valid, j, alpha_half
     real colvector col_j, valid_col
-    real scalar lo_idx, hi_idx, n_v
+    real scalar n_v
     string scalar boot_alpha_str
 
     // Read bootstrap ATE matrix from Stata
@@ -1266,14 +1292,12 @@ void _pte_cf_divergent_boot_agg(
         // Bootstrap SE = standard deviation of bootstrap estimates
         SE[1, j] = sqrt(variance(valid_col))
 
-        // Percentile CI: sort and pick quantiles
+        // Percentile CI: interpolated bounds matching Stata's default _pctile
+        // (and the official replication DOs' egen pctile(), p(.)).
         _sort(valid_col, 1)
         n_v = length(valid_col)
-        lo_idx = max((1, ceil(alpha_half * n_v)))
-        hi_idx = min((n_v, floor((1 - alpha_half) * n_v) + 1))
-
-        CI_lo[1, j] = valid_col[lo_idx]
-        CI_hi[1, j] = valid_col[hi_idx]
+        CI_lo[1, j] = _pte_pctile_default(valid_col, alpha_half)
+        CI_hi[1, j] = _pte_pctile_default(valid_col, 1 - alpha_half)
     }
 
     // Store results back to Stata

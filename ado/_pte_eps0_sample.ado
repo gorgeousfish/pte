@@ -21,7 +21,7 @@ program define _pte_eps0_sample, eclass
     // Parse touse() as a raw name token instead of varname so the helper can
     // enforce the exact-name active-sample contract before Stata expands any
     // shadow abbreviation.
-    capture noisily syntax, treatment(name) [eps0window(integer 0) NODIAGnose TOUSE(name)]
+    capture noisily syntax, treatment(name) [eps0window(integer 0) NODIAGnose TOUSE(name) LEGACYPOOLEDeps0]
     if _rc != 0 {
         local _pte_syntax_rc = _rc
         quietly _pte_eps0_sample_restore, datafile(`pte_eps0_input_data') ///
@@ -333,12 +333,13 @@ program define _pte_eps0_sample, eclass
                 local stored_delta_opt "delta(`stored_xtdelta')"
             }
             capture quietly xtset `stored_panel' `stored_time', `stored_delta_opt'
-            if _rc != 0 {
+            local _pte_eps0_xtset_rc = _rc
+            if `_pte_eps0_xtset_rc' != 0 {
                 di as error "[pte] Error: could not restore stored panel structure `stored_panel' `stored_time'"
                 di as error "[pte]        Ensure the current data still matches the live state"
                 quietly _pte_eps0_sample_restore, datafile(`pte_eps0_input_data') ///
                     estname(`_pte_prev_est') hasest(`_pte_has_prev_est')
-                exit _rc
+                exit `_pte_eps0_xtset_rc'
             }
             local restore_stored_xtset = 1
             local panelvar "`stored_panel'"
@@ -453,7 +454,9 @@ program define _pte_eps0_sample, eclass
     // The canonical untreated support is D==0 and strictly pre-entry on the
     // admissible evolution rows. This preserves the paper's untreated-law
     // interpretation while correcting the replication shortcut that can retain
-    // treated-post observations in some branches.
+    // treated-post observations in some branches. The legacy pooled benchmark
+    // branch below is deliberately narrower: it reproduces the historical
+    // att_estimation_pool_trlg.do shortcut for direct DO comparison only.
 
     // Drop the exact eps0 payload before its indicator. Otherwise Stata may
     // resolve _pte_eps0 to _pte_eps0_ind through abbreviation matching.
@@ -475,10 +478,23 @@ program define _pte_eps0_sample, eclass
         (`_pte_evo_sample' & `treatment'==0 & `_pte_ever_treated_obs' == 0) ///
         if missing(_pte_treat_year)
     
+    if "`legacypooledeps0'" != "" {
+        if `eps0window' > 0 {
+            di as error "[pte] Error: legacypooledeps0 cannot be combined with eps0window(`eps0window')"
+            quietly _pte_eps0_sample_restore, datafile(`pte_eps0_input_data') ///
+                estname(`_pte_prev_est') hasest(`_pte_has_prev_est')
+            exit 198
+        }
+        quietly replace _pte_eps0_ind = (`_pte_evo_sample' & `treatment'==0 & `timevar' <= 2010)
+        if "`nodiagnose'" == "" {
+            di as text "  Using legacy pooled DO eps0 support: year<=2010 and untreated"
+        }
+    }
+    
     // eps0window() restricts support to a common untreated window that is
     // anchored at the earliest treated entry still backed by admissible
     // untreated evolution rows in the live sample.
-    if `eps0window' > 0 {
+    if "`legacypooledeps0'" == "" & `eps0window' > 0 {
         quietly xtset
         local _pte_window_delta = real("`r(tdelta)'")
         if missing(`_pte_window_delta') | `_pte_window_delta' <= 0 {
@@ -545,16 +561,44 @@ program define _pte_eps0_sample, eclass
     // published rho_0 coefficients instead of relying on predict, xb.
 
     capture drop _pte_omega_hat
-    quietly gen double _pte_omega_hat = . 
-    quietly replace _pte_omega_hat = `evo_rho0' + `evo_rho1' * L.omega if `_pte_evo_sample'
-    if `evo_omegapoly' >= 2 {
-        quietly replace _pte_omega_hat = _pte_omega_hat + `evo_rho2' * ((L.omega)^2) if `_pte_evo_sample'
+    if "`legacypooledeps0'" != "" {
+        quietly gen double _pte_omega_hat = . 
+        quietly replace _pte_omega_hat = `evo_rho0' + `evo_rho1' * L.omega if `_pte_evo_sample'
+        if `evo_omegapoly' >= 2 {
+            quietly replace _pte_omega_hat = _pte_omega_hat + `evo_rho2' * ((L.omega)^2) if `_pte_evo_sample'
+        }
+        if `evo_omegapoly' >= 3 {
+            quietly replace _pte_omega_hat = _pte_omega_hat + `evo_rho3' * ((L.omega)^3) if `_pte_evo_sample'
+        }
+        if `evo_omegapoly' >= 4 {
+            quietly replace _pte_omega_hat = _pte_omega_hat + `evo_rho4' * ((L.omega)^4) if `_pte_evo_sample'
+        }
+        if `evo_has_treated_state' {
+            quietly replace _pte_omega_hat = _pte_omega_hat + `evo_gamma1' * (L.omega * L.`treatment') if `_pte_evo_sample'
+            if `evo_omegapoly' >= 2 {
+                quietly replace _pte_omega_hat = _pte_omega_hat + `evo_gamma2' * ((L.omega)^2 * L.`treatment') if `_pte_evo_sample'
+            }
+            if `evo_omegapoly' >= 3 {
+                quietly replace _pte_omega_hat = _pte_omega_hat + `evo_gamma3' * ((L.omega)^3 * L.`treatment') if `_pte_evo_sample'
+            }
+            if `evo_omegapoly' >= 4 {
+                quietly replace _pte_omega_hat = _pte_omega_hat + `evo_gamma4' * ((L.omega)^4 * L.`treatment') if `_pte_evo_sample'
+            }
+            quietly replace _pte_omega_hat = _pte_omega_hat + `evo_delta' * L.`treatment' if `_pte_evo_sample'
+        }
     }
-    if `evo_omegapoly' >= 3 {
-        quietly replace _pte_omega_hat = _pte_omega_hat + `evo_rho3' * ((L.omega)^3) if `_pte_evo_sample'
-    }
-    if `evo_omegapoly' >= 4 {
-        quietly replace _pte_omega_hat = _pte_omega_hat + `evo_rho4' * ((L.omega)^4) if `_pte_evo_sample'
+    else {
+        quietly gen double _pte_omega_hat = . 
+        quietly replace _pte_omega_hat = `evo_rho0' + `evo_rho1' * L.omega if `_pte_evo_sample'
+        if `evo_omegapoly' >= 2 {
+            quietly replace _pte_omega_hat = _pte_omega_hat + `evo_rho2' * ((L.omega)^2) if `_pte_evo_sample'
+        }
+        if `evo_omegapoly' >= 3 {
+            quietly replace _pte_omega_hat = _pte_omega_hat + `evo_rho3' * ((L.omega)^3) if `_pte_evo_sample'
+        }
+        if `evo_omegapoly' >= 4 {
+            quietly replace _pte_omega_hat = _pte_omega_hat + `evo_rho4' * ((L.omega)^4) if `_pte_evo_sample'
+        }
     }
     label variable _pte_omega_hat "Evolution regression predicted omega"
 
@@ -697,6 +741,11 @@ program define _pte_eps0_sample, eclass
     ereturn scalar eps0_min = `eps0_min'
     ereturn scalar eps0_max = `eps0_max'
     ereturn scalar eps0window = `eps0window'
+    local legacy_pooled_eps0_flag 0
+    if "`legacypooledeps0'" != "" {
+        local legacy_pooled_eps0_flag 1
+    }
+    ereturn scalar legacy_pooled_eps0 = `legacy_pooled_eps0_flag'
     ereturn scalar sigma_eps = `sigma_eps'
     ereturn scalar sigma_eps_trim = `sigma_eps_trim'
     ereturn scalar N_eps0_trim = `N_eps0_trim'

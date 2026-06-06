@@ -70,7 +70,8 @@ this program directly.
 {pstd}
 {cmd:_pte_graph_att_nonabs} generates graphs for non-absorbing treatment
 effects estimated by {cmd:pte} with the {opt nonabsorbing} option. It reads
-ATT{sup:+} (entry effects) and ATT{sup:-} (exit effects) from {cmd:e()}
+ATT{sup:+} (entry switch effects) and ATT{sup:-}
+(staying-treated counterfactuals for exit switchers) from {cmd:e()}
 results and produces one of three graph types:
 
 {p 8 12 2}1. {bf:Dual panel} (default): side-by-side panels showing ATT{sup:+} and
@@ -80,7 +81,8 @@ ATT{sup:-} with aligned y-axes for direct comparison.{p_end}
 the same axes with distinct colors and markers.{p_end}
 
 {p 8 12 2}3. {bf:Difference} ({opt attdiff}): ATT{sup:+} minus ATT{sup:-}, testing
-whether entry and exit effects are symmetric. A zero line indicates
+whether entry-switch and exit-switch counterfactual effects are symmetric.
+A zero line indicates
 symmetric effects.{p_end}
 
 {pstd}
@@ -153,7 +155,8 @@ uses a dashed line by default.
 
 {phang}
 {opt attdiff} plots the difference ATT{sup:+} - ATT{sup:-} across periods.
-This is useful for testing whether entry and exit effects are symmetric.
+This is useful for testing whether entry-switch and exit-switch
+counterfactual effects are symmetric.
 A horizontal zero line is drawn for reference.
 
 {phang}

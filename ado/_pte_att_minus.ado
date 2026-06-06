@@ -378,8 +378,11 @@ program define _pte_att_minus, eclass
     
     // ================================================================
     // nt=0 counterfactual calculation (using observed L.omega)
-    // omega_1_sim = rho1_0 + rho1_1*L.omega + rho1_2*(L.omega)^2 + ... + L.eps1_sim
-    // At nt_minus=0, L.omega = omega at nt_minus=-1 (observed, treated state D=1)
+    // omega_1_sim = rho1_0 + rho1_1*L.omega + rho1_2*(L.omega)^2 + ...
+    // At nt_minus=0, L.omega = omega at nt_minus=-1 (observed, treated state D=1).
+    // The instantaneous counterfactual is the treated-law prediction at the
+    // pre-exit state; the nt=0 innovation draw is consumed only by later
+    // recursive states through L.eps1_sim.
     // ================================================================
     
     // Build h_bar_1 formula for nt=0 (using observed values)
@@ -394,9 +397,8 @@ program define _pte_att_minus, eclass
         }
     }
     
-    // Execute nt=0 calculation using the lagged innovation row, matching
-    // the main ATT recursion contract with the retained nt=-1 anchor row.
-    quietly replace omega_1_sim = `h1_obs' + L.eps1_sim if nt_minus == 0
+    // Execute nt=0 calculation.
+    quietly replace omega_1_sim = `h1_obs' if nt_minus == 0
     
     // Verify
     quietly count if nt_minus == 0 & missing(omega_1_sim)

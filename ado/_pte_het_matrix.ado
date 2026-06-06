@@ -75,13 +75,8 @@ program define _pte_het_matrix, rclass
     // Set row names from labels
     // =========================================================================
     local rownames ""
-    local g_idx = 0
-    foreach lbl of local labels {
-        local ++g_idx
-        // Clean label: matrix rownames cannot contain spaces or quotes
-        local lbl_clean = subinstr("`lbl'", " ", "_", .)
-        local lbl_clean = subinstr("`lbl_clean'", `"""', "", .)
-        local rownames "`rownames' `lbl_clean'"
+    forvalues g = 1/`G' {
+        local rownames "`rownames' g`g'"
     }
     local rownames "`rownames' Total"
     

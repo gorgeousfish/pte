@@ -27,6 +27,8 @@ program define _pte_omega, eclass
          beta_l(real -999) beta_k(real -999) ///
          beta_ll(real 0) beta_kk(real 0) beta_lk(real 0) ///
          prodfunc(string) ///
+         LEGACYPOOLEDeps0 ///
+         LEGACYFLOATOMEGA ///
          TOUSE(name)]
     if _rc != 0 {
         local _pte_syntax_rc = _rc
@@ -298,10 +300,14 @@ program define _pte_omega, eclass
         quietly gen byte `_pte_sample_recovery' = `_pte_sample'
         // Explicit betas trigger a fresh omega rebuild under the requested
         // production-function form.
+        local _pte_recovery_opts "pfunc(`prodfunc') touse(`_pte_sample_recovery')"
+        if "`legacyfloatomega'" != "" {
+            local _pte_recovery_opts "`_pte_recovery_opts' legacyfloatomega"
+        }
         capture noisily _pte_omega_recovery, ///
             beta_l(`beta_l') beta_k(`beta_k') ///
             beta_ll(`beta_ll') beta_kk(`beta_kk') beta_lk(`beta_lk') ///
-            pfunc(`prodfunc') touse(`_pte_sample_recovery') `nodiagnose'
+            `_pte_recovery_opts' `nodiagnose'
         if _rc != 0 {
             local _pte_recovery_rc = _rc
             `_pte_clear_eclass'
@@ -452,8 +458,12 @@ program define _pte_omega, eclass
     // order, so omegapoly is intentionally omitted here.
     tempvar _pte_sample_eps0
     quietly gen byte `_pte_sample_eps0' = `_pte_sample'
-    capture noisily _pte_eps0_sample, treatment(`treatment') eps0window(`eps0window') ///
-        touse(`_pte_sample_eps0') `nodiagnose'
+    local _pte_eps0_opts "treatment(`treatment') eps0window(`eps0window')"
+    local _pte_eps0_opts "`_pte_eps0_opts' touse(`_pte_sample_eps0')"
+    if "`legacypooledeps0'" != "" {
+        local _pte_eps0_opts "`_pte_eps0_opts' legacypooledeps0"
+    }
+    capture noisily _pte_eps0_sample, `_pte_eps0_opts' `nodiagnose'
     if _rc != 0 {
         local _pte_eps0_rc = _rc
         `_pte_clear_eclass'
@@ -472,7 +482,11 @@ program define _pte_omega, eclass
     }
     
     // The winsorize helper owns the percentile cutoffs and sigma estimates.
-    capture noisily _pte_winsorize, `notrimeps' `nodiagnose'
+    local _pte_win_opts "`notrimeps' `nodiagnose'"
+    if "`legacypooledeps0'" != "" {
+        local _pte_win_opts "`_pte_win_opts' legacywinsor2"
+    }
+    capture noisily _pte_winsorize, `_pte_win_opts'
     if _rc != 0 {
         local _pte_winsorize_rc = _rc
         `_pte_clear_eclass'
@@ -480,10 +494,13 @@ program define _pte_omega, eclass
     }
     
     // Cache the released innovation moments before posting top-level e().
+    // _pte_winsorize owns the shock moments and overwrites e(), so the legacy
+    // support flag must come from this worker's option state, not child e().
     local sigma_eps = e(sigma_eps)
     local sigma_eps_trim = e(sigma_eps_trim)
     local N_eps0 = e(N_eps0)
     local N_eps0_trim = e(N_eps0_trim)
+    local legacy_pooled_eps0 = ("`legacypooledeps0'" != "")
     local eps0_p1 = e(eps0_p1)
     local eps0_p99 = e(eps0_p99)
     local trimeps = e(trimeps)
@@ -542,6 +559,7 @@ program define _pte_omega, eclass
     // generated the posted state.
     ereturn scalar omegapoly = `omegapoly'
     ereturn scalar eps0window = `eps0window'
+    ereturn scalar legacy_pooled_eps0 = `legacy_pooled_eps0'
     ereturn scalar lag_treated_supported = `lag_treated_supported'
     ereturn scalar trimeps = `trimeps'
     

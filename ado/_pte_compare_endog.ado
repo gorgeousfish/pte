@@ -15,7 +15,7 @@ version 14.0
 capture program drop _pte_compare_endog
 program define _pte_compare_endog, eclass
     version 14.0
-    
+
     syntax , treatment(varname) ///
         [SPECs(numlist integer min=1 max=3 >0 <4) ///
          OMEGApoly(integer 3) ///
@@ -52,6 +52,30 @@ program define _pte_compare_endog, eclass
         di as error "Error 601: reghdfe is required but not installed."
         di as error "Please install: {stata ssc install reghdfe}"
         exit 601
+    }
+
+    // pte_compare is postestimation for the active pte fit. Method II keeps
+    // transition observations, but it must not leave the caller's pte sample.
+    capture confirm variable _pte_active_sample, exact
+    if _rc {
+        di as error "Error 459: active pte sample marker _pte_active_sample not found."
+        di as error "Re-run {bf:pte} on the current data before {bf:pte_compare}."
+        exit 459
+    }
+    capture confirm numeric variable _pte_active_sample
+    if _rc {
+        di as error "Error 459: active pte sample marker _pte_active_sample must be numeric."
+        di as error "Re-run {bf:pte} on the current data before {bf:pte_compare}."
+        exit 459
+    }
+    tempvar _pte_compare_active_sample
+    qui gen byte `_pte_compare_active_sample' = ///
+        (_pte_active_sample != 0 & !missing(_pte_active_sample))
+    qui count if `_pte_compare_active_sample'
+    if r(N) == 0 {
+        di as error "Error 459: active pte sample marker _pte_active_sample is empty."
+        di as error "Re-run {bf:pte} on the current data before {bf:pte_compare}."
+        exit 459
     }
     
     // Save pte results before they get overwritten
@@ -110,6 +134,7 @@ program define _pte_compare_endog, eclass
     
     // Preserve data for GMM estimation
     preserve
+    qui keep if `_pte_compare_active_sample'
     
     // Generate polynomial variables for first stage
     local l "`pte_free'"
@@ -331,7 +356,8 @@ program define _pte_compare_endog, eclass
         - _pte_endog_bk  * `pte_state' ///
         - _pte_endog_bll * `pte_free'^2 ///
         - _pte_endog_bkk * `pte_state'^2 ///
-        - _pte_endog_blk * `pte_free' * `pte_state'
+        - _pte_endog_blk * `pte_free' * `pte_state' ///
+        if `_pte_compare_active_sample'
     
     // Generate polynomial terms
     qui gen double _pte_omega_end2 = _pte_omega_end^2
@@ -342,7 +368,7 @@ program define _pte_compare_endog, eclass
     label variable _pte_omega_end3 "omega_end cubed"
     capture drop _pte_phi_endog_cmp
     
-    qui count if !missing(_pte_omega_end)
+    qui count if `_pte_compare_active_sample' & !missing(_pte_omega_end)
     di as text "    omega_end recovered: N = " r(N)
     
     // =========================================================================
@@ -354,16 +380,19 @@ program define _pte_compare_endog, eclass
     
     // Ensure panel is set
     qui xtset `pte_panelvar' `pte_timevar'`_pte_compare_live_delta_opt'
-    
-    // Determine treatment variable
-    // Default: L.D_it (reproduction code uses L.treat_post for m4-m6)
-    local treat_var "L.`treatment'"
-    if "`lagtreatment'" == "" {
-        // Default for endogenous method: use L.treatment per reproduction code
-        di as text "    Using L.`treatment' (lagged treatment, per reproduction code)"
+
+    // Equation (18) in pte_paper.md uses the contemporaneous treatment
+    // indicator. Use L.treatment only when explicitly requested for
+    // replication/compatibility with lagged-treatment DO paths.
+    local treat_var "`treatment'"
+    local treatment_label "`treatment' (contemporaneous, Eq. 18)"
+    if "`lagtreatment'" != "" {
+        local treat_var "L.`treatment'"
+        local treatment_label "L.`treatment' (lagged, compatibility)"
+        di as text "    Using L.`treatment' (lagged treatment)"
     }
     else {
-        di as text "    Using L.`treatment' (lagged treatment)"
+        di as text "    Using `treatment' (contemporaneous treatment, Eq. 18)"
     }
     di as text "    Absorb: `absorb'"
     
@@ -374,6 +403,8 @@ program define _pte_compare_endog, eclass
     matrix `ci_mat'   = J(3, 2, .)
     matrix `r2_mat'   = J(1, 3, .)
     matrix `n_mat'    = J(1, 3, .)
+    tempvar _pte_compare_esample
+    local _pte_compare_esample_ready = 0
     
     // Run each specification
     foreach s of local specs {
@@ -381,7 +412,8 @@ program define _pte_compare_endog, eclass
         if `s' == 1 {
             // Spec 1 (m4): No controls
             // reghdfe omega_end L.treat_post, absorb(indid_adj year)
-            capture noisily reghdfe _pte_omega_end `treat_var', ///
+            capture noisily reghdfe _pte_omega_end `treat_var' ///
+                if `_pte_compare_active_sample', ///
                 absorb(`absorb') `vce_opt'
             local _pte_compare_reg_rc = _rc
             if `_pte_compare_reg_rc' {
@@ -409,9 +441,29 @@ program define _pte_compare_endog, eclass
             matrix `ci_mat'[1, 2]   = `coef_s1' + 1.96 * `se_s1'
             matrix `r2_mat'[1, 1]   = `r2_s1'
             matrix `n_mat'[1, 1]    = `n_s1'
+
+            if !`_pte_compare_esample_ready' {
+                capture quietly gen byte `_pte_compare_esample' = e(sample)
+                local _pte_compare_esample_rc = _rc
+                if `_pte_compare_esample_rc' {
+                    if `_pte_compare_had_xtset' {
+                        local _pte_compare_restore_delta_opt ""
+                        if `"`_pte_compare_prev_delta'"' != "" {
+                            local _pte_compare_restore_delta_opt "delta(`_pte_compare_prev_delta')"
+                        }
+                        capture quietly xtset `_pte_compare_prev_panel' `_pte_compare_prev_time', `_pte_compare_restore_delta_opt'
+                    }
+                    else {
+                        capture quietly xtset, clear
+                    }
+                    exit `_pte_compare_esample_rc'
+                }
+                local _pte_compare_esample_ready = 1
+            }
             
             capture estimates store _endog_m4, nocopy
-            if _rc {
+            local _pte_compare_store_rc = _rc
+            if `_pte_compare_store_rc' {
                 if `_pte_compare_had_xtset' {
                     local _pte_compare_restore_delta_opt ""
                     if `"`_pte_compare_prev_delta'"' != "" {
@@ -422,7 +474,7 @@ program define _pte_compare_endog, eclass
                 else {
                     capture quietly xtset, clear
                 }
-                exit _rc
+                exit `_pte_compare_store_rc'
             }
             
             di as text "    Spec 1/m4 (no control): delta = " ///
@@ -432,7 +484,8 @@ program define _pte_compare_endog, eclass
         if `s' == 2 {
             // Spec 2 (m5): 1st order lag
             // reghdfe omega_end L.omega_end L.treat_post, absorb(indid_adj year)
-            capture noisily reghdfe _pte_omega_end L._pte_omega_end `treat_var', ///
+            capture noisily reghdfe _pte_omega_end L._pte_omega_end `treat_var' ///
+                if `_pte_compare_active_sample', ///
                 absorb(`absorb') `vce_opt'
             local _pte_compare_reg_rc = _rc
             if `_pte_compare_reg_rc' {
@@ -460,9 +513,29 @@ program define _pte_compare_endog, eclass
             matrix `ci_mat'[2, 2]   = `coef_s2' + 1.96 * `se_s2'
             matrix `r2_mat'[1, 2]   = `r2_s2'
             matrix `n_mat'[1, 2]    = `n_s2'
+
+            if !`_pte_compare_esample_ready' {
+                capture quietly gen byte `_pte_compare_esample' = e(sample)
+                local _pte_compare_esample_rc = _rc
+                if `_pte_compare_esample_rc' {
+                    if `_pte_compare_had_xtset' {
+                        local _pte_compare_restore_delta_opt ""
+                        if `"`_pte_compare_prev_delta'"' != "" {
+                            local _pte_compare_restore_delta_opt "delta(`_pte_compare_prev_delta')"
+                        }
+                        capture quietly xtset `_pte_compare_prev_panel' `_pte_compare_prev_time', `_pte_compare_restore_delta_opt'
+                    }
+                    else {
+                        capture quietly xtset, clear
+                    }
+                    exit `_pte_compare_esample_rc'
+                }
+                local _pte_compare_esample_ready = 1
+            }
             
             capture estimates store _endog_m5, nocopy
-            if _rc {
+            local _pte_compare_store_rc = _rc
+            if `_pte_compare_store_rc' {
                 if `_pte_compare_had_xtset' {
                     local _pte_compare_restore_delta_opt ""
                     if `"`_pte_compare_prev_delta'"' != "" {
@@ -473,7 +546,7 @@ program define _pte_compare_endog, eclass
                 else {
                     capture quietly xtset, clear
                 }
-                exit _rc
+                exit `_pte_compare_store_rc'
             }
             
             di as text "    Spec 2/m5 (1st order): delta = " ///
@@ -484,7 +557,8 @@ program define _pte_compare_endog, eclass
             // Spec 3 (m6): 3rd order polynomial
             // reghdfe omega_end L.omega_end L.omega_end2 L.omega_end3 L.treat_post, absorb(indid_adj year)
             capture noisily reghdfe _pte_omega_end L._pte_omega_end ///
-                L._pte_omega_end2 L._pte_omega_end3 `treat_var', ///
+                L._pte_omega_end2 L._pte_omega_end3 `treat_var' ///
+                if `_pte_compare_active_sample', ///
                 absorb(`absorb') `vce_opt'
             local _pte_compare_reg_rc = _rc
             if `_pte_compare_reg_rc' {
@@ -512,9 +586,29 @@ program define _pte_compare_endog, eclass
             matrix `ci_mat'[3, 2]   = `coef_s3' + 1.96 * `se_s3'
             matrix `r2_mat'[1, 3]   = `r2_s3'
             matrix `n_mat'[1, 3]    = `n_s3'
+
+            if !`_pte_compare_esample_ready' {
+                capture quietly gen byte `_pte_compare_esample' = e(sample)
+                local _pte_compare_esample_rc = _rc
+                if `_pte_compare_esample_rc' {
+                    if `_pte_compare_had_xtset' {
+                        local _pte_compare_restore_delta_opt ""
+                        if `"`_pte_compare_prev_delta'"' != "" {
+                            local _pte_compare_restore_delta_opt "delta(`_pte_compare_prev_delta')"
+                        }
+                        capture quietly xtset `_pte_compare_prev_panel' `_pte_compare_prev_time', `_pte_compare_restore_delta_opt'
+                    }
+                    else {
+                        capture quietly xtset, clear
+                    }
+                    exit `_pte_compare_esample_rc'
+                }
+                local _pte_compare_esample_ready = 1
+            }
             
             capture estimates store _endog_m6, nocopy
-            if _rc {
+            local _pte_compare_store_rc = _rc
+            if `_pte_compare_store_rc' {
                 if `_pte_compare_had_xtset' {
                     local _pte_compare_restore_delta_opt ""
                     if `"`_pte_compare_prev_delta'"' != "" {
@@ -525,7 +619,7 @@ program define _pte_compare_endog, eclass
                 else {
                     capture quietly xtset, clear
                 }
-                exit _rc
+                exit `_pte_compare_store_rc'
             }
             
             di as text "    Spec 3/m6 (3rd order): delta = " ///
@@ -547,7 +641,7 @@ program define _pte_compare_endog, eclass
         di as text "  GMM: " 2*`omegapoly'+2 "-column OMEGA_lag_pol (with treatment interactions, omegapoly=`omegapoly')"
         di as text "  Sample: Full (transition period NOT excluded)"
         di as text "  Absorb: `absorb'"
-        di as text "  Treatment: L.`treatment' (lagged)"
+        di as text "  Treatment: `treatment_label'"
         di as text ""
         di as text "  {hline 66}"
         di as text "                        No Control    1st Order    3rd Order"
@@ -635,9 +729,14 @@ program define _pte_compare_endog, eclass
     matrix colnames `ci_mat'   = ci_lower ci_upper
     matrix colnames `r2_mat'   = spec1 spec2 spec3
     matrix colnames `n_mat'    = spec1 spec2 spec3
-    tempvar _pte_compare_esample
-    capture quietly gen byte `_pte_compare_esample' = e(sample)
-    if _rc {
+    if !`_pte_compare_esample_ready' {
+        local _pte_compare_esample_rc = 459
+    }
+    else {
+        capture confirm variable `_pte_compare_esample', exact
+        local _pte_compare_esample_rc = _rc
+    }
+    if `_pte_compare_esample_rc' {
         if `_pte_compare_had_xtset' {
             local _pte_compare_restore_delta_opt ""
             if `"`_pte_compare_prev_delta'"' != "" {
@@ -648,7 +747,7 @@ program define _pte_compare_endog, eclass
         else {
             capture quietly xtset, clear
         }
-        exit _rc
+        exit `_pte_compare_esample_rc'
     }
 
     // Method II also needs a temporary firm-year panel declaration for lagged
@@ -665,7 +764,6 @@ program define _pte_compare_endog, eclass
         capture quietly xtset, clear
     }
     
-    ereturn clear
     ereturn post, esample(`_pte_compare_esample')
     
     // Scalars
@@ -677,7 +775,14 @@ program define _pte_compare_endog, eclass
     ereturn scalar se_endog_3  = `se_mat'[1, 3]
     ereturn scalar fval_endog  = `fval_endog'
     ereturn scalar omegapoly   = `omegapoly'
-    
+
+    // Create chart-interface copies before ereturn matrix consumes tempnames.
+    tempname compare_coef compare_se
+    matrix `compare_coef' = `coef_mat'
+    matrix `compare_se'   = `se_mat'
+    matrix colnames `compare_coef' = spec1 spec2 spec3
+    matrix colnames `compare_se'   = spec1 spec2 spec3
+
     // Matrices
     ereturn matrix coef_endog  = `coef_mat'
     ereturn matrix se_endog    = `se_mat'
@@ -688,11 +793,6 @@ program define _pte_compare_endog, eclass
 
     // Publish the same 1x3 chart interface used by the other single-method
     // compare producers so pte_compare's documented contract stays uniform.
-    tempname compare_coef compare_se
-    matrix `compare_coef' = `coef_mat'
-    matrix `compare_se'   = `se_mat'
-    matrix colnames `compare_coef' = spec1 spec2 spec3
-    matrix colnames `compare_se'   = spec1 spec2 spec3
     ereturn matrix compare_coef = `compare_coef'
     ereturn matrix compare_se   = `compare_se'
     

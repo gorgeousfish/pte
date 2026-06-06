@@ -282,13 +282,13 @@ program define _pte_graph_att_nonabs, rclass
                 qui summarize _boot_diff_`j'
                 if r(N) >= 2 {
                     matrix `m_diff_se'[1, `j'] = r(sd)
-                    sort _boot_diff_`j'
-                    qui count if !missing(_boot_diff_`j')
-                    local nv = r(N)
-                    local lo_idx = max(1, ceil(`nv' * (100 - `level') / 200))
-                    local hi_idx = min(`nv', floor(`nv' * (1 - ((100 - `level') / 200))) + 1)
-                    matrix `m_diff_ci_lo'[1, `j'] = _boot_diff_`j'[`lo_idx']
-                    matrix `m_diff_ci_hi'[1, `j'] = _boot_diff_`j'[`hi_idx']
+                    // Percentile CI: use _pctile so the bounds match the
+                    // official replication DOs (egen pctile(), p(.)) exactly.
+                    local p_lo = (100 - `level') / 2
+                    local p_hi = 100 - ((100 - `level') / 2)
+                    qui _pctile _boot_diff_`j' if !missing(_boot_diff_`j'), percentiles(`p_lo' `p_hi')
+                    matrix `m_diff_ci_lo'[1, `j'] = r(r1)
+                    matrix `m_diff_ci_hi'[1, `j'] = r(r2)
                 }
                 else if r(N) == 1 {
                     matrix `m_diff_se'[1, `j'] = 0

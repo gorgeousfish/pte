@@ -40,7 +40,9 @@ display ""
 * Load panel dataset and verify structure
 
 use "`root'/data/pte_example.dta", clear
-gen ind = industry
+* Generate synthetic industry grouping (pte_example.dta does not contain industry)
+egen ind = cut(firm), group(4)
+label variable ind "Industry group (synthetic)"
 xtset firm year
 
 display _dup(70) "-"
@@ -60,7 +62,7 @@ display ""
 * variation such as time trends from the productivity measure.
 
 use "`root'/data/pte_example.dta", clear
-gen ind = industry
+egen ind = cut(firm), group(4)
 xtset firm year
 
 display _dup(70) "-"
@@ -97,7 +99,7 @@ display ""
 * When omegapoly >= 2, counterfactual simulation with nsim paths is used.
 
 use "`root'/data/pte_example.dta", clear
-gen ind = industry
+egen ind = cut(firm), group(4)
 xtset firm year
 
 display _dup(70) "-"
@@ -149,7 +151,7 @@ display ""
 * increase computation time. Default is 100 when omegapoly >= 2.
 
 use "`root'/data/pte_example.dta", clear
-gen ind = industry
+egen ind = cut(firm), group(4)
 xtset firm year
 
 display _dup(70) "-"
@@ -193,7 +195,7 @@ display ""
 * diagnostics. Useful for debugging and understanding the estimation process.
 
 use "`root'/data/pte_example.dta", clear
-gen ind = industry
+egen ind = cut(firm), group(4)
 xtset firm year
 
 display _dup(70) "-"
@@ -218,7 +220,7 @@ display ""
 * custom post-estimation analysis (e.g., bias-corrected CIs, density plots).
 
 use "`root'/data/pte_example.dta", clear
-gen ind = industry
+egen ind = cut(firm), group(4)
 xtset firm year
 
 display _dup(70) "-"
@@ -257,7 +259,7 @@ display ""
 * for event times 0 through 4 unless a smaller feasible horizon binds first.
 
 use "`root'/data/pte_example.dta", clear
-gen ind = industry
+egen ind = cut(firm), group(4)
 xtset firm year
 
 display _dup(70) "-"

@@ -21,6 +21,69 @@ program define _pte_graph_heterogeneity, rclass
         di as error "pte: ntall and nt() are mutually exclusive"
         exit 198
     }
+
+    local setup_panel : char _dta[_pte_setup_panelvar]
+    local setup_time : char _dta[_pte_setup_timevar]
+    local setup_treatment : char _dta[_pte_setup_treatment]
+    local setup_treatsig : char _dta[_pte_setup_treatsig]
+    local setup_xtdelta : char _dta[_pte_setup_xtdelta]
+    local live_id ""
+    local live_time ""
+    local live_treatsig ""
+    local live_predict ""
+    if "`e(cmd)'" == "pte" {
+        capture local live_id = e(idvar)
+        if _rc != 0 | inlist("`live_id'", "", ".") {
+            capture local live_id = e(id)
+        }
+        if "`live_id'" == "." {
+            local live_id ""
+        }
+        capture local live_time = e(timevar)
+        if _rc != 0 | inlist("`live_time'", "", ".") {
+            capture local live_time = e(time)
+        }
+        if "`live_time'" == "." {
+            local live_time ""
+        }
+        capture local live_treatsig = e(treatsig)
+        if _rc != 0 | "`live_treatsig'" == "." {
+            local live_treatsig ""
+        }
+        capture local live_predict = e(predict)
+        if _rc != 0 | "`live_predict'" == "." {
+            local live_predict ""
+        }
+    }
+    local have_setup_fragment = ///
+        (`"`setup_panel'"' != "") | ///
+        (`"`setup_time'"' != "") | ///
+        (`"`setup_treatment'"' != "") | ///
+        (`"`setup_treatsig'"' != "") | ///
+        (`"`setup_xtdelta'"' != "")
+    local have_setup_helper_bundle = 0
+    foreach helper in _pte_D _pte_mid _pte_cohort _pte_treat_year ///
+        _pte_first_treat_year {
+        capture confirm variable `helper', exact
+        if _rc == 0 {
+            local have_setup_helper_bundle = 1
+            continue, break
+        }
+    }
+    local have_live_panel_contract = ///
+        (`"`live_id'"' != "") | (`"`live_time'"' != "") | ///
+        (`"`live_treatsig'"' != "")
+    local have_live_payload = (`"`live_predict'"' != "")
+    local have_live_pte = (`have_live_panel_contract' | `have_live_payload')
+
+    if `have_setup_fragment' | `have_live_pte' | `have_setup_helper_bundle' {
+        capture noisily _pte_diag_panel_contract, ///
+            context("pte_graph, heterogeneity") allowsetupmissingxtdelta
+        local panel_contract_rc = _rc
+        if `panel_contract_rc' != 0 {
+            exit `panel_contract_rc'
+        }
+    }
     
     // =========================================================================
     // T03: Prerequisite checks
@@ -329,9 +392,25 @@ program define _pte_graph_heterogeneity, rclass
                 !missing(`by') & `by_calc' == `gval', local(lbl)
             local _pte_graph_group_token_`gi' `"`lbl'"'
         }
+        mata: st_local("lbl", subinstr(st_local("lbl"), char(96) + char(34), "", .))
+        mata: st_local("lbl", subinstr(st_local("lbl"), char(34) + char(39), "", .))
+        mata: st_local("lbl", subinstr(st_local("lbl"), char(34) + char(34), char(34), .))
         local group_labels `"`group_labels' `"`lbl'"'"'
-        local glabel_`gi' `"`lbl'"'
+        mata: st_local("glabel_`gi'", st_local("lbl"))
     }
+
+    local default_title : variable label `by'
+    if `"`default_title'"' == "" {
+        local default_title "`by'"
+    }
+    gettoken default_title_clean default_title_rest : default_title, quotes
+    if `"`default_title_clean'"' != "" {
+        local default_title `"`default_title_clean'"'
+    }
+    mata: st_local("default_title", subinstr(st_local("default_title"), char(96) + char(34), "", .))
+    mata: st_local("default_title", subinstr(st_local("default_title"), char(34) + char(39), "", .))
+    mata: st_local("default_title", subinstr(st_local("default_title"), char(34) + char(34), char(34), .))
+    mata: st_local("default_title", st_local("default_title") + "-level Treatment Effects on Productivity")
     
     // =========================================================================
     // T05a: Total ATT calculation
@@ -731,7 +810,12 @@ program define _pte_graph_heterogeneity, rclass
     // =========================================================================
     
     // Set defaults
-    if `"`title'"' == "" local title "Heterogeneity Analysis"
+    if `"`title'"' == "" {
+        local title `"`default_title'"'
+    }
+    mata: st_local("title", subinstr(st_local("title"), char(96) + char(34), "", .))
+    mata: st_local("title", subinstr(st_local("title"), char(34) + char(39), "", .))
+    mata: st_local("title", subinstr(st_local("title"), char(34) + char(34), char(34), .))
     if `"`xtitle'"' == "" local xtitle "ATT"
     if `"`ytitle'"' == "" local ytitle ""
     if "`scheme'" == "" local scheme "s1color"
@@ -756,7 +840,7 @@ program define _pte_graph_heterogeneity, rclass
     local graph_cmd `"`graph_cmd' ytitle(`"`ytitle'"')"'
     
     // Title
-    local graph_cmd `"`graph_cmd' title(`"`title'"')"'
+    local graph_cmd `"`graph_cmd' title(`"`macval(title)'"')"'
     
     // Note with CI level info
     local graph_cmd `"`graph_cmd' note("`level'% confidence intervals")"'
@@ -815,14 +899,7 @@ program define _pte_graph_heterogeneity, rclass
             matrix `att_by_mat'[`gi', 3] = `contrib_`gi''
         }
         matrix `att_by_mat'[`gi', 4] = `n_`gi''
-        // Sanitize label for matrix row name (replace spaces with underscores)
-        local rlbl `glabel_`gi''
-        local rlbl : subinstr local rlbl " " "_", all
-        local rlbl : subinstr local rlbl "." "_", all
-        if strlen("`rlbl'") > 32 {
-            local rlbl = substr("`rlbl'", 1, 32)
-        }
-        local rownames `"`rownames' `rlbl'"'
+        local rownames `"`rownames' g`gi'"'
     }
     
     // Fill Total row
@@ -877,7 +954,7 @@ program define _pte_graph_heterogeneity, rclass
     // =========================================================================
     
     di as text ""
-    di as text "{bf:Heterogeneity Analysis by `by'}"
+    di as text "{bf:" `"`macval(title)'"' "}"
     di as text "{hline 70}"
     
     // Table header
@@ -893,22 +970,17 @@ program define _pte_graph_heterogeneity, rclass
     local gi = 0
     foreach gval of local group_values {
         local gi = `gi' + 1
-        local lbl `glabel_`gi''
-        
-        // Truncate label if too long for display
-        if strlen("`lbl'") > 24 {
-            local lbl = substr("`lbl'", 1, 21) + "..."
-        }
+        local lbl `"`glabel_`gi''"'
         
         if "`showcontrib'" != "" & !missing(`contrib_`gi'') {
-            di as text "{col 3}`lbl'" ///
+            di as text "{col 3}" `"`macval(lbl)'"' ///
                        "{col 26}" %9.4f `att_`gi'' ///
                        "{col 38}" %8.4f `se_`gi'' ///
                        "{col 49}" %10.2f `contrib_`gi'' ///
                        "{col 62}" %8.0fc `n_`gi''
         }
         else {
-            di as text "{col 3}`lbl'" ///
+            di as text "{col 3}" `"`macval(lbl)'"' ///
                        "{col 26}" %9.4f `att_`gi'' ///
                        "{col 38}" %8.4f `se_`gi'' ///
                        "{col 49}" %8.0fc `n_`gi''

@@ -78,7 +78,7 @@ not require the unrelated baseline GMM Mata runtime used by {cmd:pte}.
 
 {syntab:Options}
 {synopt:{opt treat:ment(varname)}}override treatment variable from {cmd:pte}; the name must match an existing numeric variable exactly, and abbreviation fallback is rejected{p_end}
-{synopt:{opt lagt:reatment}}backward-compatibility alias; the released public workflow already uses lagged treatment L.D for Method I, so this option does not change behavior{p_end}
+{synopt:{opt lagt:reatment}}use lagged treatment L.D instead of the default contemporaneous D for replication/compatibility paths{p_end}
 {synopt:{opt diag:nose}}display bias source analysis (Paper Section 5){p_end}
 {synopt:{opt norep:ort}}suppress results table{p_end}
 {synoptline}
@@ -143,22 +143,24 @@ Method III (clktwfe) key characteristics:
 
 {p 8 12 2}1. Uses the current CLK-corrected productivity contract from {cmd:pte}, rebuilding a temporary current omega if the exact live {_cmd:_pte_omega} object is missing or stale{p_end}
 {p 8 12 2}2. Excludes transition period observations (D_t != D_{t-1}) using the exact canonical {_cmd:_pte_mid==0} gate; shadow variables are not accepted{p_end}
-{p 8 12 2}3. Always uses lagged treatment (L.D) per reproduction code; {opt lagtreatment} does not change Method III behavior{p_end}
+{p 8 12 2}3. Uses contemporaneous treatment D by default, matching equation (18); {opt lagtreatment} switches Method III to L.D for replication/compatibility paths{p_end}
 {p 8 12 2}4. Addresses Problem 3 (transition period) but not Problems 1-2{p_end}
 
 {pstd}
 Each method runs three TWFE specifications:
 
 {pstd}
-Across these specifications, all three public methods use the lagged
-treatment term L.D to match the released comparison workflow and the
-official reproduction code.
+Across these specifications, all three public methods use the
+contemporaneous treatment term D by default, matching equation (18) in
+the paper. Supplying {opt lagtreatment} switches the treatment regressor
+to L.D for workflows that intentionally reproduce lagged-treatment DO
+paths.
 
 {p2colset 5 20 22 2}{...}
-{p2col:Spec 1}No lagged controls: reghdfe omega L.D, absorb(firm year){p_end}
-{p2col:Spec 2}First-order lag: reghdfe omega L.omega L.D, absorb(firm year){p_end}
+{p2col:Spec 1}No lagged controls: reghdfe omega D, absorb(firm year){p_end}
+{p2col:Spec 2}First-order lag: reghdfe omega L.omega D, absorb(firm year){p_end}
 {p2col:Spec 3}Third-order polynomial lags: reghdfe omega L.omega L.omega2
-L.omega3 L.D, absorb(firm year){p_end}
+L.omega3 D, absorb(firm year){p_end}
 {p2colreset}{...}
 
 {marker options}{...}
@@ -238,12 +240,12 @@ current data spacing so the downstream {cmd:L.} operators cannot run
 under a stale lag law.
 
 {phang}
-{opt lagtreatment} is retained for backward compatibility. In the
-released public workflow, {cmd:method(expost)} already follows the
-official reproduction path and uses L.D by default, just like
-{cmd:method(endog)} and {cmd:method(clktwfe)}. Supplying
-{opt lagtreatment} therefore does not change their behavior in the
-current released comparison design.
+{opt lagtreatment} is retained for backward compatibility with
+lagged-treatment reproduction paths. By default, the public comparison
+regressions use the contemporaneous treatment indicator D in equation
+(18). Supplying {opt lagtreatment} changes the treatment regressor in
+the three comparison methods to L.D while leaving lagged productivity
+controls unchanged.
 
 {phang}
 {opt diagnose} displays a detailed bias source analysis based on
@@ -286,7 +288,7 @@ quantitative bias comparisons are also shown.
 {pstd}With custom fixed effects and VCE{p_end}
 {phang2}{cmd:. pte_compare, method(expost) absorb(firm year industry) vce(cluster firm)}{p_end}
 
-{pstd}Backward-compatibility alias for the released lagged-treatment path{p_end}
+{pstd}Lagged-treatment compatibility path{p_end}
 {phang2}{cmd:. pte_compare, method(expost) lagtreatment}{p_end}
 
 {pstd}CLK+TWFE method (Method III){p_end}

@@ -105,6 +105,75 @@ program define _pte_graph_diagnose, rclass
     // =========================================================================
     // Original cdf/kdensity implementation (inline, backward compatible)
     // =========================================================================
+
+    // Before validating package-owned treatment/event-time helpers, certify that
+    // a stale pte_setup helper bundle has not been left behind by check mode.
+    // Pure legacy fixtures that materialize only _pte_year/_pte_treat/_pte_nt
+    // still fall through to the exact _pte_year bridge below.
+    if "`currentlawchecked'" == "" {
+        local _pte_pre_setup_panel : char _dta[_pte_setup_panelvar]
+        local _pte_pre_setup_time : char _dta[_pte_setup_timevar]
+        local _pte_pre_setup_treatment : char _dta[_pte_setup_treatment]
+        local _pte_pre_setup_treatsig : char _dta[_pte_setup_treatsig]
+        local _pte_pre_setup_xtdelta : char _dta[_pte_setup_xtdelta]
+        local _pte_pre_have_setup_fragment = ///
+            (`"`_pte_pre_setup_panel'"' != "") | ///
+            (`"`_pte_pre_setup_time'"' != "") | ///
+            (`"`_pte_pre_setup_treatment'"' != "") | ///
+            (`"`_pte_pre_setup_treatsig'"' != "") | ///
+            (`"`_pte_pre_setup_xtdelta'"' != "")
+        local _pte_pre_hsh = 0
+        foreach helper in _pte_D _pte_mid _pte_cohort _pte_treat_year ///
+            _pte_first_treat_year {
+            capture confirm variable `helper', exact
+            if _rc == 0 {
+                local _pte_pre_hsh = 1
+                continue, break
+            }
+        }
+        local _pte_pre_live_id ""
+        local _pte_pre_live_time ""
+        local _pte_pre_live_treatsig ""
+        local _pte_pre_live_predict ""
+        if "`e(cmd)'" == "pte" {
+            capture local _pte_pre_live_id = e(idvar)
+            if _rc != 0 | inlist("`_pte_pre_live_id'", "", ".") {
+                capture local _pte_pre_live_id = e(id)
+            }
+            if "`_pte_pre_live_id'" == "." {
+                local _pte_pre_live_id ""
+            }
+            capture local _pte_pre_live_time = e(timevar)
+            if _rc != 0 | inlist("`_pte_pre_live_time'", "", ".") {
+                capture local _pte_pre_live_time = e(time)
+            }
+            if "`_pte_pre_live_time'" == "." {
+                local _pte_pre_live_time ""
+            }
+            capture local _pte_pre_live_treatsig = e(treatsig)
+            if _rc != 0 | "`_pte_pre_live_treatsig'" == "." {
+                local _pte_pre_live_treatsig ""
+            }
+            capture local _pte_pre_live_predict = e(predict)
+            if _rc != 0 | "`_pte_pre_live_predict'" == "." {
+                local _pte_pre_live_predict ""
+            }
+        }
+        local _pte_pre_have_live_pte = ///
+            (`"`_pte_pre_live_id'"' != "") | ///
+            (`"`_pte_pre_live_time'"' != "") | ///
+            (`"`_pte_pre_live_treatsig'"' != "") | ///
+            (`"`_pte_pre_live_predict'"' != "")
+        if `_pte_pre_have_setup_fragment' | `_pte_pre_have_live_pte' | ///
+            `_pte_pre_hsh' {
+            capture noisily _pte_diag_panel_contract, ///
+                context("pte_graph diagnose type(`type')") allowsetupmissingxtdelta
+            local _pte_pre_panel_contract_rc = _rc
+            if `_pte_pre_panel_contract_rc' != 0 {
+                exit `_pte_pre_panel_contract_rc'
+            }
+        }
+    }
     
     // Prerequisite checks
     foreach var in _pte_eps0 _pte_treat _pte_nt {

@@ -31,6 +31,7 @@ program define _pte_omega_recovery, eclass
               beta_l(real -999) beta_k(real -999) ///
               beta_ll(real 0) beta_kk(real 0) beta_lk(real 0) ///
               VERIFY DEBUG depvar(name) time(name) beta_t(real -999) ///
+              LEGACYFLOATOMEGA ///
               TOUSE(name)]
     if _rc != 0 {
         local _pte_syntax_rc = _rc
@@ -586,14 +587,26 @@ program define _pte_omega_recovery, eclass
 
     if "`pfunc'" == "cd" {
         // CD recovery subtracts only the linear free and state elasticities.
-        quietly gen double omega = phi - _pte_beta_l * `free' - _pte_beta_k * `state' if `_pte_sample'
+        if "`legacyfloatomega'" != "" {
+            quietly gen float omega = phi - _pte_beta_l * `free' - _pte_beta_k * `state' if `_pte_sample'
+        }
+        else {
+            quietly gen double omega = phi - _pte_beta_l * `free' - _pte_beta_k * `state' if `_pte_sample'
+        }
     }
     else if "`pfunc'" == "translog" {
         // Translog recovery subtracts the full curvature and interaction terms
         // so omega stays comparable to the paper's realized productivity object.
-        quietly gen double omega = phi - _pte_beta_l * `free' - _pte_beta_k * `state' ///
-                                 - _pte_beta_ll * (`free')^2 - _pte_beta_kk * (`state')^2 ///
-                                 - _pte_beta_lk * `free' * `state' if `_pte_sample'
+        if "`legacyfloatomega'" != "" {
+            quietly gen float omega = phi - _pte_beta_l * `free' - _pte_beta_k * `state' ///
+                                     - _pte_beta_ll * (`free')^2 - _pte_beta_kk * (`state')^2 ///
+                                     - _pte_beta_lk * `free' * `state' if `_pte_sample'
+        }
+        else {
+            quietly gen double omega = phi - _pte_beta_l * `free' - _pte_beta_k * `state' ///
+                                     - _pte_beta_ll * (`free')^2 - _pte_beta_kk * (`state')^2 ///
+                                     - _pte_beta_lk * `free' * `state' if `_pte_sample'
+        }
     }
 
     // Missing omega values should reflect missing inputs on the active sample,

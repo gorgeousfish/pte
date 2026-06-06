@@ -74,8 +74,8 @@ program define _pte_validate_nt_neg1, rclass
 
     // ================================================================
     // Step 2: Per-firm nt=-1 completeness
-    // Check every firm has at least one nt=-1 observation.
-    // Firms missing nt=-1 are warned and dropped.
+    // Check every firm has at least one nt=-1 observation. A missing anchor is
+    // not a recoverable state because dropping firms changes the ATT target.
     // ================================================================
 
     tempvar has_neg1
@@ -94,7 +94,7 @@ program define _pte_validate_nt_neg1, rclass
         quietly levelsof `firm' if `tag_missing' == 1, local(missing_list)
 
         di as error ""
-        di as error "{bf:pte warning}: `n_missing_firms' firms missing nt=-1 — dropped"
+        di as error "{bf:pte error E-3002}: `n_missing_firms' firms missing nt=-1"
         di as error "{hline 70}"
 
         // Show first 10 affected firms
@@ -110,17 +110,9 @@ program define _pte_validate_nt_neg1, rclass
         }
         di as error "{hline 70}"
 
-        // Drop firms missing nt=-1
-        quietly drop if `has_neg1' == 0
-
-        // Recount after drop
-        quietly count if `nt' == -1
-        local n_neg1 = r(N)
-
-        if `n_neg1' == 0 {
-            di as error "{bf:pte error E-3002}: No nt=-1 left after dropping incomplete firms"
-            exit 3002
-        }
+        di as error "These firms cannot be silently dropped because that would change the ATT target."
+        di as error "Rebuild the ATT sample so every treated firm has nt=-1 support."
+        exit 3002
     }
 
     // ================================================================
@@ -146,7 +138,7 @@ program define _pte_validate_nt_neg1, rclass
             quietly levelsof `firm' if `tag_bad_anchor' == 1, local(bad_anchor_list)
 
             di as error ""
-            di as error "{bf:pte warning}: `n_bad_anchor_firms' firms missing observed omega at nt=-1 — dropped"
+            di as error "{bf:pte error E-3002}: `n_bad_anchor_firms' firms missing observed omega at nt=-1"
             di as error "{hline 70}"
 
             local n_show = min(`n_bad_anchor_firms', 10)
@@ -161,15 +153,9 @@ program define _pte_validate_nt_neg1, rclass
             }
             di as error "{hline 70}"
 
-            quietly drop if `has_anchor_omega' == 0
-
-            quietly count if `nt' == -1
-            local n_neg1 = r(N)
-
-            if `n_neg1' == 0 {
-                di as error "{bf:pte error E-3002}: No valid nt=-1 anchors left after dropping firms with missing omega"
-                exit 3002
-            }
+            di as error "These firms cannot be silently dropped because ATT_0 is anchored at omega_{e_i-1}."
+            di as error "Re-run the upstream omega step on a sample with nonmissing nt=-1 productivity."
+            exit 3002
         }
     }
 

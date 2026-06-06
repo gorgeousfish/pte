@@ -305,6 +305,23 @@ program define _pte_graph_att, rclass
                 exit 198
             }
         }
+
+        local _pte_ci_order_cols = `L'
+        if "`noaverage'" == "" {
+            local _pte_ci_order_cols = `n_att'
+        }
+        mata: st_numscalar("__pte_graph_att_ci_order_ok",                ///
+            allof((st_matrix("`CI_LO'")[|1,1 \ 1,`_pte_ci_order_cols'|] :<= ///
+                   st_matrix("`CI_HI'")[|1,1 \ 1,`_pte_ci_order_cols'|]) :| ///
+                  (missing(st_matrix("`CI_LO'")[|1,1 \ 1,`_pte_ci_order_cols'|]) :& ///
+                   missing(st_matrix("`CI_HI'")[|1,1 \ 1,`_pte_ci_order_cols'|])), 1))
+        if scalar(__pte_graph_att_ci_order_ok) == 0 {
+            di as error "pte: stored ATT confidence-interval lower bounds exceed upper bounds."
+            di as error "e(att_lb)/e(att_ub) or e(att_ci_lower)/e(att_ci_upper) must form ordered intervals."
+            scalar drop __pte_graph_att_ci_order_ok
+            exit 198
+        }
+        capture scalar drop __pte_graph_att_ci_order_ok
     }
     
     if `has_se' {

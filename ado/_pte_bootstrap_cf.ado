@@ -463,21 +463,36 @@ program define _pte_bootstrap_cf, eclass
 
         // 6.2 Restore original data
         quietly use `orig_data', clear
+        capture drop phi phi_raw omega
+        capture drop _pte_phi _pte_omega _pte_eps0 _pte_eps0_trim _pte_eps0_ind
+        capture drop _pte_eps0_draw _pte_eps0_trim_draw
+        capture drop _pte_omega_0 _pte_omega_0_trim _pte_omega_02 _pte_omega_03 _pte_omega_04
+        capture drop _pte_omega_02_trim _pte_omega_03_trim _pte_omega_04_trim
+        capture drop _pte_tt _pte_tt_trim _pte_tt_raw _pte_nt _pte_treat_year treat_yr0
 
         // 6.3 Set outer seed
         local outer_seed = `seed' + `b' - 1
         set seed `outer_seed'
 
         // 6.4 Stratified cluster bootstrap resampling
+        local bs_ok = 1
         capture drop _pte_firm_bs
         quietly bsample, strata(_pte_treat_firm) cluster(`panelvar') idcluster(_pte_firm_bs)
+        quietly count if _pte_treat_firm == 0
+        local n_control_bs = r(N)
+        quietly count if _pte_treat_firm == 1
+        local n_treated_bs = r(N)
+        if `n_control_bs' == 0 | `n_treated_bs' == 0 {
+            local bs_ok = 0
+        }
 
         // 6.5 Re-xtset with bootstrap firm IDs
-        quietly xtset _pte_firm_bs `timevar'`_pte_boot_delta_opt'
+        if `bs_ok' == 1 {
+            quietly xtset _pte_firm_bs `timevar'`_pte_boot_delta_opt'
+        }
 
         // 6.6 Re-run full pipeline with error handling
-        local bs_ok = 1
-
+        if `bs_ok' == 1 {
             capture {
                 local _pf_bs "treatment(`treatment') id(_pte_firm_bs) time(`timevar')"
                 local _pf_bs "`_pf_bs' lny(`depvar') free(`free') state(`state') proxy(`proxy')"
@@ -486,11 +501,26 @@ program define _pte_bootstrap_cf, eclass
                 if "`control'" != "" {
                     local _pf_bs "`_pf_bs' control(`control')"
                 }
-            local _pf_bs "`_pf_bs' noreport nodiagnose"
-            _pte_prodfunc, `_pf_bs'
-        }
-        if _rc != 0 {
-            local bs_ok = 0
+                local _pf_bs "`_pf_bs' noreport nodiagnose"
+                _pte_prodfunc, `_pf_bs'
+            }
+            if _rc != 0 {
+                local bs_ok = 0
+            }
+            if `bs_ok' == 1 {
+                capture confirm numeric variable omega
+                if _rc != 0 {
+                    local bs_ok = 0
+                }
+                capture confirm numeric variable _pte_eps0
+                if _rc != 0 {
+                    local bs_ok = 0
+                }
+                capture confirm numeric variable _pte_eps0_ind
+                if _rc != 0 {
+                    local bs_ok = 0
+                }
+            }
         }
 
         if `bs_ok' == 1 {
@@ -550,6 +580,20 @@ program define _pte_bootstrap_cf, eclass
             }
             if _rc != 0 {
                 local bs_ok = 0
+            }
+            if `bs_ok' == 1 {
+                capture confirm numeric variable omega
+                if _rc != 0 {
+                    local bs_ok = 0
+                }
+                capture confirm numeric variable _pte_eps0
+                if _rc != 0 {
+                    local bs_ok = 0
+                }
+                capture confirm numeric variable _pte_eps0_ind
+                if _rc != 0 {
+                    local bs_ok = 0
+                }
             }
         }
 
@@ -724,9 +768,17 @@ program define _pte_bootstrap_cf, eclass
         }
         exit 2000
     }
+    if `n_success' < 50 {
+        di as text "{bf:Warning}: only `n_success' successful bootstrap iterations"
+        di as text "  Percentile intervals and standard errors are unstable with fewer than 50 draws"
+    }
 
     // 7.1 Compute SE, CI, p-values using temporary dataset
     local alpha = (100 - `level') / 200
+    // Percentile points (in percent) for the _pctile-based CI bounds, matching
+    // the official replication DOs (egen pctile(), p(.)).
+    local p_lo = 100 * `alpha'
+    local p_hi = 100 * (1 - `alpha')
     tempname se_att ci_lo_att ci_hi_att pval_att mean_att
     tempname se_ate ci_lo_ate ci_hi_ate pval_ate mean_ate
     tempname se_delta ci_lo_delta ci_hi_delta pval_delta mean_delta
@@ -779,14 +831,13 @@ program define _pte_bootstrap_cf, eclass
         if r(N) >= 2 {
             matrix `mean_att'[1, `j'] = r(mean)
             matrix `se_att'[1, `j'] = r(sd)
-            // Percentile CI
-            sort _att`j'
+            // Percentile CI: use _pctile so the bounds match the official
+            // replication DOs (egen pctile(), p(.)) exactly.
             quietly count if !missing(_att`j')
             local nv = r(N)
-            local lo_idx = max(1, ceil(`nv' * `alpha'))
-            local hi_idx = min(`nv', floor(`nv' * (1 - `alpha')) + 1)
-            matrix `ci_lo_att'[1, `j'] = _att`j'[`lo_idx']
-            matrix `ci_hi_att'[1, `j'] = _att`j'[`hi_idx']
+            quietly _pctile _att`j' if !missing(_att`j'), percentiles(`p_lo' `p_hi')
+            matrix `ci_lo_att'[1, `j'] = r(r1)
+            matrix `ci_hi_att'[1, `j'] = r(r2)
             // Count zero mass on both tails so a degenerate null distribution
             // does not spuriously reject at p = 0.
             quietly count if _att`j' >= 0 & !missing(_att`j')
@@ -804,13 +855,11 @@ program define _pte_bootstrap_cf, eclass
         if r(N) >= 2 {
             matrix `mean_ate'[1, `j'] = r(mean)
             matrix `se_ate'[1, `j'] = r(sd)
-            sort _ate`j'
             quietly count if !missing(_ate`j')
             local nv = r(N)
-            local lo_idx = max(1, ceil(`nv' * `alpha'))
-            local hi_idx = min(`nv', floor(`nv' * (1 - `alpha')) + 1)
-            matrix `ci_lo_ate'[1, `j'] = _ate`j'[`lo_idx']
-            matrix `ci_hi_ate'[1, `j'] = _ate`j'[`hi_idx']
+            quietly _pctile _ate`j' if !missing(_ate`j'), percentiles(`p_lo' `p_hi')
+            matrix `ci_lo_ate'[1, `j'] = r(r1)
+            matrix `ci_hi_ate'[1, `j'] = r(r2)
             quietly count if _ate`j' >= 0 & !missing(_ate`j')
             local n_nonneg = r(N)
             quietly count if _ate`j' <= 0 & !missing(_ate`j')
@@ -826,13 +875,11 @@ program define _pte_bootstrap_cf, eclass
         if r(N) >= 2 {
             matrix `mean_delta'[1, `j'] = r(mean)
             matrix `se_delta'[1, `j'] = r(sd)
-            sort _delta`j'
             quietly count if !missing(_delta`j')
             local nv = r(N)
-            local lo_idx = max(1, ceil(`nv' * `alpha'))
-            local hi_idx = min(`nv', floor(`nv' * (1 - `alpha')) + 1)
-            matrix `ci_lo_delta'[1, `j'] = _delta`j'[`lo_idx']
-            matrix `ci_hi_delta'[1, `j'] = _delta`j'[`hi_idx']
+            quietly _pctile _delta`j' if !missing(_delta`j'), percentiles(`p_lo' `p_hi')
+            matrix `ci_lo_delta'[1, `j'] = r(r1)
+            matrix `ci_hi_delta'[1, `j'] = r(r2)
             quietly count if _delta`j' >= 0 & !missing(_delta`j')
             local n_nonneg = r(N)
             quietly count if _delta`j' <= 0 & !missing(_delta`j')

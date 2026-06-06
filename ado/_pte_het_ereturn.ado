@@ -8,9 +8,10 @@ program define _pte_het_ereturn, eclass
     syntax , RESULT(name) SE(name) [CONTRIB(name)] CI(name) ///
              BYvar(varname) LABELS(string) N_groups(integer) LEVEL(real) ///
              GROUPTOKENS(string) ///
-             [NBOOT(integer 500)] [TESTED(integer 0)] ///
+             [NBOOT(string)] [TESTED(integer 0)] ///
              [Q_stat(real 0)] [Q_pvalue(real 0)] [I2(real 0)] [DF(real -1)] ///
-             [BOOTKEEP(numlist integer min=1)]
+             [BOOTKEEP(numlist integer min=1)] [CMDLINE(string)] ///
+             [TITLE(string)]
     
     local G = `n_groups'
     local total_row = `G' + 1
@@ -110,7 +111,17 @@ program define _pte_het_ereturn, eclass
     // ================================================================
     ereturn scalar n_groups = `n_groups'
     ereturn scalar level = `level'
-    ereturn scalar nboot = `nboot'
+    if "`nboot'" != "" {
+        capture confirm number `nboot'
+        if _rc != 0 {
+            di as error "nboot() must be numeric when specified"
+            exit 198
+        }
+        local nboot_value = real("`nboot'")
+        if !missing(`nboot_value') & `nboot_value' > 0 {
+            ereturn scalar nboot = `nboot_value'
+        }
+    }
     
     // Total statistics from result matrix
     ereturn scalar total_att = `result'[`total_row', 1]
@@ -135,13 +146,32 @@ program define _pte_het_ereturn, eclass
     // ================================================================
     // Macros
     // ================================================================
+    if `"`cmdline'"' == "" {
+        local cmdline "pte_heterogeneity, by(`byvar')"
+    }
+    if `"`title'"' == "" {
+        local by_label : variable label `byvar'
+        if `"`by_label'"' == "" {
+            local by_label "`byvar'"
+        }
+        gettoken by_label_clean by_label_rest : by_label, quotes
+        if `"`by_label_clean'"' != "" {
+            local by_label `"`by_label_clean'"'
+        }
+        local title `"`by_label'-level Treatment Effects on Productivity"'
+    }
+    mata: st_local("title", subinstr(st_local("title"), char(96) + char(34), "", .))
+    mata: st_local("title", subinstr(st_local("title"), char(34) + char(39), "", .))
+    mata: st_local("title", subinstr(st_local("title"), char(34) + char(34), char(34), .))
+    mata: st_local("cmdline", subinstr(st_local("cmdline"), char(96) + char(34), "", .))
+    mata: st_local("cmdline", subinstr(st_local("cmdline"), char(34) + char(39), "", .))
     ereturn local cmd = "pte_heterogeneity"
-    ereturn local cmdline = "pte_heterogeneity, by(`byvar')"
+    ereturn local cmdline `"`cmdline'"'
     ereturn local by = "`byvar'"
     ereturn local by_var = "`byvar'"
-    ereturn local groups "`grouptokens'"
-    ereturn local group_labels = "`labels'"
-    ereturn local title = "Industry-level Treatment Effects on Productivity"
+    ereturn local groups `"`grouptokens'"'
+    ereturn local group_labels `"`labels'"'
+    ereturn local title `"`title'"'
     
     // ================================================================
     // Matrices

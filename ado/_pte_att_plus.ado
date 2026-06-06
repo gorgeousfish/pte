@@ -365,8 +365,11 @@ program define _pte_att_plus, eclass
     
     // ================================================================
     // Task 13: nt=0 counterfactual calculation (using observed L.omega)
-    // omega_0_sim = rho0 + rho1*L.omega + rho2*(L.omega)^2 + ... + eps0_sim
-    // At nt=0, L.omega = omega at nt=-1 (observed, untreated state)
+    // omega_0_sim = rho0 + rho1*L.omega + rho2*(L.omega)^2 + ...
+    // At nt=0, L.omega = omega at nt=-1 (observed, untreated state).
+    // Proposition C.3 identifies the instantaneous switching effect from
+    // h_bar_0(omega_{g-1}); the nt=0 innovation draw is consumed by later
+    // recursive states through L.eps0_sim.
     // ================================================================
     
     // Build h_bar_0 formula for nt=0 (using observed values)
@@ -384,8 +387,7 @@ program define _pte_att_plus, eclass
     }
     
     // Execute nt=0 calculation
-    // Use L.eps0_sim (lagged shock) per reproduction code convention
-    quietly replace omega_0_sim = `h0_obs' + L.eps0_sim if nt_plus == 0
+    quietly replace omega_0_sim = `h0_obs' if nt_plus == 0
     
     // Verify
     quietly count if nt_plus == 0 & missing(omega_0_sim)

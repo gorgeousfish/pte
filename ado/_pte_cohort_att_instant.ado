@@ -41,10 +41,14 @@ version 14.0
 capture program drop _pte_cohort_att_instant
 program define _pte_cohort_att_instant, rclass
     version 14.0
+    local _pte_cohort_raw_opts `"`0'"'
     
     syntax , cohort(integer) rho(name) omegapoly(integer) ///
             [panelvar(varname) timevar(varname) omega(varname) ///
              cohortvar(varname) nolog]
+    if "`log'" != "" {
+        local nolog "nolog"
+    }
     
     // ================================================================
     // Task 2: Default parameter handling
@@ -56,16 +60,37 @@ program define _pte_cohort_att_instant, rclass
         if "`timevar'" == "" local timevar = r(timevar)
     }
     if "`omega'" == "" local omega "_pte_omega"
+    unab _pte_cohort_allvars : _all
     if "`cohortvar'" == "" {
         // Prefer the public/DO cohort anchor before any private scratch state.
         foreach _pte_cohort_candidate in treat_yr0 _pte_treat_year _pte_cohort_var treat_year {
-            capture confirm variable `_pte_cohort_candidate', exact
-            if _rc == 0 {
+            local _pte_has_cohort_candidate : list posof "`_pte_cohort_candidate'" in _pte_cohort_allvars
+            if `_pte_has_cohort_candidate' {
                 local cohortvar "`_pte_cohort_candidate'"
                 continue, break
             }
         }
         if "`cohortvar'" == "" local cohortvar "treat_year"
+    }
+
+    foreach _pte_cohort_exact in panelvar timevar omega cohortvar {
+        local _pte_cohort_literal ""
+        if regexm(`"`_pte_cohort_raw_opts'"', "(^|[ ,])`_pte_cohort_exact'[ ]*[(]([^)]*)[)]") {
+            local _pte_cohort_literal `"`=strtrim(regexs(2))'"'
+        }
+        if `"`_pte_cohort_literal'"' != "" {
+            local _pte_has_literal : list posof "`_pte_cohort_literal'" in _pte_cohort_allvars
+            if !`_pte_has_literal' {
+                di as error "{bf:pte error E-3018}: Variable `_pte_cohort_literal' not found"
+                exit 3018
+            }
+        }
+        local _pte_cohort_resolved "``_pte_cohort_exact''"
+        local _pte_has_resolved : list posof "`_pte_cohort_resolved'" in _pte_cohort_allvars
+        if !`_pte_has_resolved' {
+            di as error "{bf:pte error E-3018}: Variable `_pte_cohort_resolved' not found"
+            exit 3018
+        }
     }
 
     // Preserve the caller's panel declaration and delta so the helper can
@@ -110,10 +135,10 @@ program define _pte_cohort_att_instant, rclass
         exit 3020
     }
     
-    // Verify omega variable exists
-    cap confirm variable `omega'
+    // Verify omega variable is numeric after exact binding.
+    cap confirm numeric variable `omega'
     if _rc != 0 {
-        di as error "{bf:pte error E-3018}: Variable `omega' not found"
+        di as error "{bf:pte error E-3018}: Variable `omega' must be numeric"
         exit 3018
     }
     

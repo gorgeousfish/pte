@@ -1,6 +1,10 @@
 *! pte.ado
 *! Public entry point for PTE estimation and post-estimation setup.
 *!
+*! Authors: Xuanyu Cai (xuanyuCAI@outlook.com)
+*!          Wenli Xu (wlxu@cityu.edu.mo)
+*!          City University of Macau
+*!
 *! Validates the public interface, runs the production-function and
 *! productivity-recovery pipeline, and optionally computes ATT with
 *! bootstrap inference.
@@ -451,6 +455,11 @@ program define pte, eclass sortpreserve
             msg("bootstrap() must be 0 (no bootstrap) or >= 2") ///
             suggestion("Use bootstrap(0) to skip or bootstrap(200) for inference")
     }
+    if `bootstrap' > 0 & `bootstrap' < 50 {
+        _pte_error, errcode(198) ///
+            msg("bootstrap() must be 0 (no bootstrap) or at least 50 for inference") ///
+            suggestion("Use bootstrap(50) or more; bootstrap(200) is recommended for reported results")
+    }
     if "`saving'" != "" & `bootstrap' == 0 {
         _pte_error, errcode(198) ///
             msg("saving() requires bootstrap() >= 2") ///
@@ -585,6 +594,7 @@ program define pte, eclass sortpreserve
     local replicate_attperiods = .
     local replicate_nsim = .
     local replicate_eps0window = .
+    local replicate_legacy_pooled_eps0 = 0
     local _pte_has_notrimeps = ("`notrimeps'" != "")
     if "`replicate'" != "" {
         local replicate = lower(strtrim("`replicate'"))
@@ -610,6 +620,19 @@ program define pte, eclass sortpreserve
             local replicate_omegapoly = 3
             local replicate_nsim = 100
             local notrimeps ""
+        }
+        else if inlist("`replicate'", "pool_trlg", "pooled_translog") {
+            local seed_replicate = 10000
+            local replicate_omegapoly = 3
+            local replicate_nsim = 100
+            local replicate_attperiods = 3
+            local replicate_legacy_pooled_eps0 = 1
+            local notrimeps ""
+            if "`pfunc'" == "cd" {
+                _pte_error, errcode(198) ///
+                    msg("replicate(`replicate') requires pfunc(translog), incompatible with pfunc(cd)") ///
+                    suggestion("Remove pfunc(cd) or use a different replicate() mode")
+            }
         }
         else if inlist("`replicate'", "table1", "table5") {
             local seed_replicate = 10000
@@ -648,7 +671,7 @@ program define pte, eclass sortpreserve
         }
         else {
             _pte_error, errcode(198) ///
-                msg("replicate() must be one of: table1, table5, table_e4, order1, order2, order3, order4") ///
+                msg("replicate() must be one of: table1, table5, table_e4, pool_trlg, pooled_translog, order1, order2, order3, order4") ///
                 suggestion("See help pte for valid replicate() modes")
         }
 
@@ -657,7 +680,7 @@ program define pte, eclass sortpreserve
         // to production-function-only runs. Table E.4 is the dedicated
         // production-function benchmark, so the public ATT path must fail
         // closed instead of silently dispatching ATT/grouped consumers.
-        if "`noatt'" != "" & inlist("`replicate'", "table1", "table5") {
+        if "`noatt'" != "" & inlist("`replicate'", "table1", "table5", "pool_trlg", "pooled_translog") {
             _pte_error, errcode(198) ///
                 msg("replicate(`replicate') requires ATT estimation and cannot be combined with noatt") ///
                 suggestion("Remove noatt to reproduce the ATT benchmark, or use replicate(table_e4) for the production-function benchmark")
@@ -667,7 +690,7 @@ program define pte, eclass sortpreserve
                 msg("replicate(table_e4) is a production-function benchmark and requires noatt") ///
                 suggestion("Add noatt to reproduce the production-function benchmark, or use replicate(table1)/replicate(table5) for ATT benchmarks")
         }
-        if `use_bygroup' & inlist("`replicate'", "table1", "table5") {
+        if `use_bygroup' & inlist("`replicate'", "table1", "table5", "pool_trlg", "pooled_translog") {
             _pte_error, errcode(198) ///
                 msg("replicate(`replicate') is a pooled ATT benchmark and cannot be combined with by()/industry()") ///
                 suggestion("Remove by()/industry() to reproduce the pooled paper table, or use the grouped path without replicate(`replicate')")
@@ -689,6 +712,11 @@ program define pte, eclass sortpreserve
             _pte_error, errcode(198) ///
                 msg("replicate(`replicate') conflicts with explicit eps0window(`_pte_user_eps0window')") ///
                 suggestion("Remove eps0window(), or use eps0window(`replicate_eps0window') to match replicate(`replicate')")
+        }
+        if `replicate_legacy_pooled_eps0' & `_pte_has_eps0window' {
+            _pte_error, errcode(198) ///
+                msg("replicate(`replicate') uses the historical pooled DO eps0 support and cannot be combined with eps0window()") ///
+                suggestion("Remove eps0window() when reproducing DOs/att_estimation_pool_trlg.do")
         }
         if !missing(`replicate_attperiods') & `_pte_has_attperiods' & ///
             `replicate_attperiods' != `_pte_user_attperiods' {
@@ -713,10 +741,42 @@ program define pte, eclass sortpreserve
         }
     }
 
+    // Pooled translog paper benchmarks use the DO's industry-specific time
+    // trends in the first-stage proxy regression, but remain pooled for
+    // omega, eps0, simulation, and ATT. This internal trend variable must not
+    // route the public command through by()/industry().
+    local _pte_benchmark_ttrendby ""
+    local _pte_benchmark_ttrendvars ""
+    if `is_replicate' & !`use_bygroup' & "`pfunc'" == "translog" & ///
+        inlist("`replicate'", "table1", "table5", "table_e4", "pool_trlg", "pooled_translog") {
+        local _pte_has_do_tvars = 1
+        local _pte_do_tvars ""
+        forvalues _pte_j = 1/6 {
+            capture confirm variable t`_pte_j', exact
+            if _rc != 0 {
+                local _pte_has_do_tvars = 0
+            }
+            local _pte_do_tvars "`_pte_do_tvars' t`_pte_j'"
+        }
+        if `_pte_has_do_tvars' {
+            local _pte_benchmark_ttrendvars "`_pte_do_tvars'"
+        }
+        else {
+            capture confirm variable indid_adj, exact
+            if _rc == 0 {
+                local _pte_benchmark_ttrendby "indid_adj"
+            }
+        }
+    }
+
     // Preserve whether the caller omitted seed() so benchmark-by paths can
     // still apply the official industry defaults after the generic serial
     // seed resolution below.
     local seed_was_omitted = !`_pte_has_seed'
+    local seed_user = .
+    if `_pte_has_seed' {
+        local seed_user = `seed'
+    }
 
     // -1 means seed() was omitted. Seed priority is:
     // explicit seed() > serial-bootstrap default 1 > replicate() point-path
@@ -732,8 +792,14 @@ program define pte, eclass sortpreserve
     else if `bootstrap' > 0 {
         // Official serial bootstrap DOs use set seed b, so the wrapper must
         // default the starting outer seed to 1 when seed() is omitted.
-        local seed = 1
-        local seed_source = "default"
+        if `replicate_legacy_pooled_eps0' {
+            local seed = 10000
+            local seed_source = "replicate"
+        }
+        else {
+            local seed = 1
+            local seed_source = "default"
+        }
     }
     else if "`replicate'" != "" {
         // Use the benchmark point-estimation seed when seed() is absent.
@@ -753,11 +819,14 @@ program define pte, eclass sortpreserve
     local att_inner_seed = 123456
     local att_point_seed = 123456
     if "`pfunc'" == "translog" & "`replicate'" != "" & ///
-        inlist("`replicate'", "order3", "table1", "table5", "table_e4") {
+        inlist("`replicate'", "order3", "table1", "table5", "table_e4", "pool_trlg", "pooled_translog") {
         local att_point_seed = 10000
     }
     local att_bootstrap_seed = `att_inner_seed'
     if `is_replicate' & "`pfunc'" == "translog" & `omegapoly' == 1 {
+        local att_bootstrap_seed = 10000
+    }
+    if `replicate_legacy_pooled_eps0' {
         local att_bootstrap_seed = 10000
     }
 
@@ -1085,6 +1154,12 @@ program define pte, eclass sortpreserve
             quietly replace `_pte_touse' = 0 if `_pte_touse' & missing(`benchmark_by')
         }
     }
+    if "`_pte_benchmark_ttrendby'" != "" {
+        markout `_pte_touse' `_pte_benchmark_ttrendby'
+    }
+    if "`_pte_benchmark_ttrendvars'" != "" {
+        markout `_pte_touse' `_pte_benchmark_ttrendvars'
+    }
     // cohort() is currently a reserved/design-check option in the public
     // main-command path, so missing cohort metadata must not change the
     // baseline estimation sample.
@@ -1134,11 +1209,12 @@ program define pte, eclass sortpreserve
         local _pcc_opts "`_pcc_opts' detail"
     }
     capture noisily _pte_check_param_conflicts, `_pcc_opts'
-    if _rc != 0 {
+    local _pcc_rc = _rc
+    if `_pcc_rc' != 0 {
         quietly _pte_restore_xtset_contract, hadxtset(`_pte_entry_had_xtset') ///
             panel(`"`_pte_entry_panel'"') time(`"`_pte_entry_time'"') ///
             delta(`"`_pte_entry_delta'"')
-        exit _rc
+        exit `_pcc_rc'
     }
 
     // Panel summary statistics are reported in e() and reused in displays.
@@ -1249,11 +1325,12 @@ program define pte, eclass sortpreserve
         // Count entry and exit events from the observed treatment path.
         capture noisily _pte_detect_treatment_type `treatment', id(`id') time(`time') ///
             touse(`_pte_touse') nowarn
-        if _rc != 0 {
+        local _pte_detect_rc = _rc
+        if `_pte_detect_rc' != 0 {
             quietly _pte_restore_xtset_contract, hadxtset(`_pte_entry_had_xtset') ///
                 panel(`"`_pte_entry_panel'"') time(`"`_pte_entry_time'"') ///
                 delta(`"`_pte_entry_delta'"')
-            exit _rc
+            exit `_pte_detect_rc'
         }
         local _pte_na_N_exit = r(N_exit)
         local _pte_na_N_entry = r(N_entry)
@@ -1262,20 +1339,22 @@ program define pte, eclass sortpreserve
         capture noisily _pte_check_boundary_conditions, ///
             nentry(`_pte_na_N_entry') nexit(`_pte_na_N_exit') ///
             panelvar(`id') touse(`_pte_touse')
-        if _rc != 0 {
+        local _pte_boundary_rc = _rc
+        if `_pte_boundary_rc' != 0 {
             quietly _pte_restore_xtset_contract, hadxtset(`_pte_entry_had_xtset') ///
                 panel(`"`_pte_entry_panel'"') time(`"`_pte_entry_time'"') ///
                 delta(`"`_pte_entry_delta'"')
-            exit _rc
+            exit `_pte_boundary_rc'
         }
 
         // Decide whether the request collapses to the absorbing case.
         capture noisily _pte_check_degradation, nexit(`_pte_na_N_exit') nentry(`_pte_na_N_entry')
-        if _rc != 0 {
+        local _pte_degradation_rc = _rc
+        if `_pte_degradation_rc' != 0 {
             quietly _pte_restore_xtset_contract, hadxtset(`_pte_entry_had_xtset') ///
                 panel(`"`_pte_entry_panel'"') time(`"`_pte_entry_time'"') ///
                 delta(`"`_pte_entry_delta'"')
-            exit _rc
+            exit `_pte_degradation_rc'
         }
         local _pte_is_degraded = r(absorbing)
 
@@ -1756,12 +1835,11 @@ program define pte, eclass sortpreserve
                 if "`pfunc'" != "cd" {
                     local _bg_beta_colnames "beta_l beta_k beta_l2 beta_k2 beta_lk beta_t"
                 }
-                if `_bg_n_controls' > 1 {
-                    local _bg_beta_colnames "beta_l beta_k"
+                if `_bg_n_controls' > 0 {
+                    local _bg_beta_colnames "beta_l beta_k beta_t `control'"
                     if "`pfunc'" != "cd" {
-                        local _bg_beta_colnames "beta_l beta_k beta_l2 beta_k2 beta_lk"
+                        local _bg_beta_colnames "beta_l beta_k beta_l2 beta_k2 beta_lk beta_t `control'"
                     }
-                    local _bg_beta_colnames "`_bg_beta_colnames' `control'"
                 }
                 local _bg_att_boot_names ""
                 local _bg_att_trim_boot_names ""
@@ -2037,6 +2115,7 @@ program define pte, eclass sortpreserve
         ereturn scalar poly = `poly'
         ereturn scalar attperiods_max = `attperiods'
         ereturn scalar eps0window = `eps0window'
+        ereturn scalar trimeps = `do_trim'
         // Keep the same sample-summary contract as the serial public path so
         // replay/sample displays do not silently lose core counts on by().
         ereturn scalar N_g = `nGroups'
@@ -2054,6 +2133,16 @@ program define pte, eclass sortpreserve
             else {
                 ereturn scalar seed = `bygroup_boot_seed'
             }
+            ereturn scalar seed_user = `seed_user'
+            ereturn scalar seed_point_actual = `bygroup_point_seed'
+            ereturn scalar seed_bootstrap_actual = `bygroup_boot_seed'
+            if `bootstrap' == 0 {
+                ereturn scalar seed_actual = `bygroup_point_seed'
+            }
+            else {
+                ereturn scalar seed_actual = `bygroup_boot_seed'
+            }
+            ereturn local seed_route "grouped"
         }
         if `bootstrap' == 0 & `do_att' {
             ereturn scalar point_seed = `bygroup_point_seed'
@@ -2066,6 +2155,7 @@ program define pte, eclass sortpreserve
         }
         if `bootstrap' > 0 {
             ereturn scalar seed_outer = `bygroup_boot_seed'
+            ereturn scalar bootstrap_seed = `bygroup_boot_seed'
         }
         if "`xtdelta'" != "" {
             ereturn scalar xtdelta = `xtdelta'
@@ -2400,6 +2490,18 @@ program define pte, eclass sortpreserve
     if "`treatdependent'" != "" {
         local _pf_opts "`_pf_opts' treatdependent"
     }
+    if "`_pte_benchmark_ttrendby'" != "" {
+        local _pf_opts "`_pf_opts' ttrendby(`_pte_benchmark_ttrendby')"
+    }
+    if "`_pte_benchmark_ttrendvars'" != "" {
+        local _pf_opts "`_pf_opts' ttrendvars(`_pte_benchmark_ttrendvars')"
+    }
+    if `replicate_legacy_pooled_eps0' {
+        local _pf_opts "`_pf_opts' legacyfloatphi"
+    }
+    if `is_replicate' {
+        local _pf_opts "`_pf_opts' dopooledz"
+    }
 
     capture noisily _pte_prodfunc, `_pf_opts'
     local _pf_rc = _rc
@@ -2432,6 +2534,8 @@ program define pte, eclass sortpreserve
     capture local pf_fval = e(fval)
     capture local pf_converged = e(converged)
     capture local pf_iterations = e(iterations)
+    capture local pf_z_moment_layout = e(z_moment_layout)
+    capture local pf_do_pooled_z = e(do_pooled_z)
     local pf_has_beta_controls = 0
     local pf_n_beta_controls = 0
     tempname pf_beta_controls_mat
@@ -2605,11 +2709,13 @@ program define pte, eclass sortpreserve
 
         local om_sigma_eps = e(sigma_eps)
         local om_sigma_eps_trim = e(sigma_eps_trim)
+        local om_trimeps = e(trimeps)
         local om_N_eps0 = e(N_eps0)
         local om_N_eps0_trim = e(N_eps0_trim)
         local om_eps0_p1 = e(eps0_p1)
         local om_eps0_p99 = e(eps0_p99)
         local om_eps0window = `eps0window'
+        local om_legacy_pooled_eps0 = 0
     }
     else {
         // Forward only the options that affect omega recovery and evolution.
@@ -2623,6 +2729,10 @@ program define pte, eclass sortpreserve
         }
         if "`notrimeps'" != "" {
             local _om_opts "`_om_opts' notrimeps"
+        }
+        if `replicate_legacy_pooled_eps0' {
+            local _om_opts "`_om_opts' legacypooledeps0"
+            local _om_opts "`_om_opts' legacyfloatomega"
         }
         if "`nodiagnose'" != "" {
             local _om_opts "`_om_opts' nodiagnose"
@@ -2647,6 +2757,7 @@ program define pte, eclass sortpreserve
         // Preserve stage-2 scalars before later estimation steps overwrite e().
         local om_sigma_eps = e(sigma_eps)
         local om_sigma_eps_trim = e(sigma_eps_trim)
+        local om_trimeps = e(trimeps)
         local om_N_omega = e(N_omega)
         local om_N_evo = e(N_evo)
         local om_N_eps0 = e(N_eps0)
@@ -2654,6 +2765,7 @@ program define pte, eclass sortpreserve
         local om_eps0_p1 = e(eps0_p1)
         local om_eps0_p99 = e(eps0_p99)
         local om_eps0window = e(eps0window)
+        local om_legacy_pooled_eps0 = e(legacy_pooled_eps0)
         local om_r2_evo = e(r2_evo)
         local om_rmse_evo = e(rmse_evo)
         local om_N_lag_untreated = e(N_lag_untreated)
@@ -2795,7 +2907,7 @@ program define pte, eclass sortpreserve
             local _bs_opts "`_bs_opts' depvar(`depvar') free(`free') state(`state') proxy(`proxy')"
             local _bs_opts "`_bs_opts' id(`id') time(`time')"
             local _bs_opts "`_bs_opts' omegapoly(`omegapoly') attperiods(`attperiods')"
-            local _bs_opts "`_bs_opts' nsim(`nsim') breps(`bootstrap') seed(`seed') inner_seed(`att_inner_seed') eps0window(`eps0window')"
+            local _bs_opts "`_bs_opts' nsim(`nsim') breps(`bootstrap') seed(`seed') inner_seed(`att_bootstrap_seed') eps0window(`eps0window')"
             local _bs_opts "`_bs_opts' prodfunc(`pfunc') poly(`poly') level(`level')"
             local _bs_opts "`_bs_opts' touse(`_pte_touse')"
             if "`notrimeps'" != "" {
@@ -2809,6 +2921,16 @@ program define pte, eclass sortpreserve
             }
             if `is_replicate' {
                 local _bs_opts "`_bs_opts' replicate"
+                local _bs_opts "`_bs_opts' dopooledz"
+            }
+            if "`_pte_benchmark_ttrendby'" != "" {
+                local _bs_opts "`_bs_opts' ttrendby(`_pte_benchmark_ttrendby')"
+            }
+            if "`_pte_benchmark_ttrendvars'" != "" {
+                local _bs_opts "`_bs_opts' ttrendvars(`_pte_benchmark_ttrendvars')"
+            }
+            if `replicate_legacy_pooled_eps0' {
+                local _bs_opts "`_bs_opts' legacypooledeps0"
             }
 
             capture noisily _pte_bootstrap, `_bs_opts'
@@ -2848,6 +2970,10 @@ program define pte, eclass sortpreserve
             local att_overall = e(ATT_avg)
             capture local att_raw_overall = e(ATT_avg_raw)
             if _rc != 0 local att_raw_overall = .
+            capture local att_cf_missing_unexpected = e(N_cf_missing_unexpected)
+            if _rc != 0 local att_cf_missing_unexpected = .
+            capture local att_cf_trim_missing_unexpected = e(N_cf_trim_missing_unexpected)
+            if _rc != 0 local att_cf_trim_missing_unexpected = .
             local att_se = e(bs_se)
             local att_ci_lo = e(ci_lo)
             local att_ci_hi = e(ci_hi)
@@ -2918,7 +3044,10 @@ program define pte, eclass sortpreserve
             // restores `_pte_orig_data'.
             preserve
             local _att_keep "`id' `time'"
-            foreach _v in _pte_nt _pte_tt _pte_tt_trim _pte_tt_raw {
+            foreach _v in _pte_nt _pte_omega_0 _pte_omega_0_trim ///
+                _pte_tt _pte_tt_trim _pte_tt_raw ///
+                _pte_eps0_draw _pte_eps0_trim_draw ///
+                _pte_tt_raw_sd _pte_tt_sd _pte_tt_trim_sd {
                 capture confirm variable `_v'
                 if _rc == 0 {
                     local _att_keep "`_att_keep' `_v'"
@@ -2942,6 +3071,9 @@ program define pte, eclass sortpreserve
             local _att_opts "treatment(`treatment') omegapoly(`omegapoly')"
             local _att_opts "`_att_opts' attperiods(`attperiods') nsim(`nsim') seed(`att_point_seed')"
             local _att_opts "`_att_opts' touse(`_pte_touse')"
+            if `replicate_legacy_pooled_eps0' {
+                local _att_opts "`_att_opts' legacypooledeps0"
+            }
             if "`notrimeps'" != "" {
                 local _att_opts "`_att_opts' notrimeps"
             }
@@ -2978,6 +3110,10 @@ program define pte, eclass sortpreserve
                 local att_se = `att_se_vec_mat'[1, colsof(`att_se_vec_mat')]
             }
             local att_N = e(att_N)
+            capture local att_cf_missing_unexpected = e(N_cf_missing_unexpected)
+            if _rc != 0 local att_cf_missing_unexpected = .
+            capture local att_cf_trim_missing_unexpected = e(N_cf_trim_missing_unexpected)
+            if _rc != 0 local att_cf_trim_missing_unexpected = .
 
             local att_trim_overall = e(ATT_avg_trim)
             local att_trim_se = e(att_trim_se)
@@ -3016,7 +3152,10 @@ program define pte, eclass sortpreserve
             // Save ATT objects for predict after the main command exits.
             preserve
             local _att_keep "`id' `time'"
-            foreach _v in _pte_nt _pte_tt _pte_tt_trim _pte_tt_raw {
+            foreach _v in _pte_nt _pte_omega_0 _pte_omega_0_trim ///
+                _pte_tt _pte_tt_trim _pte_tt_raw ///
+                _pte_eps0_draw _pte_eps0_trim_draw ///
+                _pte_tt_raw_sd _pte_tt_sd _pte_tt_trim_sd {
                 capture confirm variable `_v'
                 if _rc == 0 {
                     local _att_keep "`_att_keep' `_v'"
@@ -3203,6 +3342,7 @@ program define pte, eclass sortpreserve
     if `om_has_delta' ereturn scalar delta = `om_delta'
     ereturn scalar sigma_eps = `om_sigma_eps'
     ereturn scalar sigma_eps_trim = `om_sigma_eps_trim'
+    ereturn scalar trimeps = `om_trimeps'
     ereturn scalar N_omega = `om_N_omega'
     ereturn scalar N_evo = `om_N_evo'
     ereturn scalar N_eps0 = `om_N_eps0'
@@ -3226,6 +3366,8 @@ program define pte, eclass sortpreserve
         ereturn scalar ATT_avg = `att_overall'
         capture ereturn scalar ATT_avg_trim = `att_trim_overall'
         capture ereturn scalar ATT_avg_raw = `att_raw_overall'
+        capture ereturn scalar N_cf_missing_unexpected = `att_cf_missing_unexpected'
+        capture ereturn scalar N_cf_trim_missing_unexpected = `att_cf_trim_missing_unexpected'
 
         if `do_bootstrap' {
             ereturn scalar bs_se = `att_se'
@@ -3245,7 +3387,6 @@ program define pte, eclass sortpreserve
             ereturn scalar att_N = `att_N'
             capture ereturn scalar att_trim_se = `att_trim_se'
         }
-
         // Period-specific ATT
         forvalues s = 0/`attperiods' {
             if !missing(`att_`s'') {
@@ -3315,9 +3456,13 @@ program define pte, eclass sortpreserve
     ereturn scalar attperiods_max = `attperiods'
     ereturn scalar nsim = `nsim'
     ereturn scalar eps0window = `om_eps0window'
+    ereturn scalar legacy_pooled_eps0 = `om_legacy_pooled_eps0'
     if `do_att' | `bootstrap' > 0 {
         ereturn scalar seed = `seed'
+        ereturn scalar seed_actual = `seed'
+        ereturn scalar seed_user = `seed_user'
         ereturn local seed_source "`seed_source'"
+        ereturn local seed_route "serial"
     }
     ereturn scalar bootstrap = `bootstrap'
     if `bootstrap' > 0 {
@@ -3383,6 +3528,12 @@ program define pte, eclass sortpreserve
     ereturn local time "`time'"
     ereturn local pfunc "`pfunc'"
     ereturn local prodfunc "`pfunc'"
+    if "`pf_z_moment_layout'" != "" {
+        ereturn local z_moment_layout "`pf_z_moment_layout'"
+    }
+    if "`pf_do_pooled_z'" != "" {
+        ereturn scalar do_pooled_z = `pf_do_pooled_z'
+    }
     ereturn local PFtype "`PFtype'"
     ereturn local method "acf"
     ereturn local model "valueadded"

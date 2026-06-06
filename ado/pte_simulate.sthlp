@@ -55,8 +55,9 @@ replacing the productivity path using calibrated parameters.{p_end}
 {phang2}{cmd:_pte_mc_engine} runs the outer simulation loop and reports Monte
 Carlo summaries in {cmd:r()}.{p_end}
 
-{phang2}{cmd:pte_simulate_paths()} is a Mata utility used for untreated-path
-simulation inside ATT routines.{p_end}
+{phang2}{cmd:pte_simulate_paths()} is a developer-facing Mata utility for
+untreated-path simulation. The public ATT estimator uses the Stata recursion
+implemented in {cmd:_pte_att}.{p_end}
 
 {pstd}
 These components depend on the current dataset and on package-internal result
@@ -106,9 +107,13 @@ uses seed {cmd:bootseed() + b - 1}.{p_end}
 
 {phang}
 {cmd:pte_simulate_paths()} is defined in
-{browse "ado/pte_simulate.mata":ado/pte_simulate.mata}. It simulates
-untreated productivity paths using the untreated evolution law h-bar-0 from
-Proposition 4.3.
+{browse "mata/pte_simulate.mata":mata/pte_simulate.mata}. It simulates
+untreated productivity paths using the untreated evolution law h-bar-0 and a
+current-period untreated innovation at each simulated event time, as in
+Proposition 4.3. This standalone Mata utility draws from the same iid
+untreated-innovation product law as the ATT estimator, but it is not a
+row-for-row reproduction of {cmd:_pte_att}'s DO-compatible lagged-row shock
+convention. The public ATT estimate is produced by {cmd:_pte_att}.
 
 
 {marker remarks}{...}

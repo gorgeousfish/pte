@@ -168,9 +168,10 @@ program define _pte_treatdep_evolution, eclass
     
     // Validate panel structure
     capture noisily _xt, trequired
-    if _rc {
+    local _pte_td_xt_rc = _rc
+    if `_pte_td_xt_rc' {
         `_pte_clear_eclass'
-        exit _rc
+        exit `_pte_td_xt_rc'
     }
     local panelvar = r(ivar)
     local timevar = r(tvar)
@@ -298,16 +299,17 @@ program define _pte_treatdep_evolution, eclass
     // CRITICAL: exclude transition periods (package contract: mid == 0)
     // ================================================================
     capture qui reg omega `varlist' if `_pte_evo_regsample'
-    if _rc {
-        if _rc == 503 {
+    local _pte_td_reg_rc = _rc
+    if `_pte_td_reg_rc' {
+        if `_pte_td_reg_rc' == 503 {
             di as error "Error: evolution regression failed due to collinearity"
             di as error "  Check for perfect collinearity between variables"
         }
         else {
-            di as error "Error: evolution regression failed (error code " _rc ")"
+            di as error "Error: evolution regression failed (error code `_pte_td_reg_rc')"
         }
         `_pte_clear_eclass'
-        exit _rc
+        exit `_pte_td_reg_rc'
     }
 
     local lag_treated_supported_raw = `lag_treated_supported'

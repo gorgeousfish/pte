@@ -20,7 +20,7 @@ program define _pte_winsorize, eclass
     }
     local _pte_clear_eclass ///
         "quietly _pte_winsorize_restore, estname(`_pte_prev_est') hasest(`_pte_has_prev_est')"
-    capture noisily syntax, [NOTRIMeps NODIAGnose KSTEST treatment(name)]
+    capture noisily syntax, [NOTRIMeps NODIAGnose KSTEST treatment(name) LEGACYWINSOR2]
     if _rc != 0 {
         local _pte_syntax_rc = _rc
         `_pte_clear_eclass'
@@ -269,13 +269,17 @@ program define _pte_winsorize, eclass
         
         // 4.3 Execute trimming
         if `_winsor2_available' == 1 {
-            // Method 1: winsor2 trim (matches replication code form)
-            // Note: use manual method for reliability across winsor2 versions
-            // winsor2 with if + trim + replace can behave inconsistently
-            // Fall through to manual method for deterministic behavior
+            // Use manual trimming for reliability across winsor2 versions.
+            // winsor2 with if + trim + replace can behave inconsistently, and
+            // the legacy replication route needs explicit boundary tolerance.
             local _winsor2_available = 0
         }
         
+        local _trim_tol = 0
+        if "`legacywinsor2'" != "" {
+            local _trim_tol = 1e-10
+        }
+
         if `_winsor2_available' == 1 {
             // winsor2 path (currently disabled, see note above)
             quietly winsor2 `_pte_eps0_work', ///
@@ -286,8 +290,12 @@ program define _pte_winsorize, eclass
             // Manual trimming (preferred: deterministic behavior)
             // Equivalent to: winsor2 eps0, cuts(1 99) trim replace,
             // but the raw eps0 pool must remain available for ATT resampling.
+            // Legacy pooled-translog replication can differ from the DO by
+            // sub-picounit eps0 drift after matching its float-stage path; use
+            // a tiny boundary tolerance only on that internal route.
             quietly replace `_pte_eps0_work' = . ///
-                if `_pte_eps0_work' < `p1' | `_pte_eps0_work' > `p99'
+                if `_pte_eps0_work' < (`p1' - `_trim_tol') | ///
+                   `_pte_eps0_work' > (`p99' + `_trim_tol')
             local _trim_method "manual"
         }
         

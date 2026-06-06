@@ -7,12 +7,16 @@ version 14.0
 capture program drop _pte_cohort_att_dynamic
 program define _pte_cohort_att_dynamic, rclass
     version 14.0
+    local _pte_cohort_raw_opts `"`0'"'
     
     syntax , cohort(integer) rho(name) omegapoly(integer) ///
             maxperiods(integer) sigmaeps(real) ///
             [nsim(integer -1) seed(integer 123456) ///
              panelvar(varname) timevar(varname) omega(varname) ///
              cohortvar(varname) nolog]
+    if "`log'" != "" {
+        local nolog "nolog"
+    }
     
     // ================================================================
     // Task 1: Framework setup
@@ -25,16 +29,37 @@ program define _pte_cohort_att_dynamic, rclass
         if "`timevar'" == "" local timevar = r(timevar)
     }
     if "`omega'" == "" local omega "_pte_omega"
+    unab _pte_cohort_allvars : _all
     if "`cohortvar'" == "" {
         // Prefer the public/DO cohort anchor before any private scratch state.
         foreach _pte_cohort_candidate in treat_yr0 _pte_treat_year _pte_cohort_var treat_year {
-            capture confirm variable `_pte_cohort_candidate', exact
-            if _rc == 0 {
+            local _pte_has_cohort_candidate : list posof "`_pte_cohort_candidate'" in _pte_cohort_allvars
+            if `_pte_has_cohort_candidate' {
                 local cohortvar "`_pte_cohort_candidate'"
                 continue, break
             }
         }
         if "`cohortvar'" == "" local cohortvar "treat_year"
+    }
+
+    foreach _pte_cohort_exact in panelvar timevar omega cohortvar {
+        local _pte_cohort_literal ""
+        if regexm(`"`_pte_cohort_raw_opts'"', "(^|[ ,])`_pte_cohort_exact'[ ]*[(]([^)]*)[)]") {
+            local _pte_cohort_literal `"`=strtrim(regexs(2))'"'
+        }
+        if `"`_pte_cohort_literal'"' != "" {
+            local _pte_has_literal : list posof "`_pte_cohort_literal'" in _pte_cohort_allvars
+            if !`_pte_has_literal' {
+                di as error "{bf:pte error E-3018}: Variable `_pte_cohort_literal' not found"
+                exit 3018
+            }
+        }
+        local _pte_cohort_resolved "``_pte_cohort_exact''"
+        local _pte_has_resolved : list posof "`_pte_cohort_resolved'" in _pte_cohort_allvars
+        if !`_pte_has_resolved' {
+            di as error "{bf:pte error E-3018}: Variable `_pte_cohort_resolved' not found"
+            exit 3018
+        }
     }
 
     // Preserve the caller's panel declaration. Internal event-time recursion
@@ -59,7 +84,6 @@ program define _pte_cohort_att_dynamic, rclass
     }
     local pte_orig_rngstate `"`c(rngstate)'"'
     local pte_restore_rng `"capture set rngstate `pte_orig_rngstate'"'
-    local pte_clip_tau = 50
     
     // ================================================================
     // Task 2: Parameter validation
@@ -113,10 +137,10 @@ program define _pte_cohort_att_dynamic, rclass
         exit 198
     }
     
-    // Verify omega variable exists
-    cap confirm variable `omega'
+    // Verify omega variable is numeric after exact binding.
+    cap confirm numeric variable `omega'
     if _rc != 0 {
-        di as error "{bf:pte error E-3018}: Variable `omega' not found"
+        di as error "{bf:pte error E-3018}: Variable `omega' must be numeric"
         exit 3018
     }
     
@@ -268,8 +292,9 @@ program define _pte_cohort_att_dynamic, rclass
         qui gen double _omega_04 = .
     }
     
-    // nt=0: use the observed omega at nt=-1 as starting point
-    // omega^0_0 = rho_0 + rho_1*omega_{-1} + rho_2*omega_{-1}^2 + ... + eps^0_0
+    // nt=0: use the observed omega at nt=-1 as starting point.
+    // Proposition C.1 identifies the onset effect from h_bar_0(omega_{g-1});
+    // the nt=0 shock draw is consumed by later event-time states through L._eps0_sim.
     qui replace _omega_0 = `rho'[1,1] + `rho'[1,2] * L._dyn_omega ///
         if _dyn_nt == 0
     
@@ -286,13 +311,6 @@ program define _pte_cohort_att_dynamic, rclass
             if _dyn_nt == 0
     }
     
-    // Match Appendix C.2 / industry DO timing: event time t consumes the
-    // current untreated innovation eps_t^0. The nt=-1 row remains only as the
-    // lagged omega anchor for h_bar_0 at treatment onset.
-    qui replace _omega_0 = _omega_0 + _eps0_sim if _dyn_nt == 0
-    quietly replace _omega_0 = `pte_clip_tau' if _dyn_nt == 0 & _omega_0 > `pte_clip_tau' & !missing(_omega_0)
-    quietly replace _omega_0 = -`pte_clip_tau' if _dyn_nt == 0 & _omega_0 < -`pte_clip_tau' & !missing(_omega_0)
-    
     // Recursive simulation for nt=1..maxperiods
     // Following reproduction code pattern: update power vars at nt=s-1, then use L. at nt=s
     if `maxperiods' >= 1 {
@@ -308,18 +326,18 @@ program define _pte_cohort_att_dynamic, rclass
                 qui replace _omega_04 = _omega_0^4 if _dyn_nt == `s' - 1
             }
             
-            // omega^0_s = rho_0 + rho_1*L.omega_0 + ... + eps0_sim
+            // omega^0_s = rho_0 + rho_1*L.omega_0 + ... + L.eps0_sim
             if `omegapoly' == 1 {
                 qui replace _omega_0 = `rho'[1,1] ///
                     + `rho'[1,2] * L._omega_0 ///
-                    + _eps0_sim ///
+                    + L._eps0_sim ///
                     if _dyn_nt == `s'
             }
             else if `omegapoly' == 2 {
                 qui replace _omega_0 = `rho'[1,1] ///
                     + `rho'[1,2] * L._omega_0 ///
                     + `rho'[1,3] * L._omega_02 ///
-                    + _eps0_sim ///
+                    + L._eps0_sim ///
                     if _dyn_nt == `s'
             }
             else if `omegapoly' == 3 {
@@ -327,7 +345,7 @@ program define _pte_cohort_att_dynamic, rclass
                     + `rho'[1,2] * L._omega_0 ///
                     + `rho'[1,3] * L._omega_02 ///
                     + `rho'[1,4] * L._omega_03 ///
-                    + _eps0_sim ///
+                    + L._eps0_sim ///
                     if _dyn_nt == `s'
             }
             else if `omegapoly' == 4 {
@@ -336,14 +354,9 @@ program define _pte_cohort_att_dynamic, rclass
                     + `rho'[1,3] * L._omega_02 ///
                     + `rho'[1,4] * L._omega_03 ///
                     + `rho'[1,5] * L._omega_04 ///
-                    + _eps0_sim ///
+                    + L._eps0_sim ///
                     if _dyn_nt == `s'
             }
-
-            quietly replace _omega_0 = `pte_clip_tau' ///
-                if _dyn_nt == `s' & _omega_0 > `pte_clip_tau' & !missing(_omega_0)
-            quietly replace _omega_0 = -`pte_clip_tau' ///
-                if _dyn_nt == `s' & _omega_0 < -`pte_clip_tau' & !missing(_omega_0)
         }
     }
     

@@ -1,64 +1,45 @@
-# ============================================================
-# pte-stata .gitignore
-# ============================================================
-
-# ----------------------------------------------------------
-# Test & development files (not for distribution)
-# ----------------------------------------------------------
-
-# Test utilities
-ado/_pte_test_*.ado
-ado/_epic010_test_helpers.ado
-ado/_test_syntax_ado.ado
-
-# Development scripts
-mata/_pte_mata_endopoly_patch.do
-mata/_pte_treatdep_seed_placeholders.do
-mata/_pte_treatdep_source_loader.do
-
-# ----------------------------------------------------------
-# Stata artifacts
-# ----------------------------------------------------------
-
-# Batch-mode logs
-*.log
-
-# Graph files (binary, should be regenerated)
-*.gph
-*.eps
-
 # Stata editor swap files
 ~*.stswp
+*.stswp
 
-# ----------------------------------------------------------
-# Temporary & OS artifacts
-# ----------------------------------------------------------
+# Log files
+*.log
 
 # Temporary files
 tmp_*
-*.tmp
+_tmp_*
+
+# Compiled graph files
+*.gph
+
+# EPS output
+*.eps
 
 # Python cache
 __pycache__/
 *.pyc
 
-# macOS
+# OS files
 .DS_Store
-._*
-
-# Windows
 Thumbs.db
-desktop.ini
 
-# Editor / IDE
-*.swp
-*.swo
+# Stata temporary datasets
+_pte_*_internal*.dta
+_pte_*_snapshot*.dta
+
+# Backup files
+*.bak
 *~
+
+# IDE/Editor files
 .vscode/
 .idea/
 
-# Excluded from GitHub release
-.github/
-docs/
+# Automation artifacts (development only)
+$CODEX_HOME/
+
+# Test directory (development only, not distributed)
 tests/
-\$CODEX_HOME/
+
+# Output directory
+output/

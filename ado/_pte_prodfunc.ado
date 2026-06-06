@@ -55,11 +55,15 @@ program define _pte_prodfunc, eclass
 	// handling happens before any helper mutates defaults or samples.
 	capture noisily syntax, TREATment(name) ID(varname) Time(varname numeric) ///
 		[LNY(varname numeric) FREE(varname numeric) PROXY(varname numeric) ///
-		 STATE(varname numeric) CONTROL(varlist numeric) PFUNC(string) POLY(integer 3) GENLAG ///
-		 OMEGAPOLY(integer 3) INDustry(varname) BYINDustry MULTISTART ///
-		 MINsample(integer 30) REPLACE NODIAGnose STRICT noREPORT ///
-		 TREATDEPENDENT ///
-		 TOUSE(name)]
+				 STATE(varname numeric) CONTROL(varlist numeric) PFUNC(string) POLY(integer 3) GENLAG ///
+				 OMEGAPOLY(integer 3) INDustry(varname) BYINDustry MULTISTART ///
+				 TTRENDBY(varname) TTRENDVARS(varlist numeric) ///
+				 GMMINIT(numlist) ///
+				 MINsample(integer 30) REPLACE NODIAGnose STRICT noREPORT ///
+				 DOPOOLEDZ ///
+			 LEGACYFLOATPHI ///
+			 TREATDEPENDENT ///
+			 TOUSE(name)]
 	if _rc {
 		local _pte_syntax_rc = _rc
 		`_pte_clear_eclass'
@@ -539,7 +543,7 @@ program define _pte_prodfunc, eclass
 		}
 		local _td_call_opts "depvar(`lny') free(`_pte_free_vars') state(`_pte_state_vars')"
 		local _td_call_opts "`_td_call_opts' proxy(`proxy') control(`_td_controls')"
-		local _td_call_opts "`_td_call_opts' endo(`treatment') treat(`treatment')"
+		local _td_call_opts "`_td_call_opts' endo(`treatment')"
 		local _td_call_opts "`_td_call_opts' pfunc(`_td_pfunc') omegapoly(`omegapoly') mid(`_pte_midvar')"
 		local _td_call_opts "`_td_call_opts' touse(`touse')"
 		if "`report'" == "" {
@@ -604,13 +608,22 @@ program define _pte_prodfunc, eclass
 	label variable _pte_t "PTE internal time trend (grouped `time')"
 
 	local _pte_stage1_tvars "_pte_t"
+	local _pte_stage1_trendby "`industry'"
+	if "`ttrendby'" != "" & "`byindustry'" == "" {
+		local _pte_stage1_trendby "`ttrendby'"
+	}
 	local _pte_n_ind = 0
+	local _pte_stage1_controls "`control'"
 	
 	// Pooled estimation expands grouped time into industry-specific trends to
 	// mirror the pooled DO regressions; by-industry estimation uses one trend.
-	if "`industry'" != "" & "`byindustry'" == "" {
+	if "`ttrendvars'" != "" & "`byindustry'" == "" {
+		local _pte_stage1_tvars "`ttrendvars'"
+		local _pte_n_ind : word count `ttrendvars'
+	}
+	else if "`_pte_stage1_trendby'" != "" & "`byindustry'" == "" {
 		tempvar _pte_indgroup
-		qui egen long `_pte_indgroup' = group(`industry') if `_pte_active_sample'
+		qui egen long `_pte_indgroup' = group(`_pte_stage1_trendby') if `_pte_active_sample'
 		qui levelsof `_pte_indgroup' if `_pte_active_sample', local(_ind_levels)
 		local _j = 0
 		local _pte_stage1_tvars ""
@@ -621,6 +634,27 @@ program define _pte_prodfunc, eclass
 			local _pte_stage1_tvars "`_pte_stage1_tvars' _pte_t`_j'"
 		}
 		local _pte_n_ind = `_j'
+	}
+
+	if "`control'" != "" & "`_pte_stage1_tvars'" == "_pte_t" {
+		local _pte_stage1_controls ""
+		foreach _pte_ctrl of local control {
+			capture confirm numeric variable `_pte_ctrl'
+			if _rc == 0 {
+				quietly count if `_pte_active_sample' & ///
+					(missing(`_pte_ctrl') | `_pte_ctrl' != _pte_t)
+				if r(N) == 0 {
+					local _pte_stage1_tvars "`_pte_ctrl'"
+				}
+				else {
+					local _pte_stage1_controls "`_pte_stage1_controls' `_pte_ctrl'"
+				}
+			}
+			else {
+				local _pte_stage1_controls "`_pte_stage1_controls' `_pte_ctrl'"
+			}
+		}
+		local _pte_stage1_controls : list uniq _pte_stage1_controls
 	}
 	
 	// Run the first-stage regression on the full active sample. Transition rows
@@ -641,15 +675,18 @@ program define _pte_prodfunc, eclass
 		if "`nodiagnose'" != "" {
 			local _stage1_opts "`_stage1_opts' nodiagnose"
 		}
-		if "`strict'" != "" {
-			local _stage1_opts "`_stage1_opts' strict"
-		}
-		local _stage1_opts "`_stage1_opts' tvars(`_pte_stage1_tvars')"
+			if "`strict'" != "" {
+				local _stage1_opts "`_stage1_opts' strict"
+			}
+			if "`legacyfloatphi'" != "" {
+				local _stage1_opts "`_stage1_opts' legacyfloatphi"
+			}
+			local _stage1_opts "`_stage1_opts' tvars(`_pte_stage1_tvars')"
 		
 		// Stage 1 sees the full active sample; lag admissibility is enforced later.
 		local _stage1_opts "`_stage1_opts' touse(`_pte_active_sample')"
-		if "`control'" != "" {
-			local _stage1_opts "`_stage1_opts' control(`control')"
+		if "`_pte_stage1_controls'" != "" {
+			local _stage1_opts "`_stage1_opts' control(`_pte_stage1_controls')"
 		}
 		
 		// phi and stage-1 diagnostics are produced inside the helper.
@@ -699,6 +736,9 @@ program define _pte_prodfunc, eclass
 		local _gmm_mat_opts "`_gmm_mat_opts' t(_pte_t) id(`id') time(`time')"
 		local _gmm_mat_opts "`_gmm_mat_opts' prodfunc(`_gmm_pfunc')"
 		local _gmm_mat_opts "`_gmm_mat_opts' omegapoly(`_gmm_omegapoly')"
+		if "`dopooledz'" != "" {
+			local _gmm_mat_opts "`_gmm_mat_opts' dopooledz"
+		}
 		
 		// Lagged observations outside touse() are invalid; lagged transition rows
 		// inside touse() remain valid because only the current observation is
@@ -750,6 +790,8 @@ program define _pte_prodfunc, eclass
 		local _cols_Z        = r(cols_Z)
 		local _cols_OLP      = r(cols_OLP)
 		local _cond_ZZ       = r(cond_ZZ)
+		local _gmm_do_pooled_z = r(do_pooled_z)
+		local _gmm_z_moment_layout "`r(z_moment_layout)'"
 		local _gmm_prodfunc  "`r(prodfunc)'"
 	}
 	
@@ -767,12 +809,9 @@ program define _pte_prodfunc, eclass
 	if "`lny'" != "" & "`free'" != "" & "`state'" != "" {
 		// Match the DO control set so starting values use the same time controls
 		// as the first-stage specification.
-		if "`industry'" != "" & "`byindustry'" == "" {
-			// Pooled industry path uses one grouped-time interaction per industry.
-			local _ols_controls ""
-			forvalues _j = 1/`_pte_n_ind' {
-				local _ols_controls "`_ols_controls' _pte_t`_j'"
-			}
+		if `_pte_n_ind' > 0 & "`byindustry'" == "" {
+			// Pooled paper path uses one grouped-time interaction per benchmark group.
+			local _ols_controls "`_pte_stage1_tvars'"
 		}
 		else {
 			// By-industry and single-industry pooled runs use one grouped-time trend.
@@ -800,10 +839,13 @@ program define _pte_prodfunc, eclass
 	
 	if "`lny'" != "" & "`free'" != "" & "`state'" != "" {
 		// Keep optimizer options explicit so multistart and logging stay visible.
-		local _gmm_wrap_opts "prodfunc(`_gmm_pfunc') omegapoly(`_gmm_omegapoly')"
-		if "`multistart'" != "" {
-			local _gmm_wrap_opts "`_gmm_wrap_opts' multistart"
-		}
+			local _gmm_wrap_opts "prodfunc(`_gmm_pfunc') omegapoly(`_gmm_omegapoly')"
+			if "`gmminit'" != "" {
+				local _gmm_wrap_opts "`_gmm_wrap_opts' init(`gmminit')"
+			}
+			if "`multistart'" != "" {
+				local _gmm_wrap_opts "`_gmm_wrap_opts' multistart"
+			}
 		if "`report'" != "" {
 			local _gmm_wrap_opts "`_gmm_wrap_opts' nolog"
 		}
@@ -821,8 +863,15 @@ program define _pte_prodfunc, eclass
 		local _fval       = r(fval)
 		local _converged  = r(converged)
 		local _iterations = r(iterations)
+		local _cond_OLtOL = r(cond_OLtOL)
+		local _rank_OLtOL = r(rank_OLtOL)
+		local _xi_mean    = r(xi_mean)
+		local _xi_sd      = r(xi_sd)
+		local _xi_max_abs = r(xi_max_abs)
 		local _gmm_omegapoly_out = r(omegapoly)
 		matrix _pte_beta  = r(beta)
+		matrix _pte_beta_init = r(beta_init)
+		matrix _pte_beta_start_actual = r(beta_start_actual)
 		
 		// Recover scalars for the omega bridge and downstream reporting.
 		if "`_gmm_pfunc'" == "cd" {
@@ -997,6 +1046,8 @@ program define _pte_prodfunc, eclass
 		ereturn scalar cols_Z       = `_cols_Z'
 		ereturn scalar cols_OLP     = `_cols_OLP'
 		ereturn scalar cond_ZZ      = `_cond_ZZ'
+		ereturn scalar do_pooled_z  = `_gmm_do_pooled_z'
+		ereturn local  z_moment_layout "`_gmm_z_moment_layout'"
 	}
 	
 	// Optimization metadata describes the converged production-function fit.
@@ -1004,7 +1055,14 @@ program define _pte_prodfunc, eclass
 		ereturn scalar fval      = `_fval'
 		ereturn scalar converged = `_converged'
 		ereturn scalar iterations = `_iterations'
+		ereturn scalar cond_OLtOL = `_cond_OLtOL'
+		ereturn scalar rank_OLtOL = `_rank_OLtOL'
+		ereturn scalar xi_mean = `_xi_mean'
+		ereturn scalar xi_sd = `_xi_sd'
+		ereturn scalar xi_max_abs = `_xi_max_abs'
 		ereturn scalar omegapoly = `_gmm_omegapoly'
+		ereturn matrix beta_init = _pte_beta_init
+		ereturn matrix beta_start_actual = _pte_beta_start_actual
 		// beta is already stored via ereturn post above
 		ereturn local  prodfunc   "`_gmm_pfunc'"
 		ereturn local  pfunc      "`_gmm_pfunc'"
@@ -1026,6 +1084,12 @@ program define _pte_prodfunc, eclass
 	}
 	if "`proxy'" != "" {
 		ereturn local proxy "`proxy'"
+	}
+	if "`ttrendby'" != "" {
+		ereturn local ttrendby "`ttrendby'"
+	}
+	if "`ttrendvars'" != "" {
+		ereturn local ttrendvars "`ttrendvars'"
 	}
 	
 end

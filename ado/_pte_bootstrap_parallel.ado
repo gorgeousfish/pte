@@ -211,17 +211,11 @@ program define _pte_bootstrap_parallel, rclass
     local ncols = 1 + `nperiods'
     local do_trim = ("`notrimeps'" == "")
     local bs_pf_cols = cond("`prodfunc'" == "cd", 2, 5)
-    local nbeta_cols = cond("`prodfunc'" == "cd", 3, 6)
-    local bs_beta_colnames = cond("`prodfunc'" == "cd", ///
-        "beta_l beta_k beta_t", ///
-        "beta_l beta_k beta_ll beta_kk beta_lk beta_t")
     local n_control : word count `control'
-    if `n_control' > 1 {
-        local nbeta_cols = `bs_pf_cols' + `n_control'
-        local bs_beta_colnames = cond("`prodfunc'" == "cd", ///
-            "beta_l beta_k `control'", ///
-            "beta_l beta_k beta_ll beta_kk beta_lk `control'")
-    }
+    local nbeta_cols = `bs_pf_cols' + 1 + `n_control'
+    local bs_beta_colnames = cond("`prodfunc'" == "cd", ///
+        "beta_l beta_k beta_t `control'", ///
+        "beta_l beta_k beta_ll beta_kk beta_lk beta_t `control'")
     
     // ================================================================
     // Task 14: Initialize parallel environment
@@ -736,6 +730,11 @@ program define _pte_bootstrap_parallel, rclass
         return clear
         exit 2000
     }
+    local low_success_warning = (`n_success' < 50)
+    if `low_success_warning' & "`nolog'" == "" {
+        di as text "{bf:Warning}: fewer than 50 successful bootstrap iterations"
+        di as text "  SE and percentile CI are unstable below 50 successful draws"
+    }
 
     // Initialize full result matrices
     tempname bs_raw bs_trim bs_betas
@@ -823,6 +822,7 @@ program define _pte_bootstrap_parallel, rclass
     return scalar n_success = `n_success'
     return scalar n_fail = `n_fail'
     return scalar nproc_eff = `nproc_eff'
+    return scalar low_success_warning = `low_success_warning'
     return scalar nboot = `nboot'
     return scalar batch_size = `batch_size'
 end
