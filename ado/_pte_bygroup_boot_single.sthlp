@@ -127,11 +127,3 @@ nt=T]{p_end}
 {synopt:{cmd:r(att_trim)}}1 x (1+T) trimmed ATT vector (if trimming
 enabled){p_end}
 {synopt:{cmd:r(betas)}}1 x k production function coefficients{p_end}
-
-
-{marker author}{...}
-{title:Author}
-
-{pstd}
-PTE Package Development Team
-{p_end}

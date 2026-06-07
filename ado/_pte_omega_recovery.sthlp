@@ -398,15 +398,3 @@ Chen, X., Liao, Y., and Schurter, K. (2026).
 Identifying Treatment Effects on Productivity.
 {it:Working Paper}.
 {p_end}
-
-
-{title:Author}
-
-{pstd}PTE Development Team{p_end}
-
-
-{title:Also see}
-
-{psee}
-Online: {helpb _pte_prodfunc}, {helpb _pte_polyvar}, {helpb _pte_transition}
-{p_end}

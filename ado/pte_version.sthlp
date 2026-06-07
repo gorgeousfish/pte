@@ -5,7 +5,6 @@
 {viewerjumpto "Options" "pte_version##options"}{...}
 {viewerjumpto "Examples" "pte_version##examples"}{...}
 {viewerjumpto "Stored results" "pte_version##results"}{...}
-{viewerjumpto "Authors" "pte_version##authors"}{...}
 {viewerjumpto "References" "pte_version##references"}{...}
 {title:Title}
 
@@ -90,30 +89,3 @@ from the GitHub repository.
 {synopt:{cmd:r(date)}}release date in ISO 8601 format (e.g.,
 {cmd:2026-01-01}){p_end}
 {synopt:{cmd:r(authors)}}author names (e.g., {cmd:Chen, Liao, Schurter}){p_end}
-
-
-{marker authors}{...}
-{title:Authors}
-
-{pstd}Zhiyuan Chen{p_end}
-{pstd}Moyu Liao{p_end}
-{pstd}Karl Schurter{p_end}
-
-
-{marker references}{...}
-{title:References}
-
-{phang}
-Chen, Z., Liao, M., & Schurter, K. (2026).
-Identifying Treatment Effects on Productivity:
-Theory with an Application to Production Digitalization.
-{it:Working Paper}.
-{p_end}
-
-
-{marker alsosee}{...}
-{title:Also see}
-
-{p 4 14 2}
-Help: {helpb pte}, {helpb pte_setup}, {helpb pte_diagnose}, {helpb pte_graph}
-{p_end}

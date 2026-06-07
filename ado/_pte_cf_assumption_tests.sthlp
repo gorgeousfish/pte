@@ -266,12 +266,3 @@ See Appendix D.3.1.{p_end}
 {phang}
 Assumption D.4: Distributional comparability between target and treated
 groups. See Appendix D.3.3.{p_end}
-
-
-{marker authors}{...}
-{title:Authors}
-
-{pstd}
-pte package development team.{p_end}
-
-{hline}

@@ -7,8 +7,6 @@
 {viewerjumpto "Remarks" "pte_esttab_att##remarks"}{...}
 {viewerjumpto "Examples" "pte_esttab_att##examples"}{...}
 {viewerjumpto "Stored results" "pte_esttab_att##results"}{...}
-{viewerjumpto "Authors" "pte_esttab_att##authors"}{...}
-
 {cmd:help pte_esttab_att}{right:also see: {helpb pte}}
 {hline}
 
@@ -145,11 +143,3 @@ when available{p_end}
 {p2col 5 28 32 2: Macros}{p_end}
 {synopt:{cmd:e(cmd)}}{cmd:pte_att}{p_end}
 {synopt:{cmd:e(title)}}title for the reposted ATT table object{p_end}
-
-
-{marker authors}{...}
-{title:Authors}
-
-{pstd}
-PTE Stata Package Development Team
-{p_end}

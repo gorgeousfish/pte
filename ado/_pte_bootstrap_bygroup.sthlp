@@ -375,15 +375,3 @@ Chen, X., Liao, Z., & Schurter, K. (2026). Productivity Treatment Effects.
 {phang}
 Replication code: {cmd:DOs/att_estimation_industry_trlg_nonlinear.do},
 {cmd:DOs/att_estimation_industry_cd_nonlinear.do}
-
-
-{marker author}{...}
-{title:Author}
-
-{pstd}
-PTE Package Development Team
-{p_end}
-{pstd}
-All by-group bootstrap ATT matrices follow the official industry DO order:
-columns 1..(T+1) correspond to {cmd:ATT0}, {cmd:ATT1}, ..., {cmd:ATT}{it:T},
-and the final column stores the overall pooled ATT.

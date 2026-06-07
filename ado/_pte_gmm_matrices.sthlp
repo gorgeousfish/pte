@@ -268,20 +268,3 @@ Chen, X., Liao, Z., & Schurter, K. (2026). Productivity Treatment Effects.
 {phang}
 Ackerberg, D. A., Caves, K., & Frazer, G. (2015). Identification properties of
 recent production function estimators. {it:Econometrica}, 83(6), 2411-2451.
-
-
-{title:Author}
-
-{pstd}
-PTE Development Team
-
-
-{title:Also see}
-
-{psee}
-Manual: {bf:[PTE] pte}
-
-{psee}
-Help: {helpb pte}, {helpb _pte_stage1}, {helpb _pte_polyvar},
-{helpb _pte_transition}
-{p_end}

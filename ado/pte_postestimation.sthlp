@@ -14,8 +14,6 @@
 {viewerjumpto "Stored results" "pte_postestimation##results"}{...}
 {viewerjumpto "References" "pte_postestimation##references"}{...}
 {viewerjumpto "Compatibility" "pte_postestimation##compatibility"}{...}
-{viewerjumpto "Authors" "pte_postestimation##authors"}{...}
-
 {cmd:help pte postestimation}{right:also see: {help pte:pte}}
 {hline}
 
@@ -581,25 +579,4 @@ treatment effects. {it:Working Paper}.
 Ackerberg, D. A., K. Caves, and G. Frazer. 2015.
 Identification properties of recent production function
 estimators. {it:Econometrica} 83(6): 2411-2451.
-{p_end}
-
-
-{marker authors}{...}
-{title:Authors}
-
-{pstd}
-Xiaoxia Chen, Shuyang Liao, and Kevin Schurter.{p_end}
-
-{pstd}
-Bug reports and suggestions:
-{browse "https://github.com/pte-stata/pte":github.com/pte-stata/pte}{p_end}
-
-
-{marker alsosee}{...}
-{title:Also see}
-
-{psee}
-{space 4}Help:  {helpb pte}, {helpb pte_setup}, {helpb pte_graph},
-{helpb pte_diagnose}, {helpb predict};{break}
-{space 1}Related:  {helpb prodest}, {helpb acfest}, {helpb levpet}
 {p_end}

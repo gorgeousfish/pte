@@ -269,16 +269,3 @@ Ackerberg, D. A., Caves, K., and Frazer, G. (2015).
 Identification Properties of Recent Production Function Estimators.
 {it:Econometrica} 83(6): 2411-2451.
 {p_end}
-
-
-{title:Author}
-
-{pstd}PTE Development Team{p_end}
-
-
-{title:Also see}
-
-{psee}
-Online: {helpb _pte_att}, {helpb _pte_omega_recovery},
-{helpb _pte_validate_nt_neg1}
-{p_end}

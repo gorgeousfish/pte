@@ -11,8 +11,6 @@
 {viewerjumpto "Remarks" "pte_export##remarks"}{...}
 {viewerjumpto "Examples" "pte_export##examples"}{...}
 {viewerjumpto "Stored results" "pte_export##results"}{...}
-{viewerjumpto "Authors" "pte_export##authors"}{...}
-
 {cmd:help pte_export}{right:also see: {help pte:pte}}
 {hline}
 
@@ -318,19 +316,3 @@ stored bootstrap count is positive.
 {synopt:{cmd:r(filename)}}output filename{p_end}
 {synopt:{cmd:r(format)}}output format (latex, xlsx, or csv){p_end}
 {synoptline}
-
-
-{marker authors}{...}
-{title:Authors}
-
-{pstd}
-pte package development team.
-{p_end}
-
-
-{marker alsosee}{...}
-{title:Also see}
-
-{psee}
-Online: {helpb pte}, {helpb pte_graph}
-{p_end}

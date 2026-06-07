@@ -403,16 +403,3 @@ Hair, J. F., Black, W. C., Babin, B. J., and Anderson, R. E. (2010).
 Multivariate Data Analysis (7th ed.).
 {it:Pearson}.
 {p_end}
-
-
-{title:Author}
-
-{pstd}PTE Development Team{p_end}
-
-
-{title:Also see}
-
-{psee}
-Online: {helpb _pte_polyvar}, {helpb _pte_transition},
-{helpb _pte_omega_recovery}, {helpb estat vif}
-{p_end}

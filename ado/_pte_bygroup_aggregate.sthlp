@@ -136,11 +136,3 @@ same draw, that bootstrap draw is treated as incomplete.
 Column layout follows the official industry DO order:
 columns 1..(T+1) = period-specific ATT for nt = 0, 1, ..., T,
 and column (T+2) = overall ATT (all nt >= 0).
-
-
-{marker author}{...}
-{title:Author}
-
-{pstd}
-PTE Package Development Team
-{p_end}

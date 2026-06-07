@@ -338,11 +338,3 @@ Chen, X., Liao, Z., & Schurter, K. (2026). Productivity Treatment Effects.
 {phang}
 Replication code reference: {cmd:DOs/tt_estimation_program.do} L49-59,
 {cmd:DOs/att_estimation_program_translog.do} L52-59.
-
-
-{marker author}{...}
-{title:Author}
-
-{pstd}
-PTE Package Development Team
-{p_end}

@@ -18,7 +18,6 @@
 {viewerjumpto "Error Messages" "pte_heterogeneity##errors"}{...}
 {viewerjumpto "References" "pte_heterogeneity##references"}{...}
 {viewerjumpto "Bug Reporting" "pte_heterogeneity##bugreport"}{...}
-{viewerjumpto "Authors" "pte_heterogeneity##authors"}{...}
 {viewerjumpto "Also see" "pte_heterogeneity##alsosee"}{...}
 
 {cmd:help pte_heterogeneity}{right:also see: {help pte:pte}}
@@ -498,24 +497,3 @@ When reporting bugs, please include:
 For issues related to the underlying PTE methodology, please refer to the
 paper: Chen, Liao & Schurter (2026) "Identifying Treatment Effects on
 Productivity".
-
-
-{marker authors}{...}
-{title:Authors}
-
-{pstd}
-[Author Name]{break}
-[University/Institution]{break}
-[City, Country]{break}
-{browse "mailto:author@university.edu":author@university.edu}
-
-
-{marker alsosee}{...}
-{title:Also see}
-
-{psee}
-Online: {helpb pte}, {helpb pte_graph}, {helpb pte_diagnose},
-{helpb pte_compare}, {helpb pte_simulate}, {helpb pte postestimation}
-
-{psee}
-{manhelp bootstrap R}, {manhelp tabstat R}

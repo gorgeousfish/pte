@@ -15,8 +15,6 @@
 {viewerjumpto "Stored results" "pte##results"}{...}
 {viewerjumpto "Examples" "pte##examples"}{...}
 {viewerjumpto "References" "pte##references"}{...}
-{viewerjumpto "Authors" "pte##authors"}{...}
-
 {cmd:help pte}{right:also see: {help pte_setup} {help pte_diagnose} {help pte_graph}}
 {hline}
 
@@ -899,20 +897,4 @@ the stored results using the current {cmd:e()} bundle.
 Chen, Z., Liao, M., and Schurter, K. (2026).
 Identifying Treatment Effects on Productivity.
 {it:Working Paper}.
-{p_end}
-
-{marker authors}{...}
-{title:Authors}
-
-{pstd}
-Zhiyuan Chen, Moyu Liao, and Karl Schurter
-{p_end}
-
-{pstd}
-Wenli Xu, City University of Macau
-({browse "mailto:wlxu@cityu.edu.mo":wlxu@cityu.edu.mo})
-{p_end}
-
-{pstd}
-PTE Stata Package Development Team
 {p_end}

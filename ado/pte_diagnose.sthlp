@@ -194,17 +194,3 @@ inconclusive{p_end}
 {phang}{cmd:. pte_diagnose, kstest}{p_end}
 {phang}{cmd:. pte_diagnose, parallel preperiods(3)}{p_end}
 {phang}{cmd:. pte_diagnose, cdf saving(eps0_cdf.gph)}{p_end}
-
-
-{title:Author}
-
-{pstd}
-Xuanyu Cai, City University of Macau.{break}
-Email: {browse "mailto:xuanyuCAI@outlook.com":xuanyuCAI@outlook.com}
-
-
-{title:Also see}
-
-{psee}
-{space 2}Help:  {helpb pte}, {helpb pte_setup}, {helpb pte_graph}
-{p_end}

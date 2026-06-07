@@ -466,9 +466,3 @@ Manual: {manlink R predict}
 {psee}
 {space 2}Help: {helpb pte}, {helpb pte_graph}, {helpb pte_diagnose},
 {helpb xtset}
-
-{title:Author}
-
-{pstd}
-PTE Stata Package Development Team
-{p_end}

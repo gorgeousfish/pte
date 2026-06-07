@@ -11,8 +11,6 @@
 {viewerjumpto "Internal components" "pte_simulate##components"}{...}
 {viewerjumpto "Remarks" "pte_simulate##remarks"}{...}
 {viewerjumpto "References" "pte_simulate##references"}{...}
-{viewerjumpto "Authors" "pte_simulate##authors"}{...}
-
 {help pte_simulate}
 {hline}
 
@@ -140,11 +138,3 @@ Chen, X., Liao, Z. & Schurter, K. (2026).
 Productivity Treatment Effects.
 {it:Working Paper}. See the simulation discussion in Section 6 and the
 official replication workflows in {cmd:DOs/}. {p_end}
-
-
-{marker authors}{...}
-{title:Authors}
-
-{pstd}
-pte package development team.
-{p_end}
