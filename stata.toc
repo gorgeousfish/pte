@@ -10,4 +10,5 @@ d Distribution-Date: 20260531
 d
 p pte pte: Core commands and internal modules (part 1)
 p pte_more pte_more: Required internal modules (part 2)
+p pte_more2 pte_more2: Required internal modules (part 3)
 p pte_examples pte_examples: Example files (optional)

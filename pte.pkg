@@ -6,7 +6,7 @@ d          Wenli Xu (wlxu@cityu.edu.mo)
 d          City University of Macau
 d
 d Requires: Stata 14.0+
-d Also install: pte_more (required internal modules)
+d Also install: pte_more, pte_more2 (required internal modules)
 d
 d Distribution-Date: 20260531
 d
@@ -104,51 +104,3 @@ f _pte_cohort_validate.ado
 f _pte_compare_all.ado
 f _pte_compare_att.ado
 f _pte_compare_beta.ado
-f _pte_compare_clktwfe.ado
-f _pte_compare_endog.ado
-f _pte_compare_expost.ado
-f _pte_compare_omega.ado
-f _pte_compare_rho.ado
-f _pte_compare_se.ado
-f _pte_compare_signature.ado
-f _pte_convergence_warning.ado
-f _pte_detect_format.ado
-f _pte_detect_treatment_type.ado
-f _pte_dgp_calibrate.ado
-f _pte_diag_cdf.ado
-f _pte_diag_conditional.ado
-f _pte_diag_eps0_support_if.ado
-f _pte_diag_kstest.ado
-f _pte_diag_kstest_group.ado
-f _pte_diag_kstest_norm.ado
-f _pte_diag_kstest_time.ado
-f _pte_diag_panel_contract.ado
-f _pte_diag_parallel.ado
-f _pte_diag_pretrend.ado
-f _pte_display.ado
-f _pte_display_degradation_info.ado
-f _pte_display_switch_statistics.ado
-f _pte_dynamic_colstripe_contract.ado
-f _pte_eps0_sample.ado
-f _pte_eps0_sample_restore.ado
-f _pte_eps_bidirectional.ado
-f _pte_error.ado
-f _pte_evolution.ado
-f _pte_evolution_p.ado
-f _pte_evolution_separate.ado
-f _pte_export.ado
-f _pte_format_time.ado
-f _pte_get_group_label.ado
-f _pte_get_line_style.ado
-f _pte_get_preset.ado
-f _pte_gmm_matrices.ado
-f _pte_gmm_wrapper.ado
-f _pte_graph_ate_dynamic.ado
-f _pte_graph_att.ado
-f _pte_graph_att_dynamic.ado
-f _pte_graph_att_nonabs.ado
-f _pte_graph_attperiods_contract.ado
-f _pte_graph_by.ado
-f _pte_graph_catt.ado
-f _pte_graph_combine.ado
-f _pte_graph_compare.ado
