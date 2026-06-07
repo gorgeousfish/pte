@@ -267,7 +267,6 @@ f mata/pte_hetero_qtest.mata
 f mata/pte_ivw_aggregate.mata
 f mata/pte_simulate.mata
 f data/pte_example.dta
-g data/复现数据.dta
 g examples/pte_quickstart.do
 g examples/pte_advanced.do
 g examples/pte_replication.do
