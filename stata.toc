@@ -15,3 +15,4 @@ d
 d Distribution-Date: 20260531
 d
 p pte pte: Productivity Treatment Effects estimation in Stata
+p pte_examples pte_examples: Example files for pte package

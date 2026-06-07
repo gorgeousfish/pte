@@ -1,0 +1,24 @@
+v 3
+d pte_examples: Example files for pte package
+d
+d Authors: Xuanyu Cai (xuanyuCAI@outlook.com)
+d          Wenli Xu (wlxu@cityu.edu.mo)
+d          City University of Macau
+d
+d Example do-files and datasets for the pte package.
+d Install the main pte package first.
+d
+d Distribution-Date: 20260531
+d
+f examples/_init_mata.do
+f examples/pte_quickstart.do
+f examples/pte_advanced.do
+f examples/pte_replication.do
+f examples/pte_replication_alt.do
+f examples/pte_extensions.do
+f examples/pte_counterfactual.do
+f examples/pte_extended_moments.do
+f examples/bootstrap_counterfactual.do
+f examples/bootstrap_results.dta
+f examples/mc_coverage_example.do
+f examples/visualization_guide.do
