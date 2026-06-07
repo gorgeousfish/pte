@@ -9,6 +9,10 @@
 tmp_*
 _tmp_*
 
+# Test installation scripts
+_test_*.do
+_test_*.log
+
 # Compiled graph files
 *.gph
 
