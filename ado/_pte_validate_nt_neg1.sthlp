@@ -13,7 +13,8 @@
 {title:Title}
 
 {phang}
-{bf:_pte_validate_nt_neg1} {hline 2} Validate nt=-1 observations for ATT estimation
+{bf:_pte_validate_nt_neg1} {hline 2} Validate nt=-1 observations for ATT
+estimation
 
 
 {marker syntax}{...}
@@ -59,18 +60,21 @@ but missing observed omega at that anchor also cause a fatal error even when
 {pstd}
 The validation performs four checks:
 
-{phang2}1. {bf:Existence check}: At least one nt=-1 observation exists in the data.{p_end}
+{phang2}1. {bf:Existence check}: At least one nt=-1 observation exists in the
+data.{p_end}
 
 {phang2}2. {bf:Completeness check}: Every treated firm should have an nt=-1
 observation. Firms that fail this check are reported, dropped, and excluded
-observation. Firms that fail this check are reported and the command exits.{p_end}
+observation. Firms that fail this check are reported and the command
+exits.{p_end}
 
 {phang2}3. {bf:Observed omega anchor check}: When {opt omega()} is supplied,
 every treated firm must also have observed omega at nt=-1. Firms that fail
 this check are reported and the command exits even outside debug mode.{p_end}
 
 {phang2}4. {bf:L.omega check} (debug mode only, when {opt omega()} is supplied):
-L.omega at nt=0 equals omega at nt=-1 for each firm, with tolerance 1e-10.{p_end}
+L.omega at nt=0 equals omega at nt=-1 for each firm, with tolerance
+1e-10.{p_end}
 
 
 {marker options}{...}

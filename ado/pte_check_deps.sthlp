@@ -12,7 +12,8 @@
 {title:Title}
 
 {p2colset 5 30 32 2}{...}
-{p2col:{cmd:pte_check_deps} {hline 2}}Check all dependencies for the pte package{p_end}
+{p2col:{cmd:pte_check_deps} {hline 2}}Check all dependencies for the pte
+package{p_end}
 {p2colreset}{...}
 
 
@@ -27,10 +28,18 @@
 {synoptset 20 tabbed}{...}
 {synopthdr}
 {synoptline}
-{synopt:{opt detail}}display detailed check results including file locations{p_end}
-{synopt:{opt treatdependent}}additionally check the live treatdependent gate: {cmd:endopolyprodest} as hard requirement and {cmd:prodest} as advisory environment info{p_end}
-{synopt:{opt compare}}check the public {cmd:pte_compare} workflow bundle ({cmd:reghdfe} plus companion compare Mata sources that resolve to the active source-tree bundle when present, otherwise fall back to adopath, are compilable, and publish the required compare worker-entry Mata symbol); compare mode does not require baseline GMM Mata readiness{p_end}
-{synopt:{opt notrimeps}}report the trimming environment for a {cmd:pte, notrimeps} run; {cmd:winsor2} remains advisory only{p_end}
+{synopt:{opt detail}}display detailed check results including file
+locations{p_end}
+{synopt:{opt treatdependent}}additionally check the live treatdependent gate:
+{cmd:endopolyprodest} as hard requirement and {cmd:prodest} as advisory
+environment info{p_end}
+{synopt:{opt compare}}check the public {cmd:pte_compare} workflow bundle
+({cmd:reghdfe} plus companion compare Mata sources that resolve to the active
+source-tree bundle when present, otherwise fall back to adopath, are compilable,
+and publish the required compare worker-entry Mata symbol); compare mode does
+not require baseline GMM Mata readiness{p_end}
+{synopt:{opt notrimeps}}report the trimming environment for a
+{cmd:pte, notrimeps} run; {cmd:winsor2} remains advisory only{p_end}
 {synoptline}
 
 
@@ -120,7 +129,8 @@ trimming path.
 {title:Core vs extended dependencies}
 
 {pstd}
-{it:Core baseline dependencies} (checked by default, and skipped in compare-only mode):
+{it:Core baseline dependencies} (checked by default, and skipped in compare-only
+mode):
 
 {p 8 12 2}
 1. Stata version >= 14.0 {hline 2} required for Mata optimization
@@ -153,7 +163,8 @@ Legacy local workflows may still carry the library, but the current public
 runtime does not require it at entry.{p_end}
 
 {pstd}
-{it:Treatdependent gate and advisory checks} (checked when {opt treatdependent} is specified):
+{it:Treatdependent gate and advisory checks} (checked when {opt treatdependent}
+is specified):
 
 {p 8 12 2}
 3. {cmd:prodest} {hline 2} recommended base package reported for
@@ -199,9 +210,11 @@ the core {cmd:pte} dependency contract enforced by {cmd:pte_check_deps}.
 
 {synoptset 25 tabbed}{...}
 {p2col 5 25 29 2: Scalars}{p_end}
-{synopt:{cmd:r(all_satisfied)}}1 if all required checks passed, 0 otherwise{p_end}
+{synopt:{cmd:r(all_satisfied)}}1 if all required checks passed, 0
+otherwise{p_end}
 {synopt:{cmd:r(n_missing)}}number of failed required checks{p_end}
-{synopt:{cmd:r(n_checks)}}total number of required pass/fail checks performed{p_end}
+{synopt:{cmd:r(n_checks)}}total number of required pass/fail checks
+performed{p_end}
 
 
 {marker examples}{...}
@@ -233,7 +246,8 @@ the core {cmd:pte} dependency contract enforced by {cmd:pte_check_deps}.
 
 {phang}
 Chen, Z., Liao, M. & Schurter, K. (2026).
-Identifying Treatment Effects on Productivity: Theory with an Application to Production Digitalization.
+Identifying Treatment Effects on Productivity: Theory with an Application to
+Production Digitalization.
 {it:Working Paper}.
 {p_end}
 {smcl}

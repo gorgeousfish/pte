@@ -30,18 +30,30 @@
 {syntab:Standalone mode}
 {synopt:{opt beta_l(#)}}labor coefficient in standalone mode{p_end}
 {synopt:{opt beta_k(#)}}capital coefficient in standalone mode{p_end}
-{synopt:{opt beta_ll(#)}}labor squared coefficient in standalone Translog mode{p_end}
-{synopt:{opt beta_kk(#)}}capital squared coefficient in standalone Translog mode{p_end}
-{synopt:{opt beta_lk(#)}}labor-capital interaction coefficient in standalone Translog mode{p_end}
+{synopt:{opt beta_ll(#)}}labor squared coefficient in standalone Translog
+mode{p_end}
+{synopt:{opt beta_kk(#)}}capital squared coefficient in standalone Translog
+mode{p_end}
+{synopt:{opt beta_lk(#)}}labor-capital interaction coefficient in standalone
+Translog mode{p_end}
 {syntab:Common options}
-{synopt:{opt pfunc(string)}}production function type; {cmd:cd} or {cmd:translog}; default from {cmd:e(prodfunc)} with fallback to legacy {cmd:e(pfunc)}, or inferred as {cmd:translog} when standalone higher-order coefficients are nonzero{p_end}
-{synopt:{opt touse(name)}}exact-name numeric sample indicator; recover {cmd:omega} only where {cmd:touse!=0} and nonmissing{p_end}
+{synopt:{opt pfunc(string)}}production function type; {cmd:cd} or
+{cmd:translog}; default from {cmd:e(prodfunc)} with fallback to legacy
+{cmd:e(pfunc)}, or inferred as {cmd:translog} when standalone higher-order
+coefficients are nonzero{p_end}
+{synopt:{opt touse(name)}}exact-name numeric sample indicator; recover
+{cmd:omega} only where {cmd:touse!=0} and nonmissing{p_end}
 {synopt:{opt nodiag:nose}}suppress diagnostic output{p_end}
 {synopt:{opt verify}}check phi-method and direct-method equivalence{p_end}
-{synopt:{opt depvar(name)}}exact-name log output variable for direct-method verification{p_end}
-{synopt:{opt time(name)}}legacy direct-method control variable; not used in the direct subtraction when {cmd:e(beta_controls)} exists, and unnecessary in zero-control verification{p_end}
-{synopt:{opt beta_t(#)}}legacy scalar coefficient for {opt time()} in standalone verification; omit it in zero-control verification{p_end}
-{synopt:{opt debug}}display detailed equivalence diagnostics under {opt verify}{p_end}
+{synopt:{opt depvar(name)}}exact-name log output variable for direct-method
+verification{p_end}
+{synopt:{opt time(name)}}legacy direct-method control variable; not used in the
+direct subtraction when {cmd:e(beta_controls)} exists, and unnecessary in
+zero-control verification{p_end}
+{synopt:{opt beta_t(#)}}legacy scalar coefficient for {opt time()} in standalone
+verification; omit it in zero-control verification{p_end}
+{synopt:{opt debug}}display detailed equivalence diagnostics under
+{opt verify}{p_end}
 {synoptline}
 {p 4 6 2}
 {cmd:*} Choose one entry mode: either {opt free()} + {opt state()} for EPIC-001
@@ -87,7 +99,8 @@ fallbacks such as {cmd:t} binding to {cmd:t_shadow} are rejected.{p_end}
 {pstd}
 {cmd:_pte_omega_recovery} recovers firm-level productivity (omega) from the
 control-adjusted first-stage productivity proxy ({cmd:phi}) and estimated
-production function parameters. First-stage controls are already removed from phi
+production function parameters. First-stage controls are already removed from
+phi
 before this command runs. This is the first step in EPIC-002
 (Productivity Recovery and Evolution) of the PTE package.
 
@@ -108,7 +121,8 @@ variable and computes:
 {bf:Cobb-Douglas:} omega = phi - beta_l * l - beta_k * k
 
 {p 8 12 2}
-{bf:Translog:} omega = phi - beta_l * l - beta_k * k - beta_ll * l^2 - beta_kk * k^2 - beta_lk * l * k
+{bf:Translog:} omega = phi - beta_l * l - beta_k * k - beta_ll * l^2 - beta_kk *
+k^2 - beta_lk * l * k
 
 {pstd}
 The recovered productivity variable {cmd:omega} is used by subsequent modules
@@ -172,7 +186,8 @@ returns {cmd:r(198)} instead of silently mixing incompatible stage-1 results.
 
 {phang}
 {opt touse(name)} specifies a sample indicator for recovery. The supplied
-name must match the exact variable name of an existing numeric variable; abbreviation fallback
+name must match the exact variable name of an existing numeric variable;
+abbreviation fallback
 such as {cmd:touse(keep)} binding to {cmd:keep_shadow} is rejected. {cmd:omega}
 is generated only on observations with {cmd:touse!=0} and nonmissing
 {cmd:touse}. The variable must be numeric; string sample flags are rejected
@@ -241,7 +256,8 @@ downstream evolution, eps0, and ATT steps cannot consume a rejected state.
 
 {synoptset 22 tabbed}{...}
 {p2col 5 22 26 2: Scalars}{p_end}
-{synopt:{cmd:e(N)}}number of valid omega observations (same as {cmd:e(N_omega)}){p_end}
+{synopt:{cmd:e(N)}}number of valid omega observations (same as
+{cmd:e(N_omega)}){p_end}
 {synopt:{cmd:e(N_omega)}}number of valid omega observations{p_end}
 {synopt:{cmd:e(n_missing)}}number of missing omega due to missing inputs{p_end}
 {synopt:{cmd:e(omega_mean)}}mean of omega{p_end}
@@ -251,11 +267,19 @@ downstream evolution, eps0, and ATT steps cannot consume a rejected state.
 {synopt:{cmd:e(omega_p50)}}median of omega{p_end}
 {synopt:{cmd:e(beta_l)}}labor coefficient used in recovery{p_end}
 {synopt:{cmd:e(beta_k)}}capital coefficient used in recovery{p_end}
-{synopt:{cmd:e(beta_ll)}}labor squared coefficient used in Translog recovery{p_end}
-{synopt:{cmd:e(beta_kk)}}capital squared coefficient used in Translog recovery{p_end}
-{synopt:{cmd:e(beta_lk)}}labor-capital interaction coefficient used in Translog recovery{p_end}
-{synopt:{cmd:e(method_corr)}}correlation between phi-method and direct-method omega under {opt verify}{p_end}
-{synopt:{cmd:e(equiv_pass)}}1 if the equivalence check passes under {opt verify}: with multiple valid pairs, correlation exceeds 0.9999 and {cmd:e(max_diff)} < 1e-8 and {cmd:e(mean_diff)} < 1e-10; with exactly one valid pair, the direct comparison alone must pass and {cmd:e(method_corr)} is missing{p_end}
+{synopt:{cmd:e(beta_ll)}}labor squared coefficient used in Translog
+recovery{p_end}
+{synopt:{cmd:e(beta_kk)}}capital squared coefficient used in Translog
+recovery{p_end}
+{synopt:{cmd:e(beta_lk)}}labor-capital interaction coefficient used in Translog
+recovery{p_end}
+{synopt:{cmd:e(method_corr)}}correlation between phi-method and direct-method
+omega under {opt verify}{p_end}
+{synopt:{cmd:e(equiv_pass)}}1 if the equivalence check passes under
+{opt verify}: with multiple valid pairs, correlation exceeds 0.9999 and
+{cmd:e(max_diff)} < 1e-8 and {cmd:e(mean_diff)} < 1e-10; with exactly one valid
+pair, the direct comparison alone must pass and {cmd:e(method_corr)} is
+missing{p_end}
 {synopt:{cmd:e(max_diff)}}maximum absolute difference under {opt verify}{p_end}
 {synopt:{cmd:e(mean_diff)}}mean absolute difference under {opt verify}{p_end}
 
@@ -271,9 +295,14 @@ downstream evolution, eps0, and ATT steps cannot consume a rejected state.
 {title:Error codes}
 
 {synoptset 10 tabbed}{...}
-{synopt:{cmd:111}}specified input variable not found, or an input variable exists but is not numeric{p_end}
-{synopt:{cmd:198}}missing mode inputs, mutually exclusive mode inputs, phi not found, e(b) not found, e(b) dimension mismatch, EPIC-001 coefficient layout/metadata mismatch, or invalid pfunc{p_end}
-{synopt:{cmd:2000}}phi has no valid observations, touse() excludes all observations, no recoverable omega values remain in the active sample, or there are no valid observations for verify pairing{p_end}
+{synopt:{cmd:111}}specified input variable not found, or an input variable
+exists but is not numeric{p_end}
+{synopt:{cmd:198}}missing mode inputs, mutually exclusive mode inputs, phi not
+found, e(b) not found, e(b) dimension mismatch, EPIC-001 coefficient
+layout/metadata mismatch, or invalid pfunc{p_end}
+{synopt:{cmd:2000}}phi has no valid observations, touse() excludes all
+observations, no recoverable omega values remain in the active sample, or there
+are no valid observations for verify pairing{p_end}
 {synopt:{cmd:2001}}verify equivalence failed{p_end}
 {synopt:{cmd:2002}}verify detected negative correlation between methods{p_end}
 {p2colreset}{...}
@@ -348,7 +377,8 @@ f(k, l; beta) = beta_l * l + beta_k * k
 For Translog (Equation 15 of the paper):
 
 {p 8 12 2}
-f(k, l; beta) = beta_l * l + beta_k * k + beta_ll * l^2 + beta_kk * k^2 + beta_lk * l * k
+f(k, l; beta) = beta_l * l + beta_k * k + beta_ll * l^2 + beta_kk * k^2 +
+beta_lk * l * k
 
 {pstd}
 The recovered omega is then used to estimate the productivity evolution

@@ -9,7 +9,8 @@
 {title:Title}
 
 {p2colset 5 35 37 2}{...}
-{p2col:{cmd:_pte_graph_att_nonabs} {hline 2}}Non-absorbing dual ATT graph (internal){p_end}
+{p2col:{cmd:_pte_graph_att_nonabs} {hline 2}}Non-absorbing dual ATT graph
+(internal){p_end}
 {p2colreset}{...}
 
 {marker syntax}{...}
@@ -30,26 +31,35 @@ this program directly.
 {syntab:Graph type}
 {synopt:{opt ov:erlay}}overlay ATT{sup:+} and ATT{sup:-} on same axes{p_end}
 {synopt:{opt attdiff}}plot ATT{sup:+} minus ATT{sup:-} difference{p_end}
-{synopt:{opt abs:orbing}}handle absorbing treatment case (ATT{sup:+} only){p_end}
+{synopt:{opt abs:orbing}}handle absorbing treatment case (ATT{sup:+}
+only){p_end}
 
 {syntab:Confidence intervals}
-{synopt:{opt ci(type)}}CI display: {bf:area} (default), {bf:rcap}, {bf:rspike}, or {bf:none}{p_end}
+{synopt:{opt ci(type)}}CI display: {bf:area} (default), {bf:rcap}, {bf:rspike},
+or {bf:none}{p_end}
 {synopt:{opt le:vel(#)}}confidence level; default is {cmd:level(95)}{p_end}
 
 {syntab:Colors and styles}
 {synopt:{opt colorp:lus(color)}}ATT{sup:+} line color; default {bf:navy}{p_end}
-{synopt:{opt colorm:inus(color)}}ATT{sup:-} line color; default {bf:maroon}{p_end}
-{synopt:{opt colord:iff(color)}}difference line color; default {bf:forest_green}{p_end}
-{synopt:{opt lpatternp:lus(pattern)}}ATT{sup:+} line pattern; default {bf:solid}{p_end}
-{synopt:{opt lpatternm:inus(pattern)}}ATT{sup:-} line pattern; default {bf:solid}{p_end}
+{synopt:{opt colorm:inus(color)}}ATT{sup:-} line color; default
+{bf:maroon}{p_end}
+{synopt:{opt colord:iff(color)}}difference line color; default
+{bf:forest_green}{p_end}
+{synopt:{opt lpatternp:lus(pattern)}}ATT{sup:+} line pattern; default
+{bf:solid}{p_end}
+{synopt:{opt lpatternm:inus(pattern)}}ATT{sup:-} line pattern; default
+{bf:solid}{p_end}
 {synopt:{opt lw:idth(#)}}line width; default {bf:0.8}{p_end}
-{synopt:{opt msymbolp:lus(symbol)}}ATT{sup:+} marker symbol; default {bf:O}{p_end}
-{synopt:{opt msymbolm:inus(symbol)}}ATT{sup:-} marker symbol; default {bf:D}{p_end}
+{synopt:{opt msymbolp:lus(symbol)}}ATT{sup:+} marker symbol; default
+{bf:O}{p_end}
+{synopt:{opt msymbolm:inus(symbol)}}ATT{sup:-} marker symbol; default
+{bf:D}{p_end}
 {synopt:{opt ms:ize(#)}}marker size; default {bf:2.5}{p_end}
 
 {syntab:Titles and labels}
 {synopt:{opt ti:tle(string)}}graph title{p_end}
-{synopt:{opt xti:tle(string)}}x-axis title; default "Periods Since Treatment (n{sub:t})"{p_end}
+{synopt:{opt xti:tle(string)}}x-axis title; default "Periods Since Treatment
+(n{sub:t})"{p_end}
 {synopt:{opt yti:tle(string)}}y-axis title; default "ATT"{p_end}
 {synopt:{opt sub:title(string)}}graph subtitle{p_end}
 {synopt:{opt note(string)}}graph note{p_end}
@@ -74,13 +84,16 @@ ATT{sup:+} (entry switch effects) and ATT{sup:-}
 (staying-treated counterfactuals for exit switchers) from {cmd:e()}
 results and produces one of three graph types:
 
-{p 8 12 2}1. {bf:Dual panel} (default): side-by-side panels showing ATT{sup:+} and
+{p 8 12 2}1. {bf:Dual panel} (default): side-by-side panels showing ATT{sup:+}
+and
 ATT{sup:-} with aligned y-axes for direct comparison.{p_end}
 
-{p 8 12 2}2. {bf:Overlay} ({opt overlay}): both ATT{sup:+} and ATT{sup:-} plotted on
+{p 8 12 2}2. {bf:Overlay} ({opt overlay}): both ATT{sup:+} and ATT{sup:-}
+plotted on
 the same axes with distinct colors and markers.{p_end}
 
-{p 8 12 2}3. {bf:Difference} ({opt attdiff}): ATT{sup:+} minus ATT{sup:-}, testing
+{p 8 12 2}3. {bf:Difference} ({opt attdiff}): ATT{sup:+} minus ATT{sup:-},
+testing
 whether entry-switch and exit-switch counterfactual effects are symmetric.
 A zero line indicates
 symmetric effects.{p_end}
@@ -291,19 +304,26 @@ shown.
 {synopt:{cmd:r(ci_level)}}confidence level used{p_end}
 
 {p2col 5 28 32 2: Macros}{p_end}
-{synopt:{cmd:r(graph_type)}}graph type: {bf:dual}, {bf:overlay}, or {bf:att_diff}{p_end}
+{synopt:{cmd:r(graph_type)}}graph type: {bf:dual}, {bf:overlay}, or
+{bf:att_diff}{p_end}
 {synopt:{cmd:r(filename)}}saved filename (if {opt save()} specified){p_end}
-{synopt:{cmd:r(diff_se_method)}}SE method for difference: {bf:bootstrap}, {bf:delta}, or {bf:none} (attdiff mode only){p_end}
-{synopt:{cmd:r(diff_ci_source)}}CI source for difference: {bf:bootstrap}, {bf:normal}, or {bf:none} (attdiff mode only){p_end}
+{synopt:{cmd:r(diff_se_method)}}SE method for difference: {bf:bootstrap},
+{bf:delta}, or {bf:none} (attdiff mode only){p_end}
+{synopt:{cmd:r(diff_ci_source)}}CI source for difference: {bf:bootstrap},
+{bf:normal}, or {bf:none} (attdiff mode only){p_end}
 
 {p2col 5 28 32 2: Matrices}{p_end}
 {synopt:{cmd:r(att_plus)}}ATT{sup:+} estimates vector{p_end}
 {synopt:{cmd:r(att_minus)}}ATT{sup:-} estimates vector{p_end}
 {synopt:{cmd:r(nt)}}event-time support used on the x-axis{p_end}
-{synopt:{cmd:r(att_diff)}}ATT{sup:+} - ATT{sup:-} difference vector (attdiff mode only){p_end}
-{synopt:{cmd:r(att_diff_se)}}difference SE vector (attdiff mode, if SE available){p_end}
-{synopt:{cmd:r(att_diff_ci_lower)}}difference CI lower bound (attdiff mode, if CI available){p_end}
-{synopt:{cmd:r(att_diff_ci_upper)}}difference CI upper bound (attdiff mode, if CI available){p_end}
+{synopt:{cmd:r(att_diff)}}ATT{sup:+} - ATT{sup:-} difference vector (attdiff
+mode only){p_end}
+{synopt:{cmd:r(att_diff_se)}}difference SE vector (attdiff mode, if SE
+available){p_end}
+{synopt:{cmd:r(att_diff_ci_lower)}}difference CI lower bound (attdiff mode, if
+CI available){p_end}
+{synopt:{cmd:r(att_diff_ci_upper)}}difference CI upper bound (attdiff mode, if
+CI available){p_end}
 
 {marker references}{...}
 {title:References}

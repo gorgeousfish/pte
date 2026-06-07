@@ -9,7 +9,8 @@
 {title:Title}
 
 {p2colset 5 35 37 2}{...}
-{p2col:{cmd:_pte_nonabs_ereturn} {hline 2}}Store non-absorbing treatment effect results in e() (internal){p_end}
+{p2col:{cmd:_pte_nonabs_ereturn} {hline 2}}Store non-absorbing treatment effect
+results in e() (internal){p_end}
 {p2colreset}{...}
 
 {marker syntax}{...}
@@ -36,14 +37,21 @@ directly.
 {synopthdr}
 {synoptline}
 {syntab:Required}
-{synopt:{opt atts:witchin(matname)}}ATT{sup:+} matrix, (L+2){it:x}3 [period, ATT, N_firms]{p_end}
-{synopt:{opt attswitchins:e(matname)}}ATT{sup:+} bootstrap SE matrix, (L+2){it:x}1{p_end}
-{synopt:{opt attswitcho:ut(matname)}}ATT{sup:-} matrix, (L+2){it:x}3 [period, ATT, N_firms]{p_end}
-{synopt:{opt attswitchouts:e(matname)}}ATT{sup:-} bootstrap SE matrix, (L+2){it:x}1{p_end}
+{synopt:{opt atts:witchin(matname)}}ATT{sup:+} matrix, (L+2){it:x}3 [period,
+ATT, N_firms]{p_end}
+{synopt:{opt attswitchins:e(matname)}}ATT{sup:+} bootstrap SE matrix,
+(L+2){it:x}1{p_end}
+{synopt:{opt attswitcho:ut(matname)}}ATT{sup:-} matrix, (L+2){it:x}3 [period,
+ATT, N_firms]{p_end}
+{synopt:{opt attswitchouts:e(matname)}}ATT{sup:-} bootstrap SE matrix,
+(L+2){it:x}1{p_end}
 {synopt:{opt ns:witchin(#)}}number of entry events (G=+1){p_end}
-{synopt:{opt nswitcho:ut(#)}}number of exit events (G=-1); 0 implies absorbing{p_end}
-{synopt:{opt attp:eriods(matname)}}ATT evaluation periods matrix, 1{it:x}(L+1){p_end}
-{synopt:{opt persist:periods(#)}}persistence requirement for treatment classification{p_end}
+{synopt:{opt nswitcho:ut(#)}}number of exit events (G=-1); 0 implies
+absorbing{p_end}
+{synopt:{opt attp:eriods(matname)}}ATT evaluation periods matrix,
+1{it:x}(L+1){p_end}
+{synopt:{opt persist:periods(#)}}persistence requirement for treatment
+classification{p_end}
 
 {syntab:Shock distribution}
 {synopt:{opt sigmaeps0(#)}}std. dev. of control-group productivity shock{p_end}
@@ -61,7 +69,8 @@ directly.
 
 {syntab:Metadata}
 {synopt:{opt nt:otal(#)}}total number of observations{p_end}
-{synopt:{opt touse(name)}}exact existing estimation-sample marker; abbreviation fallback is rejected{p_end}
+{synopt:{opt touse(name)}}exact existing estimation-sample marker; abbreviation
+fallback is rejected{p_end}
 {synopt:{opt cmdline(string)}}full command line for replay{p_end}
 {synopt:{opt v:erbose}}display additional diagnostic messages{p_end}
 {synoptline}
@@ -210,11 +219,15 @@ when absorbing treatment is detected.
 {synopt:{cmd:e(absorbing)}}1 if absorbing treatment, 0 otherwise{p_end}
 {synopt:{cmd:e(persistperiods)}}persistence requirement{p_end}
 {synopt:{cmd:e(sigma_eps0)}}control-group shock std. dev. (if positive){p_end}
-{synopt:{cmd:e(sigma_eps1)}}treated-group shock std. dev. (non-absorbing, if positive){p_end}
-{synopt:{cmd:e(sigma_eps0_trim)}}trimmed control-group shock std. dev. (if positive){p_end}
-{synopt:{cmd:e(sigma_eps1_trim)}}trimmed treated-group shock std. dev. (non-absorbing, if positive){p_end}
+{synopt:{cmd:e(sigma_eps1)}}treated-group shock std. dev. (non-absorbing, if
+positive){p_end}
+{synopt:{cmd:e(sigma_eps0_trim)}}trimmed control-group shock std. dev. (if
+positive){p_end}
+{synopt:{cmd:e(sigma_eps1_trim)}}trimmed treated-group shock std. dev.
+(non-absorbing, if positive){p_end}
 {synopt:{cmd:e(nboot)}}number of bootstrap replications (if bootstrap){p_end}
-{synopt:{cmd:e(boot_failed)}}number of failed bootstrap iterations (if bootstrap){p_end}
+{synopt:{cmd:e(boot_failed)}}number of failed bootstrap iterations (if
+bootstrap){p_end}
 {synopt:{cmd:e(N_total)}}total observations (if specified){p_end}
 
 {p2col 5 28 32 2: Macros}{p_end}
@@ -225,15 +238,21 @@ when absorbing treatment is detected.
 {p2col 5 28 32 2: Matrices}{p_end}
 {synopt:{cmd:e(att_switchin)}}ATT{sup:+} estimates, (L+2){it:x}3{p_end}
 {synopt:{cmd:e(att_switchin_se)}}ATT{sup:+} standard errors, (L+2){it:x}1{p_end}
-{synopt:{cmd:e(att_switchout)}}ATT{sup:-} estimates, (L+2){it:x}3; missing if absorbing{p_end}
-{synopt:{cmd:e(att_switchout_se)}}ATT{sup:-} standard errors, (L+2){it:x}1; missing if absorbing{p_end}
+{synopt:{cmd:e(att_switchout)}}ATT{sup:-} estimates, (L+2){it:x}3; missing if
+absorbing{p_end}
+{synopt:{cmd:e(att_switchout_se)}}ATT{sup:-} standard errors, (L+2){it:x}1;
+missing if absorbing{p_end}
 {synopt:{cmd:e(attperiods)}}evaluation periods, 1{it:x}(L+1){p_end}
 {synopt:{cmd:e(b)}}coefficient vector for {cmd:esttab} compatibility{p_end}
 {synopt:{cmd:e(V)}}variance matrix for {cmd:esttab} compatibility{p_end}
-{synopt:{cmd:e(att_switchin_ci_l)}}ATT{sup:+} lower CI bounds (if bootstrap){p_end}
-{synopt:{cmd:e(att_switchin_ci_u)}}ATT{sup:+} upper CI bounds (if bootstrap){p_end}
-{synopt:{cmd:e(att_switchout_ci_l)}}ATT{sup:-} lower CI bounds (if bootstrap, non-absorbing){p_end}
-{synopt:{cmd:e(att_switchout_ci_u)}}ATT{sup:-} upper CI bounds (if bootstrap, non-absorbing){p_end}
+{synopt:{cmd:e(att_switchin_ci_l)}}ATT{sup:+} lower CI bounds (if
+bootstrap){p_end}
+{synopt:{cmd:e(att_switchin_ci_u)}}ATT{sup:+} upper CI bounds (if
+bootstrap){p_end}
+{synopt:{cmd:e(att_switchout_ci_l)}}ATT{sup:-} lower CI bounds (if bootstrap,
+non-absorbing){p_end}
+{synopt:{cmd:e(att_switchout_ci_u)}}ATT{sup:-} upper CI bounds (if bootstrap,
+non-absorbing){p_end}
 
 {pstd}
 {bf:Note on e(b) and e(V) structure:}

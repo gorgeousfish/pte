@@ -15,7 +15,8 @@
 {title:Title}
 
 {p2colset 5 24 26 2}{...}
-{p2col:{cmd:pte_compare} {hline 2}}Compare pte with traditional two-step methods{p_end}
+{p2col:{cmd:pte_compare} {hline 2}}Compare pte with traditional two-step
+methods{p_end}
 {p2colreset}{...}
 
 {marker syntax}{...}
@@ -70,15 +71,24 @@ not require the unrelated baseline GMM Mata runtime used by {cmd:pte}.
 {synopt:{opt all}}alias for {cmd:method(all)}{p_end}
 
 {syntab:Specification}
-{synopt:{opt spec:s(numlist)}}TWFE specifications to run: 1, 2, 3; default is {cmd:specs(1 2 3)}{p_end}
-{synopt:{opt omegap:oly(#)}}Method II evolution order; explicit values are forwarded to {cmd:method(endog)} and {cmd:method(all)}, and omission inherits the last {cmd:pte} order before falling back to 3{p_end}
-{synopt:{opt ab:sorb(varlist)}}fixed effects for reghdfe; default is firm + year FE{p_end}
+{synopt:{opt spec:s(numlist)}}TWFE specifications to run: 1, 2, 3; default is
+{cmd:specs(1 2 3)}{p_end}
+{synopt:{opt omegap:oly(#)}}Method II evolution order; explicit values are
+forwarded to {cmd:method(endog)} and {cmd:method(all)}, and omission inherits
+the last {cmd:pte} order before falling back to 3{p_end}
+{synopt:{opt ab:sorb(varlist)}}fixed effects for reghdfe; default is firm + year
+FE{p_end}
 {synopt:{opt vce(vcetype)}}variance-covariance estimator for reghdfe{p_end}
-{synopt:{opt ind:ustry(string)}}reserved token; rejected for all public methods because the released comparison API does not implement a general by-industry path{p_end}
+{synopt:{opt ind:ustry(string)}}reserved token; rejected for all public methods
+because the released comparison API does not implement a general by-industry
+path{p_end}
 
 {syntab:Options}
-{synopt:{opt treat:ment(varname)}}override treatment variable from {cmd:pte}; the name must match an existing numeric variable exactly, and abbreviation fallback is rejected{p_end}
-{synopt:{opt lagt:reatment}}use lagged treatment L.D instead of the default contemporaneous D for replication/compatibility paths{p_end}
+{synopt:{opt treat:ment(varname)}}override treatment variable from {cmd:pte};
+the name must match an existing numeric variable exactly, and abbreviation
+fallback is rejected{p_end}
+{synopt:{opt lagt:reatment}}use lagged treatment L.D instead of the default
+contemporaneous D for replication/compatibility paths{p_end}
 {synopt:{opt diag:nose}}display bias source analysis (Paper Section 5){p_end}
 {synopt:{opt norep:ort}}suppress results table{p_end}
 {synoptline}
@@ -128,7 +138,8 @@ then runs TWFE instead of counterfactual simulation for ATT (m4-m6).{p_end}
 on CLK-recovered productivity. This method uses the current CLK omega
 contract from {cmd:pte}; if the live {cmd:_pte_omega} object is missing or
 stale relative to the active {cmd:phi}/{cmd:beta} state, it rebuilds a
-temporary current omega before running TWFE. It excludes transition period observations
+temporary current omega before running TWFE. It excludes transition period
+observations
 using the package's exact non-transition gate {_cmd:_pte_mid==0}. Shadow
 leftovers such as {cmd:_pte_mid_shadow} or {cmd:_pte_omega_shadow} are rejected
 instead of being consumed through Stata abbreviation binding. Corresponds to
@@ -141,9 +152,15 @@ comparison table (Table 3 style with m1-m9).{p_end}
 {pstd}
 Method III (clktwfe) key characteristics:
 
-{p 8 12 2}1. Uses the current CLK-corrected productivity contract from {cmd:pte}, rebuilding a temporary current omega if the exact live {_cmd:_pte_omega} object is missing or stale{p_end}
-{p 8 12 2}2. Excludes transition period observations (D_t != D_{t-1}) using the exact canonical {_cmd:_pte_mid==0} gate; shadow variables are not accepted{p_end}
-{p 8 12 2}3. Uses contemporaneous treatment D by default, matching equation (18); {opt lagtreatment} switches Method III to L.D for replication/compatibility paths{p_end}
+{p 8 12 2}1. Uses the current CLK-corrected productivity contract from
+{cmd:pte}, rebuilding a temporary current omega if the exact live
+{_cmd:_pte_omega} object is missing or stale{p_end}
+{p 8 12 2}2. Excludes transition period observations (D_t != D_{t-1}) using the
+exact canonical {_cmd:_pte_mid==0} gate; shadow variables are not
+accepted{p_end}
+{p 8 12 2}3. Uses contemporaneous treatment D by default, matching equation
+(18); {opt lagtreatment} switches Method III to L.D for
+replication/compatibility paths{p_end}
 {p 8 12 2}4. Addresses Problem 3 (transition period) but not Problems 1-2{p_end}
 
 {pstd}
@@ -273,7 +290,8 @@ quantitative bias comparisons are also shown.
 {pstd}Run only specification 3{p_end}
 {phang2}{cmd:. pte_compare, method(expost) specs(3)}{p_end}
 
-{pstd}Endogenous comparison with the same live order as the last {cmd:pte} fit{p_end}
+{pstd}Endogenous comparison with the same live order as the last {cmd:pte}
+fit{p_end}
 {phang2}{cmd:. pte_compare, method(endog)}{p_end}
 
 {pstd}Override Method II to fourth-order evolution{p_end}
@@ -330,7 +348,8 @@ When {cmd:method(expost)} is specified, results are stored:
 {synopt:{cmd:e(ci_expost)}}3x2 confidence interval matrix (lower, upper){p_end}
 {synopt:{cmd:e(r2_expost)}}1x3 adjusted R-squared vector{p_end}
 {synopt:{cmd:e(n_expost)}}1x3 sample size vector{p_end}
-{synopt:{cmd:e(beta_expost)}}1x5 production function coefficients (beta_l, beta_k, beta_ll, beta_kk, beta_lk){p_end}
+{synopt:{cmd:e(beta_expost)}}1x5 production function coefficients (beta_l,
+beta_k, beta_ll, beta_kk, beta_lk){p_end}
 {synopt:{cmd:e(compare_coef)}}1x3 coefficient vector for chart interface{p_end}
 {synopt:{cmd:e(compare_se)}}1x3 SE vector for chart interface{p_end}
 
@@ -357,10 +376,14 @@ does {bf:not} republish the single-method-only matrices
 {synopt:{cmd:e(n_all)}}1x9 sample size vector{p_end}
 {synopt:{cmd:e(r2_all)}}1x9 adjusted R-squared vector{p_end}
 {synopt:{cmd:e(spec_all)}}1x9 specification indicator (1,2,3,1,2,3,1,2,3){p_end}
-{synopt:{cmd:e(compare_coef)}}9x1 coefficient vector for {cmd:pte_graph, compare}{p_end}
-{synopt:{cmd:e(compare_ci_lower)}}9x1 CI lower bound vector for {cmd:pte_graph, compare}{p_end}
-{synopt:{cmd:e(compare_ci_upper)}}9x1 CI upper bound vector for {cmd:pte_graph, compare}{p_end}
-{synopt:{cmd:e(compare_spec)}}9x1 specification indicator for {cmd:pte_graph, compare}{p_end}
+{synopt:{cmd:e(compare_coef)}}9x1 coefficient vector for
+{cmd:pte_graph, compare}{p_end}
+{synopt:{cmd:e(compare_ci_lower)}}9x1 CI lower bound vector for
+{cmd:pte_graph, compare}{p_end}
+{synopt:{cmd:e(compare_ci_upper)}}9x1 CI upper bound vector for
+{cmd:pte_graph, compare}{p_end}
+{synopt:{cmd:e(compare_spec)}}9x1 specification indicator for
+{cmd:pte_graph, compare}{p_end}
 
 {p2col 5 28 32 2: Scalars (method all)}{p_end}
 {synopt:{cmd:e(att_m1)}}m1 treatment coefficient{p_end}
@@ -372,8 +395,10 @@ does {bf:not} republish the single-method-only matrices
 {synopt:{cmd:e(att_m7)}}m7 treatment coefficient{p_end}
 {synopt:{cmd:e(att_m8)}}m8 treatment coefficient{p_end}
 {synopt:{cmd:e(att_m9)}}m9 treatment coefficient{p_end}
-{synopt:{cmd:e(omegapoly)}}Method II evolution order used inside {cmd:method(all)}{p_end}
-{synopt:{cmd:e(pte_att)}}pte ATT reference value, posted only when the upstream {cmd:pte} result carried an ATT estimate{p_end}
+{synopt:{cmd:e(omegapoly)}}Method II evolution order used inside
+{cmd:method(all)}{p_end}
+{synopt:{cmd:e(pte_att)}}pte ATT reference value, posted only when the upstream
+{cmd:pte} result carried an ATT estimate{p_end}
 
 {pstd}
 When {cmd:method(endog)} is specified, additional results are stored:

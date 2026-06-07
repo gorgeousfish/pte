@@ -43,7 +43,8 @@ release date, authors, and paper reference.
 {pstd}
 Without options, {cmd:pte_version} displays basic version information.
 With {opt detail}, it additionally shows the complete release history.
-With {opt check}, it displays update instructions for obtaining the latest version.
+With {opt check}, it displays update instructions for obtaining the latest
+version.
 
 
 {marker options}{...}
@@ -54,7 +55,8 @@ With {opt check}, it displays update instructions for obtaining the latest versi
 with their dates and changes.
 
 {phang}
-{opt check} displays update instructions for obtaining the latest version of {cmd:pte}
+{opt check} displays update instructions for obtaining the latest version of
+{cmd:pte}
 from the GitHub repository.
 
 
@@ -85,7 +87,8 @@ from the GitHub repository.
 {p2colset 5 24 28 2}{...}
 {p2col 5 24 28 2: Locals}{p_end}
 {synopt:{cmd:r(version)}}version number (e.g., {cmd:1.0.0}){p_end}
-{synopt:{cmd:r(date)}}release date in ISO 8601 format (e.g., {cmd:2026-01-01}){p_end}
+{synopt:{cmd:r(date)}}release date in ISO 8601 format (e.g.,
+{cmd:2026-01-01}){p_end}
 {synopt:{cmd:r(authors)}}author names (e.g., {cmd:Chen, Liao, Schurter}){p_end}
 
 

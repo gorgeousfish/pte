@@ -8,7 +8,8 @@
 {title:Title}
 
 {p2colset 5 30 32 2}{...}
-{p2col:{cmd:_pte_compare_clktwfe} {hline 2}}CLK+TWFE method implementation (internal){p_end}
+{p2col:{cmd:_pte_compare_clktwfe} {hline 2}}CLK+TWFE method implementation
+(internal){p_end}
 {p2colreset}{...}
 
 {marker syntax}{...}
@@ -30,7 +31,8 @@ Users should call {cmd:pte_compare} rather than this program directly.
 {synopt:{opt specs(numlist)}}TWFE specifications: 1, 2, 3; default is all{p_end}
 {synopt:{opt absorb(string)}}fixed effects for reghdfe{p_end}
 {synopt:{opt vce(string)}}variance-covariance estimator{p_end}
-{synopt:{opt industry(varname)}}reserved; currently rejected because this worker does not implement a general by-industry Method III API{p_end}
+{synopt:{opt industry(varname)}}reserved; currently rejected because this worker
+does not implement a general by-industry Method III API{p_end}
 {synopt:{opt lagtreatment}}use lagged treatment L.D{p_end}
 {synopt:{opt diagnose}}display bias source analysis{p_end}
 {synopt:{opt noreport}}suppress results table{p_end}
@@ -44,17 +46,25 @@ Users should call {cmd:pte_compare} rather than this program directly.
 {cmd:_pte_compare_clktwfe} implements Method III (CLK+TWFE) for comparing
 treatment effect estimates. This method:
 
-{p 8 12 2}1. Uses the current CLK-corrected productivity contract from {cmd:pte}; if the exact canonical {cmd:_pte_omega} is missing or stale relative to the active {cmd:phi}/{cmd:beta} state, the worker rebuilds a temporary current omega before regression{p_end}
-{p 8 12 2}2. Excludes transition period observations using the package's exact non-transition gate {_cmd:_pte_mid == 0}; shadow leftovers are rejected instead of binding through Stata abbreviation rules{p_end}
+{p 8 12 2}1. Uses the current CLK-corrected productivity contract from
+{cmd:pte}; if the exact canonical {cmd:_pte_omega} is missing or stale relative
+to the active {cmd:phi}/{cmd:beta} state, the worker rebuilds a temporary
+current omega before regression{p_end}
+{p 8 12 2}2. Excludes transition period observations using the package's exact
+non-transition gate {_cmd:_pte_mid == 0}; shadow leftovers are rejected instead
+of binding through Stata abbreviation rules{p_end}
 {p 8 12 2}3. Runs TWFE regression with lagged treatment (L.D){p_end}
 
 {pstd}
 Three TWFE specifications are available (corresponding to m7-m9 in Table 3):
 
 {p2colset 5 20 22 2}{...}
-{p2col:Spec 1 (m7)}No controls: reghdfe current CLK omega L.D if _pte_mid==0, absorb(firm year){p_end}
-{p2col:Spec 2 (m8)}AR(1) control: reghdfe current CLK omega L.omega L.D if _pte_mid==0, absorb(firm year){p_end}
-{p2col:Spec 3 (m9)}AR(3) controls: reghdfe current CLK omega L.omega L.omega2 L.omega3 L.D if _pte_mid==0, absorb(firm year){p_end}
+{p2col:Spec 1 (m7)}No controls: reghdfe current CLK omega L.D if _pte_mid==0,
+absorb(firm year){p_end}
+{p2col:Spec 2 (m8)}AR(1) control: reghdfe current CLK omega L.omega L.D if
+_pte_mid==0, absorb(firm year){p_end}
+{p2col:Spec 3 (m9)}AR(3) controls: reghdfe current CLK omega L.omega L.omega2
+L.omega3 L.D if _pte_mid==0, absorb(firm year){p_end}
 {p2colreset}{...}
 
 {pstd}
@@ -65,7 +75,8 @@ fails at transition) but still suffers from Problems 1 and 2.
 
 {pstd}
 The official reproduction DO applies the non-transition filter only after
-trimming to the working sample. Inside the package, {_cmd:_pte_transition} marks observations outside
+trimming to the working sample. Inside the package, {_cmd:_pte_transition} marks
+observations outside
 the estimation sample as {_cmd:_pte_mid=.}, so the package-consistent
 implementation must use {_cmd:_pte_mid==0} to avoid leaking sample-out rows
 back into Method III regressions.
@@ -124,7 +135,8 @@ Paper Section 5.
 {synopt:{cmd:e(bias_clk_twfe)}}relative bias vs pte (%){p_end}
 
 {p2col 5 28 32 2: Matrices}{p_end}
-{synopt:{cmd:e(coef_clk_twfe)}}1x3 coefficient vector (spec1, spec2, spec3){p_end}
+{synopt:{cmd:e(coef_clk_twfe)}}1x3 coefficient vector (spec1, spec2,
+spec3){p_end}
 {synopt:{cmd:e(se_clk_twfe)}}1x3 standard error vector{p_end}
 {synopt:{cmd:e(ci_clk_twfe)}}3x2 confidence interval matrix{p_end}
 {synopt:{cmd:e(r2_clk_twfe)}}1x3 adjusted R-squared vector{p_end}
@@ -158,5 +170,6 @@ Reproduction code reference: DOs/att_estimation_simulation_r1.do L200-205
 {title:Also see}
 
 {psee}
-{space 2}Help:  {help pte_compare:pte_compare}, {help pte:pte}, {help reghdfe:reghdfe}
+{space 2}Help:  {help pte_compare:pte_compare}, {help pte:pte},
+{help reghdfe:reghdfe}
 {p_end}

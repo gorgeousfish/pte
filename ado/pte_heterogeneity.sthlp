@@ -28,7 +28,8 @@
 {title:Title}
 
 {p2colset 5 30 32 2}{...}
-{p2col:{hi:pte_heterogeneity} {hline 2}}Heterogeneity analysis of productivity treatment effects{p_end}
+{p2col:{hi:pte_heterogeneity} {hline 2}}Heterogeneity analysis of productivity
+treatment effects{p_end}
 {p2colreset}{...}
 
 
@@ -44,7 +45,8 @@
 {synopthdr:options}
 {synoptline}
 {syntab:Grouping}
-{synopt:{opt by(name)}}group by a discrete variable such as industry; the name must match an existing grouping variable exactly{p_end}
+{synopt:{opt by(name)}}group by a discrete variable such as industry; the name
+must match an existing grouping variable exactly{p_end}
 
 {syntab:Testing}
 {synopt:{opt test}}perform heterogeneity tests (Q statistic, I-squared){p_end}
@@ -54,7 +56,8 @@
 {synopt:{opt nocon:tribution}}suppress contribution rate calculation{p_end}
 
 {syntab:Advanced}
-{synopt:{opt tol:erance(#)}}threshold for near-zero ATT detection; default is {cmd:tolerance(1e-6)}{p_end}
+{synopt:{opt tol:erance(#)}}threshold for near-zero ATT detection; default is
+{cmd:tolerance(1e-6)}{p_end}
 {synoptline}
 {p2colreset}{...}
 
@@ -152,7 +155,8 @@ positional fragments.
 {pmore}
 Only groups with at least one valid treated treatment-effect observation on the
 exact stored support in {cmd:e(attperiods)} (nonmissing {cmd:_pte_tt} and
-exact canonical {cmd:_pte_treat==1}) are retained in the reported table. Groups that
+exact canonical {cmd:_pte_treat==1}) are retained in the reported table. Groups
+that
 are present in the raw data but absent from the treated post-treatment ATT
 sample are excluded from the live heterogeneity output.
 
@@ -341,7 +345,8 @@ output.
 {synopt:{cmd:e(n_groups)}}number of groups{p_end}
 {synopt:{cmd:e(total_att)}}overall ATT across all groups{p_end}
 {synopt:{cmd:e(total_se)}}standard error of overall ATT{p_end}
-{synopt:{cmd:e(total_n)}}total number of treated observations on the exact stored ATT support from {cmd:e(attperiods)} and exact {cmd:_pte_treat==1}{p_end}
+{synopt:{cmd:e(total_n)}}total number of treated observations on the exact
+stored ATT support from {cmd:e(attperiods)} and exact {cmd:_pte_treat==1}{p_end}
 {synopt:{cmd:e(Q_stat)}}Cochran's Q statistic (if {cmd:test}){p_end}
 {synopt:{cmd:e(Q_pvalue)}}p-value for Q statistic (chi-squared test){p_end}
 {synopt:{cmd:e(df)}}degrees of freedom for Q test (G-1){p_end}
@@ -351,16 +356,21 @@ output.
 {p2col 5 30 34 2: Macros}{p_end}
 {synopt:{cmd:e(cmd)}}{cmd:pte_heterogeneity}{p_end}
 {synopt:{cmd:e(cmdline)}}command as typed{p_end}
-{synopt:{cmd:e(by)}}grouping variable used by grouped heterogeneity reentry{p_end}
+{synopt:{cmd:e(by)}}grouping variable used by grouped heterogeneity
+reentry{p_end}
 {synopt:{cmd:e(by_var)}}name of grouping variable{p_end}
-{synopt:{cmd:e(groups)}}exact group-token order retained for grouped bootstrap reentry{p_end}
+{synopt:{cmd:e(groups)}}exact group-token order retained for grouped bootstrap
+reentry{p_end}
 {synopt:{cmd:e(group_labels)}}labels for each group (space-separated){p_end}
 {synopt:{cmd:e(title)}}title of estimation{p_end}
 
 {p2col 5 30 34 2: Matrices}{p_end}
-{synopt:{cmd:e(attperiods)}}1 x K row vector of exact supported ATT/TT event times preserved for pooled graph reentry{p_end}
-{synopt:{cmd:e(att_by_group)}}(G+1) x 4 matrix with contribution, or (G+1) x 3 with {cmd:nocontribution}{p_end}
-{synopt:{cmd:e(att_by_group_se)}}G x 1 vector of group-level standard errors{p_end}
+{synopt:{cmd:e(attperiods)}}1 x K row vector of exact supported ATT/TT event
+times preserved for pooled graph reentry{p_end}
+{synopt:{cmd:e(att_by_group)}}(G+1) x 4 matrix with contribution, or (G+1) x 3
+with {cmd:nocontribution}{p_end}
+{synopt:{cmd:e(att_by_group_se)}}G x 1 vector of group-level standard
+errors{p_end}
 {synopt:{cmd:e(att_by_group_ci)}}G x 2 matrix: [CI_lower, CI_upper]{p_end}
 {synopt:{cmd:e(contribution)}}G x 1 vector of contribution rates;
     omitted when {cmd:nocontribution} is specified{p_end}
@@ -375,7 +385,8 @@ Row G+1: Total (aggregated across all groups){break}
 Column 1: ATT estimate{break}
 Column 2: Bootstrap standard error{break}
 Column 3: Contribution rate (%) or sample size under {cmd:nocontribution}{break}
-Column 4: Sample size (observations whose event times are listed in {cmd:e(attperiods)}) when contribution is reported
+Column 4: Sample size (observations whose event times are listed in
+{cmd:e(attperiods)}) when contribution is reported
 {p_end}
 
 {pstd}
@@ -403,10 +414,14 @@ no live {cmd:e(att_se)} bundle is posted at all.
 
 {synoptset 8 tabbed}{...}
 {synopt:{err:301}}pte has not been run; use {helpb pte} first{p_end}
-{synopt:{err:111}}required exact bridge missing or malformed (including {cmd:_pte_treat}){p_end}
-{synopt:{err:198}}invalid public option value, or grouped bootstrap route metadata {cmd:e(by)} / {cmd:e(groups)} are missing or inconsistent with {cmd:by()}{p_end}
+{synopt:{err:111}}required exact bridge missing or malformed (including
+{cmd:_pte_treat}){p_end}
+{synopt:{err:198}}invalid public option value, or grouped bootstrap route
+metadata {cmd:e(by)} / {cmd:e(groups)} are missing or inconsistent with
+{cmd:by()}{p_end}
 {synopt:{err:498}}at least 2 groups required for heterogeneity analysis{p_end}
-{synopt:{err:459}}Bootstrap samples not available; rerun {helpb pte} with bootstrap() option{p_end}
+{synopt:{err:459}}Bootstrap samples not available; rerun {helpb pte} with
+bootstrap() option{p_end}
 {synopt:{err:2000}}no observations after excluding missing values in by(){p_end}
 {p2colreset}{...}
 
@@ -466,7 +481,8 @@ Quantifying Heterogeneity in a Meta-Analysis.
 {pstd}
 Please report bugs, suggestions, and feature requests to:
 
-{phang2}1. Email: {browse "mailto:author@university.edu":author@university.edu}{p_end}
+{phang2}1. Email:
+{browse "mailto:author@university.edu":author@university.edu}{p_end}
 {phang2}2. GitHub Issues: {browse "https://github.com/xxx/pte/issues"}{p_end}
 
 {pstd}

@@ -14,19 +14,24 @@
 
 {title:Syntax}
 
-{p 8 28 2}{cmd:_pte_polyvar}, {opt free(varname)} {opt proxy(varname)} {opt state(varname)}
+{p 8 28 2}{cmd:_pte_polyvar}, {opt free(varname)} {opt proxy(varname)}
+{opt state(varname)}
 [{it:options}]
 
 {synoptset 24 tabbed}{...}
 {synopthdr}
 {synoptline}
 {syntab:Required}
-{p2coldent:* {opt free(varname)}}exact free-variable name (labor, in logs){p_end}
-{p2coldent:* {opt proxy(varname)}}exact proxy-variable name (intermediate inputs, in logs){p_end}
-{p2coldent:* {opt state(varname)}}exact state-variable name (capital, in logs){p_end}
+{p2coldent:* {opt free(varname)}}exact free-variable name (labor, in
+logs){p_end}
+{p2coldent:* {opt proxy(varname)}}exact proxy-variable name (intermediate
+inputs, in logs){p_end}
+{p2coldent:* {opt state(varname)}}exact state-variable name (capital, in
+logs){p_end}
 
 {syntab:Optional}
-{synopt:{opt pfunc(string)}}production function type; {cmd:cd} (default) or {cmd:translog}{p_end}
+{synopt:{opt pfunc(string)}}production function type; {cmd:cd} (default) or
+{cmd:translog}{p_end}
 {synopt:{opt poly(#)}}polynomial degree; 1, 2, or 3; default is {cmd:3}{p_end}
 {synopt:{opt genlag}}generate lagged variables for GMM instruments{p_end}
 {synopt:{opt noclean}}do not drop existing variables with the same names{p_end}
@@ -182,7 +187,8 @@ The following polynomial variables are generated depending on {opt poly()}:
 {synoptset 18 tabbed}{...}
 {synopt:{cmd:l2_lag}}double; L.l2 (lagged log labor squared){p_end}
 {synopt:{cmd:k2_lag}}double; L.k2 (lagged log capital squared){p_end}
-{synopt:{cmd:l1k_lag}}double; L.{it:free} * {it:state} (see {help _pte_polyvar##l1k_lag:important note}){p_end}
+{synopt:{cmd:l1k_lag}}double; L.{it:free} * {it:state} (see
+{help _pte_polyvar##l1k_lag:important note}){p_end}
 {p2colreset}{...}
 
 
@@ -200,11 +206,13 @@ The following polynomial variables are generated depending on {opt poly()}:
 This is {bf:NOT} the lag of the cross term {cmd:l1k1}.  That is:
 
 {p 8 12 2}
-{cmd:l1k_lag} {it:!=} L.l1k1 = L.(ln(L) * ln(K)) = ln(L{sub:t-1}) * ln(K{sub:t-1})
+{cmd:l1k_lag} {it:!=} L.l1k1 = L.(ln(L) * ln(K)) = ln(L{sub:t-1}) *
+ln(K{sub:t-1})
 
 {pstd}
 {ul:Theoretical justification} (Assumption 2.2 of Chen, Liao & Schurter 2026):
-Capital K{sub:it} is determined at or before time t-1, so current capital k{sub:t}
+Capital K{sub:it} is determined at or before time t-1, so current capital
+k{sub:t}
 is predetermined with respect to the productivity innovation and serves as a
 valid instrument.  Lagged labor l{sub:t-1} also satisfies the exogeneity
 condition.  The product l{sub:t-1} * k{sub:t} is therefore a valid instrument
@@ -213,13 +221,20 @@ for the Translog GMM Z matrix.
 {pstd}
 {ul:Numerical example}:
 
-        {c TLC}{hline 6}{c -}{hline 6}{c -}{hline 6}{c -}{hline 6}{c -}{hline 10}{c -}{hline 14}{c -}{hline 10}{c TRC}
-        {c |} firm   year    lnl    lnk   L.lnl   l1k_lag        L.l1k1     diff {c |}
-        {c LT}{hline 6}{c -}{hline 6}{c -}{hline 6}{c -}{hline 6}{c -}{hline 10}{c -}{hline 14}{c -}{hline 10}{c RT}
-        {c |}    1   2000    2.0    3.0       .          .             .        . {c |}
-        {c |}    1   2001    2.5    3.5     2.0   {bf:7.0}          6.0      1.0 {c |}
-        {c |}    1   2002    3.0    4.0     2.5  {bf:10.0}          8.75     1.25 {c |}
-        {c BLC}{hline 6}{c -}{hline 6}{c -}{hline 6}{c -}{hline 6}{c -}{hline 10}{c -}{hline 14}{c -}{hline 10}{c BRC}
+
+{c TLC}{hline 6}{c -}{hline 6}{c -}{hline 6}{c -}{hline 6}{c -}{hline 10}{c -}{hline 14}{c -}{hline 10}{c TRC}
+        {c |} firm   year    lnl    lnk   L.lnl   l1k_lag        L.l1k1     diff
+{c |}
+
+{c LT}{hline 6}{c -}{hline 6}{c -}{hline 6}{c -}{hline 6}{c -}{hline 10}{c -}{hline 14}{c -}{hline 10}{c RT}
+        {c |}    1   2000    2.0    3.0       .          .             .
+. {c |}
+        {c |}    1   2001    2.5    3.5     2.0   {bf:7.0}          6.0      1.0
+{c |}
+        {c |}    1   2002    3.0    4.0     2.5  {bf:10.0}          8.75
+1.25 {c |}
+
+{c BLC}{hline 6}{c -}{hline 6}{c -}{hline 6}{c -}{hline 6}{c -}{hline 10}{c -}{hline 14}{c -}{hline 10}{c BRC}
 
 {p 8 12 2}
 year 2001: l1k_lag = 2.0 * 3.5 = {bf:7.0} (correct){break}
@@ -241,12 +256,16 @@ Reference: {cmd:DOs/prodest_clk_mata_pool_trlg_nonlinear.do} line 58:
 {p2col 5 22 26 2: Scalars}{p_end}
 {synopt:{cmd:r(n_polyvars)}}number of polynomial variables generated{p_end}
 {synopt:{cmd:r(poly)}}polynomial degree used{p_end}
-{synopt:{cmd:r(n_lagvars)}}number of lag variables generated (if {opt genlag}){p_end}
+{synopt:{cmd:r(n_lagvars)}}number of lag variables generated (if
+{opt genlag}){p_end}
 
 {p2col 5 22 26 2: Macros}{p_end}
-{synopt:{cmd:r(polyvars)}}space-separated list of polynomial variable names{p_end}
-{synopt:{cmd:r(pfunc)}}production function type used ({cmd:cd} or {cmd:translog}){p_end}
-{synopt:{cmd:r(lagvars)}}space-separated list of lag variable names (if {opt genlag}){p_end}
+{synopt:{cmd:r(polyvars)}}space-separated list of polynomial variable
+names{p_end}
+{synopt:{cmd:r(pfunc)}}production function type used ({cmd:cd} or
+{cmd:translog}){p_end}
+{synopt:{cmd:r(lagvars)}}space-separated list of lag variable names (if
+{opt genlag}){p_end}
 {p2colreset}{...}
 
 {pstd}
@@ -272,7 +291,8 @@ generated (no {cmd:l2_lag}, {cmd:k2_lag}, or {cmd:l1k_lag}).
 {synopt:{cmd:111}}specified input variable not found{p_end}
 {synopt:{cmd:109}}specified input variable is not numeric{p_end}
 {synopt:{cmd:198}}invalid {opt poly()} or {opt pfunc()} value{p_end}
-{synopt:{cmd:459}}data not {helpb xtset} as panel when {opt genlag} is specified{p_end}
+{synopt:{cmd:459}}data not {helpb xtset} as panel when {opt genlag} is
+specified{p_end}
 {synopt:{cmd:2000}}specified input variable has all missing values{p_end}
 {p2colreset}{...}
 

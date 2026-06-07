@@ -14,7 +14,8 @@
 
 {title:Syntax}
 
-{p 8 32 2}{cmd:_pte_stage1_diag} [{it:if}] [{it:in}], {opt phi(varname)} {opt pfunc(string)}
+{p 8 32 2}{cmd:_pte_stage1_diag} [{it:if}] [{it:in}], {opt phi(varname)}
+{opt pfunc(string)}
 [{it:options}]
 
 {synoptset 24 tabbed}{...}
@@ -22,20 +23,26 @@
 {synoptline}
 {syntab:Required}
 {p2coldent:* {opt phi(varname)}}first-stage fitted value variable{p_end}
-{p2coldent:* {opt pfunc(string)}}production function type; {cmd:cd} or {cmd:translog}{p_end}
+{p2coldent:* {opt pfunc(string)}}production function type; {cmd:cd} or
+{cmd:translog}{p_end}
 
 {syntab:Optional}
 {synopt:{opt diag:nose}}enable verbose diagnostic output{p_end}
 {synopt:{opt strict}}exit on critical diagnostic failures{p_end}
-{synopt:{opt controlvars(varlist)}}explicit control list for the control-subtraction identity and descriptive correlation outputs; when omitted, the command infers the live non-polynomial control variables from the regression where possible{p_end}
+{synopt:{opt controlvars(varlist)}}explicit control list for the
+control-subtraction identity and descriptive correlation outputs; when omitted,
+the command infers the live non-polynomial control variables from the regression
+where possible{p_end}
 {synopt:{opt r2min(#)}}R-squared warning threshold; default is {cmd:0.8}{p_end}
 {synopt:{opt vifmax(#)}}VIF warning threshold; default is {cmd:10}{p_end}
-{synopt:{opt corrmax(#)}}correlation warning threshold; default is {cmd:0.05}{p_end}
+{synopt:{opt corrmax(#)}}correlation warning threshold; default is
+{cmd:0.05}{p_end}
 {synoptline}
 {p 4 6 2}
 {cmd:*} {opt phi()} and {opt pfunc()} are required.{p_end}
 {p 4 6 2}
-Requires prior execution of first-stage regression ({cmd:regress}) which sets {cmd:e(r2)}, {cmd:e(b)}, etc.{p_end}
+Requires prior execution of first-stage regression ({cmd:regress}) which sets
+{cmd:e(r2)}, {cmd:e(b)}, etc.{p_end}
 
 
 {title:Description}
@@ -206,11 +213,16 @@ the remaining fitted polynomial terms may co-move with the controls.
 {synopt:{cmd:r(mean_vif)}}mean VIF across all regressors{p_end}
 
 {p2col 5 26 30 2: Scalars - Correlation diagnostics}{p_end}
-{synopt:{cmd:r(max_corr)}}maximum absolute correlation with controls (descriptive){p_end}
-{synopt:{cmd:r(control_identity_maxdiff)}}max absolute difference between supplied and rebuilt phi{p_end}
-{synopt:{cmd:r(control_identity_meandiff)}}mean absolute difference between supplied and rebuilt phi{p_end}
-{synopt:{cmd:r(control_identity_n)}}observations used in the identity check{p_end}
-{synopt:{cmd:r(corr_<controlvar>)}}correlation with each checked control variable, using the live control name in the suffix{p_end}
+{synopt:{cmd:r(max_corr)}}maximum absolute correlation with controls
+(descriptive){p_end}
+{synopt:{cmd:r(control_identity_maxdiff)}}max absolute difference between
+supplied and rebuilt phi{p_end}
+{synopt:{cmd:r(control_identity_meandiff)}}mean absolute difference between
+supplied and rebuilt phi{p_end}
+{synopt:{cmd:r(control_identity_n)}}observations used in the identity
+check{p_end}
+{synopt:{cmd:r(corr_<controlvar>)}}correlation with each checked control
+variable, using the live control name in the suffix{p_end}
 
 {p2col 5 26 30 2: Scalars - Phi statistics}{p_end}
 {synopt:{cmd:r(phi_N)}}number of valid phi observations{p_end}
@@ -244,11 +256,14 @@ the remaining fitted polynomial terms may co-move with the controls.
 {synopt:{cmd:r(pfunc)}}production function type{p_end}
 {synopt:{cmd:r(control_vars)}}list of control variables checked{p_end}
 {synopt:{cmd:r(r2_status)}}R-squared status: ok, warning, or critical{p_end}
-{synopt:{cmd:r(vif_status)}}VIF status: ok, acceptable, warning, or critical{p_end}
-{synopt:{cmd:r(corr_status)}}control-subtraction identity status: ok, warning, or critical{p_end}
+{synopt:{cmd:r(vif_status)}}VIF status: ok, acceptable, warning, or
+critical{p_end}
+{synopt:{cmd:r(corr_status)}}control-subtraction identity status: ok, warning,
+or critical{p_end}
 {synopt:{cmd:r(max_vif_var)}}variable with maximum VIF{p_end}
 {synopt:{cmd:r(max_corr_var)}}control variable with maximum correlation{p_end}
-{synopt:{cmd:r(diag_status)}}overall diagnostic status: ok, warning, or critical{p_end}
+{synopt:{cmd:r(diag_status)}}overall diagnostic status: ok, warning, or
+critical{p_end}
 {p2colreset}{...}
 
 {pstd}
@@ -265,7 +280,8 @@ the internal pooled path can store names such as {cmd:r(corr__pte_t1)} and
 {synopt:{cmd:111}}specified phi or control variable not found{p_end}
 {synopt:{cmd:198}}invalid pfunc value or threshold parameter out of range{p_end}
 {synopt:{cmd:301}}no regression results found (e(cmd) != regress){p_end}
-{synopt:{cmd:498}}e(r2) invalid or critical diagnostic failure in strict mode{p_end}
+{synopt:{cmd:498}}e(r2) invalid or critical diagnostic failure in strict
+mode{p_end}
 {synopt:{cmd:2000}}phi variable has no valid observations{p_end}
 {p2colreset}{...}
 
@@ -397,5 +413,6 @@ Multivariate Data Analysis (7th ed.).
 {title:Also see}
 
 {psee}
-Online: {helpb _pte_polyvar}, {helpb _pte_transition}, {helpb _pte_omega_recovery}, {helpb estat vif}
+Online: {helpb _pte_polyvar}, {helpb _pte_transition},
+{helpb _pte_omega_recovery}, {helpb estat vif}
 {p_end}

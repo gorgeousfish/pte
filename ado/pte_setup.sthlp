@@ -37,23 +37,44 @@
 {synopthdr}
 {synoptline}
 {syntab:Core}
-{synopt:{opt treat:ment(name)}}binary numeric treatment indicator {it:D_it}; the variable name must match an existing column exactly, string variables are rejected with {cmd:rc=198}, and all-missing treatment columns are rejected with {cmd:rc=416}{p_end}
-{synopt:{opt firmid(varname)}}panel id variable; default is current {cmd:xtset} id; if the dataset is not already {cmd:xtset}, supply {cmd:firmid()} together with {cmd:timevar()}{p_end}
-{synopt:{opt timevar(varname)}}time variable; default is current {cmd:xtset} time variable; if the dataset is not already {cmd:xtset}, supply {cmd:timevar()} together with {cmd:firmid()}{p_end}
-{synopt:{opt check}}audit mode; skip creation of {cmd:_pte_*} helper variables in a non-mutating check path{p_end}
-{synopt:{opt absor:bing}}strict absorbing-treatment check; errors out if 1->0 transitions are found{p_end}
+{synopt:{opt treat:ment(name)}}binary numeric treatment indicator {it:D_it}; the
+variable name must match an existing column exactly, string variables are
+rejected with {cmd:rc=198}, and all-missing treatment columns are rejected with
+{cmd:rc=416}{p_end}
+{synopt:{opt firmid(varname)}}panel id variable; default is current {cmd:xtset}
+id; if the dataset is not already {cmd:xtset}, supply {cmd:firmid()} together
+with {cmd:timevar()}{p_end}
+{synopt:{opt timevar(varname)}}time variable; default is current {cmd:xtset}
+time variable; if the dataset is not already {cmd:xtset}, supply {cmd:timevar()}
+together with {cmd:firmid()}{p_end}
+{synopt:{opt check}}audit mode; skip creation of {cmd:_pte_*} helper variables
+in a non-mutating check path{p_end}
+{synopt:{opt absor:bing}}strict absorbing-treatment check; errors out if 1->0
+transitions are found{p_end}
 {synopt:{opt report}}print an additional setup summary report{p_end}
-{synopt:{opt minthreshold(#)}}nonnegative minimum threshold used by summary identification checks; default is {cmd:100}{p_end}
+{synopt:{opt minthreshold(#)}}nonnegative minimum threshold used by summary
+identification checks; default is {cmd:100}{p_end}
 
 {syntab:Variable generation}
-{synopt:{opt generate(string)}}currently only accepts the canonical {cmd:_pte_} prefix; {cmd:generate(_pte)} is accepted as a compatibility alias and normalized to the canonical {cmd:_pte_} prefix, while other prefixes are rejected{p_end}
-{synopt:{opt replace}}allow overwriting pre-existing generated {cmd:_pte_*} variables; ignored with {opt check}{p_end}
+{synopt:{opt generate(string)}}currently only accepts the canonical {cmd:_pte_}
+prefix; {cmd:generate(_pte)} is accepted as a compatibility alias and normalized
+to the canonical {cmd:_pte_} prefix, while other prefixes are rejected{p_end}
+{synopt:{opt replace}}allow overwriting pre-existing generated {cmd:_pte_*}
+variables; ignored with {opt check}{p_end}
 
 {syntab:Input-role validation (optional)}
-{synopt:{opt output(varname)}}candidate output variable to validate; the name must match an existing numeric variable exactly, and string variables are rejected with {cmd:rc=109}{p_end}
-{synopt:{opt free(varlist)}}candidate free inputs to validate; each name must match an existing numeric variable exactly, and string variables are rejected with {cmd:rc=109}{p_end}
-{synopt:{opt state(varlist)}}candidate state inputs to validate; each name must match an existing numeric variable exactly, and string variables are rejected with {cmd:rc=109}{p_end}
-{synopt:{opt proxy(varlist)}}candidate proxy inputs to validate; each name must match an existing numeric variable exactly, and string variables are rejected with {cmd:rc=109}{p_end}
+{synopt:{opt output(varname)}}candidate output variable to validate; the name
+must match an existing numeric variable exactly, and string variables are
+rejected with {cmd:rc=109}{p_end}
+{synopt:{opt free(varlist)}}candidate free inputs to validate; each name must
+match an existing numeric variable exactly, and string variables are rejected
+with {cmd:rc=109}{p_end}
+{synopt:{opt state(varlist)}}candidate state inputs to validate; each name must
+match an existing numeric variable exactly, and string variables are rejected
+with {cmd:rc=109}{p_end}
+{synopt:{opt proxy(varlist)}}candidate proxy inputs to validate; each name must
+match an existing numeric variable exactly, and string variables are rejected
+with {cmd:rc=109}{p_end}
 {synoptline}
 
 {marker description}{...}
@@ -135,7 +156,9 @@ caller's original {cmd:xtset} declaration has been restored.
 {pstd}
 With {opt check}, {cmd:pte_setup} still validates treatment structure and
 returns summary diagnostics, but it does {bf:not} create helper variables.
-This is useful for non-mutating audits of candidate datasets. replace is ignored in check mode, so existing {cmd:_pte_*} variables are left unchanged and missing helper variables are not created.
+This is useful for non-mutating audits of candidate datasets. replace is ignored
+in check mode, so existing {cmd:_pte_*} variables are left unchanged and missing
+helper variables are not created.
 
 {pstd}
 If the audited panel/time/treatment law no longer matches the last stored
@@ -196,7 +219,8 @@ with an error when it detects any 1->0 transition.
 {dlgtab:minthreshold()}
 
 {pstd}
-{opt minthreshold()} accepts nonnegative integers only and affects only the identification summary flags reported by
+{opt minthreshold()} accepts nonnegative integers only and affects only the
+identification summary flags reported by
 the setup summary branch. It does not redefine treatment transitions or
 the helper-variable formulas.
 
@@ -228,36 +252,52 @@ the helper-variable formulas.
 {synopt:{cmd:r(N_treated_obs)}}treated observations ({cmd:D=1}){p_end}
 {synopt:{cmd:r(N_untreated_obs)}}untreated observations ({cmd:D=0}){p_end}
 {synopt:{cmd:r(N_missing)}}missing-treatment observations{p_end}
-{synopt:{cmd:r(pct_treated)}}treated share among non-missing observations (percent){p_end}
+{synopt:{cmd:r(pct_treated)}}treated share among non-missing observations
+(percent){p_end}
 {synopt:{cmd:r(N_treated_firms)}}number of ever-treated panel units{p_end}
 {synopt:{cmd:r(N_control_firms)}}number of never-treated panel units{p_end}
 {synopt:{cmd:r(N_entry_events)}}number of 0->1 transitions{p_end}
 {synopt:{cmd:r(N_exit_events)}}number of 1->0 transitions{p_end}
-{synopt:{cmd:r(N_stable_0)}}stable untreated observations ({cmd:D_t=L.D_t=0}){p_end}
-{synopt:{cmd:r(N_stable_1)}}stable treated observations ({cmd:D_t=L.D_t=1}){p_end}
+{synopt:{cmd:r(N_stable_0)}}stable untreated observations
+({cmd:D_t=L.D_t=0}){p_end}
+{synopt:{cmd:r(N_stable_1)}}stable treated observations
+({cmd:D_t=L.D_t=1}){p_end}
 {synopt:{cmd:r(N_trans)}}transition observations ({cmd:mid=1}){p_end}
-{synopt:{cmd:r(n_first_d1)}}firms with {cmd:D=1} at the first observed period{p_end}
-{synopt:{cmd:r(pct_first_d1)}}share of first-observation {cmd:D=1} firms (percent){p_end}
-{synopt:{cmd:r(n_cohorts)}}number of observed-entry treatment cohorts in generated metadata{p_end}
+{synopt:{cmd:r(n_first_d1)}}firms with {cmd:D=1} at the first observed
+period{p_end}
+{synopt:{cmd:r(pct_first_d1)}}share of first-observation {cmd:D=1} firms
+(percent){p_end}
+{synopt:{cmd:r(n_cohorts)}}number of observed-entry treatment cohorts in
+generated metadata{p_end}
 {synopt:{cmd:r(balanced)}}panel balancedness flag from setup-panel check{p_end}
 {synopt:{cmd:r(regular)}}panel regularity flag from setup-panel check{p_end}
 {synopt:{cmd:r(panel_n_obs)}}observation count from setup-panel check{p_end}
 {synopt:{cmd:r(panel_n_groups)}}group count from setup-panel check{p_end}
-{synopt:{cmd:r(input_validation_passed)}}optional input-role validation flag (missing if not requested){p_end}
-{synopt:{cmd:r(total_invalid_inputs)}}optional count of invalid input-role cells{p_end}
-{synopt:{cmd:r(total_nonpos)}}optional count of nonpositive values from input-role checks{p_end}
-{synopt:{cmd:r(total_miss)}}optional count of missing values from input-role checks{p_end}
-{synopt:{cmd:r(n_invalid_obs)}}optional count of observations with any input-role issue{p_end}
-{synopt:{cmd:r(avg_pre)}}average pre-treatment periods among treated units (summary branch){p_end}
-{synopt:{cmd:r(avg_post)}}average post-treatment periods among treated units (summary branch){p_end}
-{synopt:{cmd:r(assumption_pass)}}summary identification flag based on {cmd:minthreshold()}{p_end}
+{synopt:{cmd:r(input_validation_passed)}}optional input-role validation flag
+(missing if not requested){p_end}
+{synopt:{cmd:r(total_invalid_inputs)}}optional count of invalid input-role
+cells{p_end}
+{synopt:{cmd:r(total_nonpos)}}optional count of nonpositive values from
+input-role checks{p_end}
+{synopt:{cmd:r(total_miss)}}optional count of missing values from input-role
+checks{p_end}
+{synopt:{cmd:r(n_invalid_obs)}}optional count of observations with any
+input-role issue{p_end}
+{synopt:{cmd:r(avg_pre)}}average pre-treatment periods among treated units
+(summary branch){p_end}
+{synopt:{cmd:r(avg_post)}}average post-treatment periods among treated units
+(summary branch){p_end}
+{synopt:{cmd:r(assumption_pass)}}summary identification flag based on
+{cmd:minthreshold()}{p_end}
 
 {p2col 5 30 34 2: Macros}{p_end}
-{synopt:{cmd:r(trt_type)}}detected treatment type: {cmd:absorbing} or {cmd:non-absorbing}{p_end}
+{synopt:{cmd:r(trt_type)}}detected treatment type: {cmd:absorbing} or
+{cmd:non-absorbing}{p_end}
 {synopt:{cmd:r(panelvar)}}resolved panel id variable{p_end}
 {synopt:{cmd:r(timevar)}}resolved time variable{p_end}
 {synopt:{cmd:r(treatment)}}treatment variable used by the command{p_end}
-{synopt:{cmd:r(generate)}}current generation prefix contract ({cmd:_pte_}){p_end}
+{synopt:{cmd:r(generate)}}current generation prefix contract
+({cmd:_pte_}){p_end}
 {synopt:{cmd:r(cmd)}}command name ({cmd:pte_setup}){p_end}
 
 {marker references}{...}

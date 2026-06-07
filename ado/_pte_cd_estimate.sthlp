@@ -9,7 +9,8 @@
 {title:Title}
 
 {p2colset 5 30 32 2}{...}
-{p2col:{bf:_pte_cd_estimate} {hline 2}}Cobb-Douglas production function parameter estimation{p_end}
+{p2col:{bf:_pte_cd_estimate} {hline 2}}Cobb-Douglas production function
+parameter estimation{p_end}
 {p2colreset}{...}
 
 
@@ -36,14 +37,18 @@
 {synopt:{opt treatment(varname)}}binary treatment indicator (0/1){p_end}
 
 {syntab:Optional}
-{synopt:{opt control(varlist)}}additional control variables; each name must be spelled exactly, without Stata abbreviation fallback{p_end}
+{synopt:{opt control(varlist)}}additional control variables; each name must be
+spelled exactly, without Stata abbreviation fallback{p_end}
 {synopt:{opt id(varname)}}panel identifier (overrides xtset){p_end}
 {synopt:{opt t(varname)}}time variable (overrides xtset){p_end}
 {synopt:{opt pooled}}use pooled estimation mode{p_end}
-{synopt:{opt by(varname)}}industry grouping variable (with {opt pooled}); the grouping variable name must be spelled exactly{p_end}
-{synopt:{opt omegapoly(#)}}omega evolution polynomial order; default is {cmd:1}{p_end}
+{synopt:{opt by(varname)}}industry grouping variable (with {opt pooled}); the
+grouping variable name must be spelled exactly{p_end}
+{synopt:{opt omegapoly(#)}}omega evolution polynomial order; default is
+{cmd:1}{p_end}
 {synopt:{opt maxiter(#)}}maximum GMM iterations; default is {cmd:10000}{p_end}
-{synopt:{opt touse(varname)}}internal numeric sample indicator; zero and missing values are excluded from all estimator stages{p_end}
+{synopt:{opt touse(varname)}}internal numeric sample indicator; zero and missing
+values are excluded from all estimator stages{p_end}
 {synopt:{opt nodiagnose}}suppress diagnostic output{p_end}
 {synopt:{opt nolog}}suppress progress log{p_end}
 {synoptline}
@@ -95,7 +100,8 @@ The estimation proceeds in phases:
 5. Parameter validation and result storage{p_end}
 
 {pstd}
-The CLK correction excludes transition-period observations (where D_t != D_{t-1})
+The CLK correction excludes transition-period observations (where D_t !=
+D_{t-1})
 from the GMM estimation, as required by Theorem 3.1.
 
 {pstd}
@@ -104,18 +110,21 @@ by the current {opt treatment()} input. If {cmd:_pte_mid} (or legacy
 {cmd:mid}) was built from a different treatment variable or before the current
 data were modified, {cmd:_pte_cd_estimate} fails closed with {cmd:rc=498}
 instead of silently mixing inconsistent transition state into the GMM sample.
-Re-run {cmd:_pte_transition, treatment(...)} on the current sample before calling {cmd:_pte_cd_estimate}.
+Re-run {cmd:_pte_transition, treatment(...)} on the current sample before
+calling {cmd:_pte_cd_estimate}.
 
 {pstd}
 Two estimation modes are supported:
 
 {p 8 12 2}
 {bf:By-industry} (default): Estimates parameters separately for each industry
-using a simple time trend.  Reference: {it:prodest_clk_mata_industry_est.do}.{p_end}
+using a simple time trend.  Reference:
+{it:prodest_clk_mata_industry_est.do}.{p_end}
 
 {p 8 12 2}
 {bf:Pooled}: Estimates parameters using all industries jointly with
-industry-specific time trends.  Reference: {it:prodest_clk_mata_pool_est.do}.{p_end}
+industry-specific time trends.  Reference:
+{it:prodest_clk_mata_pool_est.do}.{p_end}
 
 
 {marker options}{...}
@@ -127,13 +136,16 @@ industry-specific time trends.  Reference: {it:prodest_clk_mata_pool_est.do}.{p_
 {opt depvar(varname)} specifies the log output variable (dependent variable).
 
 {phang}
-{opt free(varname)} specifies the log labor variable (free input in ACF terminology).
+{opt free(varname)} specifies the log labor variable (free input in ACF
+terminology).
 
 {phang}
-{opt state(varname)} specifies the log capital variable (state variable in ACF terminology).
+{opt state(varname)} specifies the log capital variable (state variable in ACF
+terminology).
 
 {phang}
-{opt proxy(varname)} specifies the log materials variable (proxy for unobserved productivity).
+{opt proxy(varname)} specifies the log materials variable (proxy for unobserved
+productivity).
 
 {phang}
 {opt treatment(varname)} specifies the binary treatment indicator.  Must contain
@@ -165,7 +177,8 @@ with {opt by()}, industry-specific time trends are generated.
 mode it generates industry-specific time trends (t1, t2, ..., tJ). In the
 non-{opt pooled} path, supplying {opt by()} still activates the live
 single-industry contract: the estimation sample must contain exactly one
-nonmissing {opt by()} level; otherwise users should subset to one industry or add {bf:pooled}.  The
+nonmissing {opt by()} level; otherwise users should subset to one industry or
+add {bf:pooled}.  The
 grouping variable name itself must also be written exactly; abbreviation
 fallback is rejected because it would silently redirect the pooled time-trend
 partition.
@@ -181,9 +194,11 @@ current implementation accepts higher-order omega polynomials when requested.
 Nelder-Mead GMM optimizer.  Default is {cmd:10000}.
 
 {phang}
-{opt touse(varname)} specifies an internal numeric sample indicator.  Observations
+{opt touse(varname)} specifies an internal numeric sample indicator.
+Observations
 where {it:varname} is zero or missing are excluded before required variables,
-controls, grouping variables, and transition periods are checked.  This option is
+controls, grouping variables, and transition periods are checked.  This option
+is
 intended for callers that have already constructed a package-level sample.
 
 {phang}
@@ -219,7 +234,8 @@ intended for callers that have already constructed a package-level sample.
 
 {p2col 5 20 24 2: Matrices}{p_end}
 {synopt:{cmd:e(b)}}1 x 2 coefficient vector (beta_l, beta_k){p_end}
-{synopt:{cmd:e(V)}}not returned; this module does not release an inferential covariance matrix{p_end}
+{synopt:{cmd:e(V)}}not returned; this module does not release an inferential
+covariance matrix{p_end}
 
 
 {marker examples}{...}
@@ -263,5 +279,7 @@ Identification Properties of Recent Production Function Estimators.
 {title:Also see}
 
 {psee}
-{space 2}Help:  {manhelp xtset XT}, {helpb _pte_transition}, {helpb _pte_polyvar}, {helpb _pte_stage1}, {helpb _pte_gmm_matrices}, {helpb _pte_gmm_wrapper}
+{space 2}Help:  {manhelp xtset XT}, {helpb _pte_transition},
+{helpb _pte_polyvar}, {helpb _pte_stage1}, {helpb _pte_gmm_matrices},
+{helpb _pte_gmm_wrapper}
 {p_end}

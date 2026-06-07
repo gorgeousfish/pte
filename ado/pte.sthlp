@@ -87,56 +87,138 @@ intervals from the stored standard errors rather than reusing the old bounds.
 {synopthdr}
 {synoptline}
 {syntab:Required}
-{synopt:{opt treat:ment(varname)}}binary treatment indicator {it:D_it}; the variable name must be exact{p_end}
-{synopt:{opt free(varname)}}free (flexible) input, e.g. labor; the current public estimator supports one free variable, and the variable name must be exact{p_end}
-{synopt:{opt state(varname)}}state input, e.g. capital; the current public estimator supports one state variable, and the variable name must be exact{p_end}
-{synopt:{opt proxy(varname)}}proxy input, e.g. materials/investment; the current public estimator supports one proxy variable, and the variable name must be exact{p_end}
+{synopt:{opt treat:ment(varname)}}binary treatment indicator {it:D_it}; the
+variable name must be exact{p_end}
+{synopt:{opt free(varname)}}free (flexible) input, e.g. labor; the current
+public estimator supports one free variable, and the variable name must be
+exact{p_end}
+{synopt:{opt state(varname)}}state input, e.g. capital; the current public
+estimator supports one state variable, and the variable name must be
+exact{p_end}
+{synopt:{opt proxy(varname)}}proxy input, e.g. materials/investment; the current
+public estimator supports one proxy variable, and the variable name must be
+exact{p_end}
 
 {syntab:Production function}
-{synopt:{opt pfunc(string)}}{cmd:cd} or {cmd:translog}; default is {cmd:translog}{p_end}
+{synopt:{opt pfunc(string)}}{cmd:cd} or {cmd:translog}; default is
+{cmd:translog}{p_end}
 {synopt:{opt translog}}alias for {cmd:pfunc(translog)}{p_end}
-{synopt:{opt control(varlist)}}controls partialled out from the first-stage regression and removed from the stored first-stage productivity proxy before omega recovery (e.g., time trends); each control variable must be named exactly; not available with {cmd:treatdependent}, which uses its internal time-trend control only{p_end}
-{synopt:{opt omegapoly(#)}}order of the productivity evolution polynomial; default is {cmd:3}; allowed: 1..4{p_end}
-{synopt:{opt poly(#)}}alias for {cmd:omegapoly(#)}; if both are specified, they must agree{p_end}
+{synopt:{opt control(varlist)}}controls partialled out from the first-stage
+regression and removed from the stored first-stage productivity proxy before
+omega recovery (e.g., time trends); each control variable must be named exactly;
+not available with {cmd:treatdependent}, which uses its internal time-trend
+control only{p_end}
+{synopt:{opt omegapoly(#)}}order of the productivity evolution polynomial;
+default is {cmd:3}; allowed: 1..4{p_end}
+{synopt:{opt poly(#)}}alias for {cmd:omegapoly(#)}; if both are specified, they
+must agree{p_end}
 
 {syntab:ATT estimation}
-{synopt:{opt attp:eriods(#)}}maximum event time; estimates the window {cmd:0..#}; default is {cmd:4}{p_end}
-{synopt:{opt nsim(#)}}number of Monte Carlo paths; default is auto (100 if {cmd:omegapoly>=2}, else 1){p_end}
-{synopt:{opt eps0window(#)}}nonnegative window (panel periods, scaled by {cmd:xtset} {cmd:delta()}) for constructing the untreated pre-treatment {cmd:eps0} sample; default is {cmd:0}; {cmd:0} uses all available untreated pre-treatment support{p_end}
+{synopt:{opt attp:eriods(#)}}maximum event time; estimates the window
+{cmd:0..#}; default is {cmd:4}{p_end}
+{synopt:{opt nsim(#)}}number of Monte Carlo paths; default is auto (100 if
+{cmd:omegapoly>=2}, else 1){p_end}
+{synopt:{opt eps0window(#)}}nonnegative window (panel periods, scaled by
+{cmd:xtset} {cmd:delta()}) for constructing the untreated pre-treatment
+{cmd:eps0} sample; default is {cmd:0}; {cmd:0} uses all available untreated
+pre-treatment support{p_end}
 {synopt:{opt notrimeps}}disable 1%/99% Winsorization of {cmd:eps0}{p_end}
-{synopt:{opt noatt}}skip ATT estimation (production-function and omega only); incompatible with {cmd:bootstrap()>0}/{cmd:reps()>0} and {cmd:attnorm}; also allowed on the grouped {cmd:by()/industry()} path, where the command reposts grouped stage-1/2 objects only{p_end}
+{synopt:{opt noatt}}skip ATT estimation (production-function and omega only);
+incompatible with {cmd:bootstrap()>0}/{cmd:reps()>0} and {cmd:attnorm}; also
+allowed on the grouped {cmd:by()/industry()} path, where the command reposts
+grouped stage-1/2 objects only{p_end}
 
 {syntab:Inference}
-{synopt:{opt bootstrap(#)}}number of bootstrap replications; default {cmd:0}; must be {cmd:0} or {cmd:>=2}{p_end}
-{synopt:{opt reps(#)}}alias for {cmd:bootstrap(#)}; any explicit mixed pair must agree exactly, so {cmd:reps(0)} conflicts with nonzero {cmd:bootstrap(#)} and explicit {cmd:bootstrap(0)} conflicts with nonzero {cmd:reps(#)}{p_end}
-{synopt:{opt saving(filename)}}save bootstrap draws; requires {cmd:bootstrap()>=2}; the alias gate is identical, so {cmd:reps()>=2} is also required when {cmd:bootstrap()} is omitted{p_end}
-{synopt:{opt level(#)}}confidence level for bootstrap intervals; default is Stata's {cmd:c(level)}{p_end}
-{synopt:{opt noparallel}}on grouped bootstrap only, force the helper to stay on the serial path; requires {cmd:bootstrap()>=2}, equivalently {cmd:reps()>=2} when {cmd:bootstrap()} is omitted{p_end}
-{synopt:{opt processors(#)}}on grouped bootstrap only, request a positive parallel worker count for the helper; requires {cmd:bootstrap()>=2}, equivalently {cmd:reps()>=2} when {cmd:bootstrap()} is omitted{p_end}
+{synopt:{opt bootstrap(#)}}number of bootstrap replications; default {cmd:0};
+must be {cmd:0} or {cmd:>=2}{p_end}
+{synopt:{opt reps(#)}}alias for {cmd:bootstrap(#)}; any explicit mixed pair must
+agree exactly, so {cmd:reps(0)} conflicts with nonzero {cmd:bootstrap(#)} and
+explicit {cmd:bootstrap(0)} conflicts with nonzero {cmd:reps(#)}{p_end}
+{synopt:{opt saving(filename)}}save bootstrap draws; requires
+{cmd:bootstrap()>=2}; the alias gate is identical, so {cmd:reps()>=2} is also
+required when {cmd:bootstrap()} is omitted{p_end}
+{synopt:{opt level(#)}}confidence level for bootstrap intervals; default is
+Stata's {cmd:c(level)}{p_end}
+{synopt:{opt noparallel}}on grouped bootstrap only, force the helper to stay on
+the serial path; requires {cmd:bootstrap()>=2}, equivalently {cmd:reps()>=2}
+when {cmd:bootstrap()} is omitted{p_end}
+{synopt:{opt processors(#)}}on grouped bootstrap only, request a positive
+parallel worker count for the helper; requires {cmd:bootstrap()>=2},
+equivalently {cmd:reps()>=2} when {cmd:bootstrap()} is omitted{p_end}
 
 {syntab:Grouping (benchmark-by)}
-{synopt:{opt by(varname)}}run the benchmark-by path (group-specific estimation); requires the exact grouping variable name, currently requires a single {cmd:proxy()} variable and at most one {cmd:control()} variable, and supports either the baseline ATT workflow or grouped {cmd:noatt}{p_end}
-{synopt:{opt industry(varname)}}alias for {cmd:by()} used by paper scripts; also requires the exact grouping variable name. If both {cmd:by()} and {cmd:industry()} are supplied, they must spell the same exact grouping variable name{p_end}
-{synopt:{opt byindustry}}mark {cmd:by()/industry()} as an industry split in the returned metadata; requires {cmd:by()} or {cmd:industry()}{p_end}
+{synopt:{opt by(varname)}}run the benchmark-by path (group-specific estimation);
+requires the exact grouping variable name, currently requires a single
+{cmd:proxy()} variable and at most one {cmd:control()} variable, and supports
+either the baseline ATT workflow or grouped {cmd:noatt}{p_end}
+{synopt:{opt industry(varname)}}alias for {cmd:by()} used by paper scripts; also
+requires the exact grouping variable name. If both {cmd:by()} and
+{cmd:industry()} are supplied, they must spell the same exact grouping variable
+name{p_end}
+{synopt:{opt byindustry}}mark {cmd:by()/industry()} as an industry split in the
+returned metadata; requires {cmd:by()} or {cmd:industry()}{p_end}
 
 {syntab:Replication and reporting}
-{synopt:{opt rep:licate(mode)}}benchmark configuration preset; see {help pte##replicate:Replication modes}{p_end}
-{synopt:{opt seed(#)}}positive integer seed when specified; the option name must be spelled exactly as {cmd:seed()} (unsupported abbreviations such as {cmd:see()} are rejected at entry), requires an ATT/bootstrap RNG stage, and is therefore incompatible with {cmd:noatt}. Bootstrap uses it as the outer seed start, while omitted {cmd:seed()} on the serial bootstrap path starts at {cmd:1}. Serial point ATT simulation uses {cmd:123456} by default, keeps {cmd:123456} for {cmd:replicate(order3)} under {cmd:pfunc(cd)}, and uses {cmd:10000} for the translog benchmark modes {cmd:order3}, {cmd:table1}, {cmd:table5}, and {cmd:table_e4}; see {help pte##seed:Seed management}{p_end}
-{synopt:{opt nodiag:nose}}skip diagnostics that are not required for estimation{p_end}
-{synopt:{opt nolog}}suppress progress output during estimation; replay still shows the final results summary{p_end}
-{synopt:{opt verbose}}show verbose parameter-conflict detail and Mata initialization output{p_end}
+{synopt:{opt rep:licate(mode)}}benchmark configuration preset; see
+{help pte##replicate:Replication modes}{p_end}
+{synopt:{opt seed(#)}}positive integer seed when specified; the option name must
+be spelled exactly as {cmd:seed()} (unsupported abbreviations such as
+{cmd:see()} are rejected at entry), requires an ATT/bootstrap RNG stage, and is
+therefore incompatible with {cmd:noatt}. Bootstrap uses it as the outer seed
+start, while omitted {cmd:seed()} on the serial bootstrap path starts at
+{cmd:1}. Serial point ATT simulation uses {cmd:123456} by default, keeps
+{cmd:123456} for {cmd:replicate(order3)} under {cmd:pfunc(cd)}, and uses
+{cmd:10000} for the translog benchmark modes {cmd:order3}, {cmd:table1},
+{cmd:table5}, and {cmd:table_e4}; see {help pte##seed:Seed management}{p_end}
+{synopt:{opt nodiag:nose}}skip diagnostics that are not required for
+estimation{p_end}
+{synopt:{opt nolog}}suppress progress output during estimation; replay still
+shows the final results summary{p_end}
+{synopt:{opt verbose}}show verbose parameter-conflict detail and Mata
+initialization output{p_end}
 
 {syntab:Extension flags (validated; not all workflows are public)}
-{synopt:{opt treatdep:endent}}enable treatment-dependent production-function path{p_end}
-{synopt:{opt normalize(string)}}normalization method for {cmd:treatdependent}; any explicit {cmd:normalize()} requires {cmd:treatdependent}: {cmd:indexing}, {cmd:benchmark}, or {cmd:none}; the grouped {cmd:by()/industry()} path rejects it at entry{p_end}
-{synopt:{opt attnorm}}on {cmd:treatdependent+normalize(indexing)}: also compute normalized ATT objects over the full requested {cmd:attperiods()} horizon and repost them as {cmd:e(att_norm_computed)} plus {cmd:e(att_norm_#)}; incompatible with {cmd:noatt}; the grouped {cmd:by()/industry()} path rejects it at entry{p_end}
-{synopt:{opt nonabs:orbing}}request non-absorbing treatment analysis; currently degrades to baseline or errors (see Remarks){p_end}
-{synopt:{opt persistp:eriods(#)}}nonnegative minimum consecutive treated periods for the nonabsorbing path; positive values require {cmd:nonabsorbing}{p_end}
-{synopt:{opt switchdir:ection(string)}}nonabsorbing switch direction: {cmd:on}, {cmd:off}, or {cmd:both}; requires {cmd:nonabsorbing}{p_end}
-{synopt:{opt counterfactual}}reserved flag for internal counterfactual pipelines; the public {cmd:pte} command rejects it and requires a dedicated counterfactual worker instead; the grouped {cmd:by()/industry()} path rejects it at the grouped unsupported-option gate{p_end}
-{synopt:{opt targetgr:oup(name)}}reserved target-group option name for internal counterfactual workers; on the public {cmd:pte} path this option name is reserved, the command rejects the counterfactual branch at entry, and only reports bare {cmd:targetgroup()} misuse; the grouped {cmd:by()/industry()} path rejects it at the grouped unsupported-option gate{p_end}
-{synopt:{opt cohort(varname numeric)}}reserved numeric design-check variable name (for example, treatment year); on the current public baseline/{cmd:noatt} path {cmd:pte} accepts the syntax, enforces only the public variable-name / numeric-input contract, and does not dispatch a cohort-analysis worker, invoke the internal multi-cohort validator, or post cohort-specific {cmd:e()} results; on the grouped {cmd:by()/industry()} path, {cmd:pte} still enforces the exact {cmd:cohort()} variable name first, so explicit abbreviations fail with the cohort exact-name error before the grouped unsupported-option gate rejects the grouped cohort branch; nonexistent or malformed {cmd:cohort()} names are still rejected earlier by Stata's syntax-level variable validation{p_end}
-{synopt:{opt lagp:eriods(#)}}nonnegative extended-moment horizon; {cmd:lagperiods(0)} is the only accepted public value because {cmd:lagperiods()>0} is not implemented in the current {cmd:pte} main-command path; the grouped {cmd:by()/industry()} path rejects {cmd:lagperiods()>0} at the grouped unsupported-option gate{p_end}
+{synopt:{opt treatdep:endent}}enable treatment-dependent production-function
+path{p_end}
+{synopt:{opt normalize(string)}}normalization method for {cmd:treatdependent};
+any explicit {cmd:normalize()} requires {cmd:treatdependent}: {cmd:indexing},
+{cmd:benchmark}, or {cmd:none}; the grouped {cmd:by()/industry()} path rejects
+it at entry{p_end}
+{synopt:{opt attnorm}}on {cmd:treatdependent+normalize(indexing)}: also compute
+normalized ATT objects over the full requested {cmd:attperiods()} horizon and
+repost them as {cmd:e(att_norm_computed)} plus {cmd:e(att_norm_#)}; incompatible
+with {cmd:noatt}; the grouped {cmd:by()/industry()} path rejects it at
+entry{p_end}
+{synopt:{opt nonabs:orbing}}request non-absorbing treatment analysis; currently
+degrades to baseline or errors (see Remarks){p_end}
+{synopt:{opt persistp:eriods(#)}}nonnegative minimum consecutive treated periods
+for the nonabsorbing path; positive values require {cmd:nonabsorbing}{p_end}
+{synopt:{opt switchdir:ection(string)}}nonabsorbing switch direction: {cmd:on},
+{cmd:off}, or {cmd:both}; requires {cmd:nonabsorbing}{p_end}
+{synopt:{opt counterfactual}}reserved flag for internal counterfactual
+pipelines; the public {cmd:pte} command rejects it and requires a dedicated
+counterfactual worker instead; the grouped {cmd:by()/industry()} path rejects it
+at the grouped unsupported-option gate{p_end}
+{synopt:{opt targetgr:oup(name)}}reserved target-group option name for internal
+counterfactual workers; on the public {cmd:pte} path this option name is
+reserved, the command rejects the counterfactual branch at entry, and only
+reports bare {cmd:targetgroup()} misuse; the grouped {cmd:by()/industry()} path
+rejects it at the grouped unsupported-option gate{p_end}
+{synopt:{opt cohort(varname numeric)}}reserved numeric design-check variable
+name (for example, treatment year); on the current public baseline/{cmd:noatt}
+path {cmd:pte} accepts the syntax, enforces only the public variable-name /
+numeric-input contract, and does not dispatch a cohort-analysis worker, invoke
+the internal multi-cohort validator, or post cohort-specific {cmd:e()} results;
+on the grouped {cmd:by()/industry()} path, {cmd:pte} still enforces the exact
+{cmd:cohort()} variable name first, so explicit abbreviations fail with the
+cohort exact-name error before the grouped unsupported-option gate rejects the
+grouped cohort branch; nonexistent or malformed {cmd:cohort()} names are still
+rejected earlier by Stata's syntax-level variable validation{p_end}
+{synopt:{opt lagp:eriods(#)}}nonnegative extended-moment horizon;
+{cmd:lagperiods(0)} is the only accepted public value because
+{cmd:lagperiods()>0} is not implemented in the current {cmd:pte} main-command
+path; the grouped {cmd:by()/industry()} path rejects {cmd:lagperiods()>0} at the
+grouped unsupported-option gate{p_end}
 {synoptline}
 
 {marker description}{...}
@@ -153,7 +235,8 @@ treatment transitions, recovers firm productivity, and estimates
 The baseline (absorbing-treatment) pipeline has four stages:
 
 {phang}1. {bf:Production function estimation (Theorem 3.1).} A first-stage
-regression produces {it:phi_it}; transition observations ({it:D_it != D_{i,t-1}})
+regression produces {it:phi_it}; transition observations
+({it:D_it != D_{i,t-1}})
 are excluded from the CLK/ACF GMM step to estimate production-function
 parameters.{p_end}
 
@@ -318,7 +401,8 @@ Seed behavior depends on whether bootstrap inference is requested:
 When {opt seed()} is specified, it must be a positive integer, and the option
 name must be spelled exactly as {cmd:seed()} (unsupported abbreviations such as
 {cmd:see()} are rejected by the public parser). The run must also execute an
-ATT/bootstrap RNG stage, so {opt seed()} is incompatible with {opt noatt}. Omit {opt seed()}
+ATT/bootstrap RNG stage, so {opt seed()} is incompatible with {opt noatt}. Omit
+{opt seed()}
 to request the documented default behavior; negative sentinel values are not
 part of the public interface.
 
@@ -407,14 +491,18 @@ supported modes are:
 {pstd}
 All supported replicate modes force the trimmed-{cmd:eps0} path. An explicit
 {opt notrimeps} request therefore conflicts with {cmd:replicate()} and is
-rejected at entry rather than silently rewritten. In addition, {cmd:table1}, {cmd:table5}, and
+rejected at entry rather than silently rewritten. In addition, {cmd:table1},
+{cmd:table5}, and
 {cmd:table_e4} are defined only for {cmd:pfunc(translog)} and are rejected
 under {cmd:pfunc(cd)}. Those three table-style modes also pin
 {cmd:eps0window(3)} to mirror the paper's three-year untreated innovation
 window, so an explicit conflicting {opt eps0window()} setting is rejected at
 entry. To match the paper's dynamic ATT table exactly, {cmd:replicate(table1)}
 also pins {cmd:attperiods(3)}; a conflicting explicit {opt attperiods()}
-request is rejected at entry. Legal disambiguating spellings such as {cmd:attp()} and {cmd:attpe()} count as explicit {cmd:attperiods()} requests for this gate, so they are rejected as well when they request a different horizon. {cmd:replicate(table5)} leaves the live
+request is rejected at entry. Legal disambiguating spellings such as
+{cmd:attp()} and {cmd:attpe()} count as explicit {cmd:attperiods()} requests for
+this gate, so they are rejected as well when they request a different horizon.
+{cmd:replicate(table5)} leaves the live
 {opt attperiods()} contract unchanged
 and therefore keeps the caller/default ATT horizon instead of pinning
 {opt attperiods()}. Because {cmd:table1} and {cmd:table5} are ATT
@@ -441,7 +529,8 @@ omitting {opt seed()} still uses the official outer-seed start {cmd:1}.
 
 {pstd}
 Because {cmd:replicate()} is a strict benchmark preset, conflicting explicit
-{opt omegapoly()}, {opt poly()}, numeric {opt nsim()}, {opt eps0window()} (for the
+{opt omegapoly()}, {opt poly()}, numeric {opt nsim()}, {opt eps0window()} (for
+the
 table-style modes), {opt attperiods()} (for {cmd:table1}), and {opt notrimeps}
 settings are rejected rather than silently rewritten. The automatic sentinel
 {opt nsim(-1)} is the documented exception: it requests the benchmark mode's own
@@ -480,7 +569,8 @@ Full support for reversible treatments, persistence filters, and
 direction-specific switch analysis will be available in a subsequent
 version.{p_end}
 
-{phang}2. {opt persistperiods()} must be a nonnegative integer. Positive values and all
+{phang}2. {opt persistperiods()} must be a nonnegative integer. Positive values
+and all
 {opt switchdirection()} settings are auxiliary filters for the
 {opt nonabsorbing} path only. The baseline absorbing-treatment workflow
 rejects them if {opt nonabsorbing} is not specified. The grouped
@@ -517,7 +607,8 @@ production-function estimation and optional normalization output), but the
 core ATT definition remains the absorbing-treatment ATT unless you run the
 dedicated treat-dependent counterfactual tooling. On the public {cmd:pte}
 path, {cmd:treatdependent} also rejects explicit {cmd:control()} and always
-uses the internal time-trend control that matches the official DO workflow.{p_end}
+uses the internal time-trend control that matches the official DO
+workflow.{p_end}
 
 {marker examples}{...}
 {title:Examples}
@@ -541,7 +632,8 @@ uses the internal time-trend control that matches the official DO workflow.{p_en
 {pstd}
 {cmd:pte} is an {cmd:eclass} command. The returned bundle includes:
 
-{phang}1. On the serial public path, production-function coefficients in {cmd:e(b)} and key scalars
+{phang}1. On the serial public path, production-function coefficients in
+{cmd:e(b)} and key scalars
 {cmd:e(beta_l)}, {cmd:e(beta_k)}, optimizer diagnostics such as
 {cmd:e(fval)}, {cmd:e(converged)}, and {cmd:e(iterations)}
 (and translog interaction terms when used). When stage-1 controls are
@@ -549,7 +641,8 @@ estimated, {cmd:e(beta_controls)} stores the exact control-name row vector of
 control coefficients; with a single {cmd:control()} variable, the legacy
 scalar {cmd:e(beta_t)} is reposted as its first-column alias.{p_end}
 
-{phang}2. On the serial public path, evolution-law parameters for the untreated law in
+{phang}2. On the serial public path, evolution-law parameters for the untreated
+law in
 {cmd:e(rho0)}..{cmd:e(rho4)} and {cmd:e(rho_0)}. When treated-lag support is
 available ({cmd:e(lag_treated_supported)}={cmd:1}), the treated-side bridge is
 also posted in {cmd:e(rho_1)}, {cmd:e(gamma1)} (and, when implied by
@@ -578,11 +671,13 @@ effects {cmd:e(att_0)}, {cmd:e(att_1)}, and the remaining numeric
 event-time scalars for the exact realized support listed in
 {cmd:e(attperiods)},
 and matrices such as {cmd:e(att)},
-{cmd:e(att_trim)}, {cmd:e(attperiods)}, and the point-path ATT dispersion/support
+{cmd:e(att_trim)}, {cmd:e(attperiods)}, and the point-path ATT
+dispersion/support
 objects {cmd:e(att_sd)} and {cmd:e(N_by_period)}, plus the scalar
 support count {cmd:e(att_N)} for the total number of treated firm-period
 observations contributing to ATT across all nonnegative event times
-({cmd:sum(e(N_by_period))}, not the number of unique treated firms). When the default trimmed path is active, the
+({cmd:sum(e(N_by_period))}, not the number of unique treated firms). When the
+default trimmed path is active, the
 overall trimmed summary is also stored in {cmd:e(ATT_avg_trim)}.
 The public status flag {cmd:e(noatt)} is 1 if ATT estimation was skipped
 (for example on a {opt noatt} run) and 0 otherwise.
@@ -608,7 +703,8 @@ official DO-style untreated recursion; the deterministic Proposition 4.1
 / C.1 benchmark is available separately through
 {cmd:_pte_cohort_att_instant}.{p_end}
 
-{phang}4. Bootstrap objects when {cmd:bootstrap()>=2}: canonical replication-count
+{phang}4. Bootstrap objects when {cmd:bootstrap()>=2}: canonical
+replication-count
 scalar {cmd:e(bootstrap)}, bootstrap-draw matrices {cmd:e(bs_raw)} and
 {cmd:e(bs_betas)}. The coefficient-draw payload includes the published
 production-function slope/trend contract: pooled Cobb-Douglas stores
@@ -652,9 +748,26 @@ benchmark-by bootstrap path, {cmd:pte} follows the grouped DO seed contract
 instead of publishing a reusable point-estimate inner seed, so
 {cmd:e(point_seed)} is intentionally omitted there even when the translog
 {cmd:replicate(order1)} benchmark injects the fixed DO seed internally.
-On grouped bootstrap ATT runs, {cmd:e(seed)} and {cmd:e(seed_outer)} record the grouped bootstrap seed actually used. On the standard grouped live-stream path, {cmd:e(inner_seed)} is omitted while {cmd:e(inner_seed_source)} remains {cmd:inherited} to show that the grouped worker consumed the live grouped RNG stream instead of resetting a fixed ATT seed. When the grouped bootstrap path activates a fixed ATT inner seed (currently the translog {cmd:replicate(order1)} benchmark path), {cmd:e(inner_seed)} and {cmd:e(seed_inner)} repost that realized fixed ATT simulation seed while {cmd:e(point_seed)} remains intentionally omitted. The grouped bootstrap path does not publish {cmd:e(seed_outer_strategy)}; that outer-seed advancement rule belongs only to the serial bootstrap path. On {opt noatt} runs, the serial path omits {cmd:e(seed)}, {cmd:e(seed_source)}, {cmd:e(point_seed)}, {cmd:e(inner_seed)}, {cmd:e(seed_inner)}, {cmd:e(inner_seed_source)}, {cmd:e(seed_outer)}, and {cmd:e(seed_outer_strategy)}, while the grouped path omits {cmd:e(seed)}, {cmd:e(seed_source)}, {cmd:e(point_seed)}, {cmd:e(inner_seed)}, {cmd:e(seed_inner)}, {cmd:e(inner_seed_source)}, and {cmd:e(seed_outer)} because no ATT/bootstrap RNG stage is executed.
+On grouped bootstrap ATT runs, {cmd:e(seed)} and {cmd:e(seed_outer)} record the
+grouped bootstrap seed actually used. On the standard grouped live-stream path,
+{cmd:e(inner_seed)} is omitted while {cmd:e(inner_seed_source)} remains
+{cmd:inherited} to show that the grouped worker consumed the live grouped RNG
+stream instead of resetting a fixed ATT seed. When the grouped bootstrap path
+activates a fixed ATT inner seed (currently the translog {cmd:replicate(order1)}
+benchmark path), {cmd:e(inner_seed)} and {cmd:e(seed_inner)} repost that
+realized fixed ATT simulation seed while {cmd:e(point_seed)} remains
+intentionally omitted. The grouped bootstrap path does not publish
+{cmd:e(seed_outer_strategy)}; that outer-seed advancement rule belongs only to
+the serial bootstrap path. On {opt noatt} runs, the serial path omits
+{cmd:e(seed)}, {cmd:e(seed_source)}, {cmd:e(point_seed)}, {cmd:e(inner_seed)},
+{cmd:e(seed_inner)}, {cmd:e(inner_seed_source)}, {cmd:e(seed_outer)}, and
+{cmd:e(seed_outer_strategy)}, while the grouped path omits {cmd:e(seed)},
+{cmd:e(seed_source)}, {cmd:e(point_seed)}, {cmd:e(inner_seed)},
+{cmd:e(seed_inner)}, {cmd:e(inner_seed_source)}, and {cmd:e(seed_outer)} because
+no ATT/bootstrap RNG stage is executed.
 Because {opt noatt} is incompatible with {cmd:bootstrap()>0},
-{cmd:e(seed_outer)} is not posted on {opt noatt} runs. The serial bootstrap path also stores
+{cmd:e(seed_outer)} is not posted on {opt noatt} runs. The serial bootstrap path
+also stores
 {cmd:e(seed_outer_strategy)} to identify how the outer bootstrap seeds advance
 across replications (currently the main command uses the
 {cmd:start_plus_index} rule), while the benchmark-by bootstrap path stores
@@ -735,7 +848,8 @@ Grouped routing metadata are also posted in {cmd:e(by)} and, when
 {opt industry()} is used, in {cmd:e(industry)}. If both {cmd:by()} and
 {cmd:industry()} are supplied, they must spell the same exact grouping
 variable name; different exact names fail closed rather than guessing which
-grouped law should drive {cmd:e(by)}. When {opt industry()} or {opt byindustry} is active, the grouped repost also sets
+grouped law should drive {cmd:e(by)}. When {opt industry()} or {opt byindustry}
+is active, the grouped repost also sets
 {cmd:e(byindustry)}. The live group labels are stored in {cmd:e(groups)},
 with grouped point-estimate results posting {cmd:e(n_groups)} and grouped
 bootstrap reposts keeping the legacy alias {cmd:e(ngroups)}.
@@ -752,7 +866,8 @@ worker metadata in {cmd:e(normalize_method)} and {cmd:e(omega_norm)}. When
 the indexing-number {opt attnorm} path is used successfully, the public
 result also preserves {cmd:e(att_norm_computed_flag)}, scalar
 {cmd:e(att_norm_computed)}, and the full normalized ATT horizon
-{cmd:e(att_norm_0)} through {cmd:e(att_norm_L)} where {cmd:L = e(attperiods_max)}. The
+{cmd:e(att_norm_0)} through {cmd:e(att_norm_L)} where
+{cmd:L = e(attperiods_max)}. The
 stored panel metadata keep {cmd:e(panelvar)}, {cmd:e(idvar)}, and the legacy
 alias {cmd:e(id)} for the panel identifier, plus {cmd:e(timevar)} and the
 legacy alias {cmd:e(time)} for the time variable, for postestimation
@@ -760,7 +875,8 @@ helpers. When the public result republishes the exact data-side aliases
 {cmd:phi} and {cmd:omega} from the stored internal state, it overwrites only
 those exact names; same-prefix caller variables such as {cmd:phi_shadow} or
 {cmd:omega_shadow} are preserved rather than treated as abbreviations for the
-canonical aliases. The same public result also stores the treatment-law certificate
+canonical aliases. The same public result also stores the treatment-law
+certificate
 {cmd:e(treatsig)} and, when panel spacing is identified, {cmd:e(xtdelta)}.
 Those two fields are consumed by {helpb pte_p:predict} after
 {helpb pte_setup}: the standard prediction/reporting branches require both
@@ -793,7 +909,8 @@ Zhiyuan Chen, Moyu Liao, and Karl Schurter
 {p_end}
 
 {pstd}
-Wenli Xu, City University of Macau ({browse "mailto:wlxu@cityu.edu.mo":wlxu@cityu.edu.mo})
+Wenli Xu, City University of Macau
+({browse "mailto:wlxu@cityu.edu.mo":wlxu@cityu.edu.mo})
 {p_end}
 
 {pstd}

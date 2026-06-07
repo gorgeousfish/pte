@@ -11,7 +11,8 @@
 {title:Title}
 
 {p2colset 5 28 30 2}{...}
-{p2col:{cmd:_pte_mata_init} {hline 2}}Initialize Mata functions for the PTE package{p_end}
+{p2col:{cmd:_pte_mata_init} {hline 2}}Initialize Mata functions for the PTE
+package{p_end}
 {p2colreset}{...}
 
 
@@ -42,8 +43,10 @@ PTE package. It is called automatically by {cmd:pte} before estimation begins.
 The initialization process:
 
 {phang2}1. Checks if required Mata functions are already loaded{p_end}
-{phang2}2. If not (or if {opt force} specified), finds and compiles .mata source files{p_end}
-{phang2}3. Verifies all required functions are available after compilation{p_end}
+{phang2}2. If not (or if {opt force} specified), finds and compiles .mata source
+files{p_end}
+{phang2}3. Verifies all required functions are available after
+compilation{p_end}
 
 {pstd}
 Required baseline runtime objects include GMM_CLK(), matrix construction

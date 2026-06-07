@@ -13,7 +13,8 @@
 {title:Title}
 
 {p2colset 5 32 34 2}{...}
-{p2col:{cmd:_pte_bootstrap_bygroup} {hline 2}}Bygroup bootstrap inference for ATT estimation{p_end}
+{p2col:{cmd:_pte_bootstrap_bygroup} {hline 2}}Bygroup bootstrap inference for
+ATT estimation{p_end}
 {p2colreset}{...}
 
 
@@ -40,30 +41,43 @@
 {synopt:{opt proxy(varname)}}proxy variable (e.g., materials){p_end}
 
 {syntab:Production function}
-{synopt:{opt pfunc(string)}}production function type: {cmd:cd} or {cmd:translog}; default is {cmd:translog}{p_end}
-{synopt:{opt poly(#)}}legacy alias for {cmd:omegapoly(#)}; default is {cmd:3}{p_end}
-{synopt:{opt omegapoly(#)}}evolution polynomial order (1-4); default is {cmd:3}{p_end}
+{synopt:{opt pfunc(string)}}production function type: {cmd:cd} or
+{cmd:translog}; default is {cmd:translog}{p_end}
+{synopt:{opt poly(#)}}legacy alias for {cmd:omegapoly(#)}; default is
+{cmd:3}{p_end}
+{synopt:{opt omegapoly(#)}}evolution polynomial order (1-4); default is
+{cmd:3}{p_end}
 {synopt:{opt control(varlist)}}control variables (e.g., time trends){p_end}
 {synopt:{opt notrimeps}}disable Winsorize trimming of eps0 residuals{p_end}
 
 {syntab:ATT estimation}
-{synopt:{opt attperiods(#)}}non-negative ATT horizon requested from the grouped bootstrap helper; default is {cmd:4}{p_end}
-{synopt:{opt nsim(#)}}number of counterfactual simulation paths; default is auto ({cmd:1} if {cmd:omegapoly(1)}, else {cmd:100}){p_end}
-{synopt:{opt eps0window(#)}}untreated innovation window passed to EPIC-002; default is {cmd:0} (full identified untreated pre-treatment support, scaled by the current {cmd:xtset} {cmd:delta()} declaration when windowed){p_end}
+{synopt:{opt attperiods(#)}}non-negative ATT horizon requested from the grouped
+bootstrap helper; default is {cmd:4}{p_end}
+{synopt:{opt nsim(#)}}number of counterfactual simulation paths; default is auto
+({cmd:1} if {cmd:omegapoly(1)}, else {cmd:100}){p_end}
+{synopt:{opt eps0window(#)}}untreated innovation window passed to EPIC-002;
+default is {cmd:0} (full identified untreated pre-treatment support, scaled by
+the current {cmd:xtset} {cmd:delta()} declaration when windowed){p_end}
 
 {syntab:Inference}
-{synopt:{opt bootstrap(#)}}number of bootstrap replications (must be >= 2); default is {cmd:100}{p_end}
-{synopt:{opt seed(#)}}group seed for bootstrap resampling; default is pfunc-based{p_end}
-{synopt:{opt inner_seed(#)}}explicit inner seed override for ATT simulation; omitted {cmd:inner_seed()} preserves the live grouped RNG stream{p_end}
+{synopt:{opt bootstrap(#)}}number of bootstrap replications (must be >= 2);
+default is {cmd:100}{p_end}
+{synopt:{opt seed(#)}}group seed for bootstrap resampling; default is
+pfunc-based{p_end}
+{synopt:{opt inner_seed(#)}}explicit inner seed override for ATT simulation;
+omitted {cmd:inner_seed()} preserves the live grouped RNG stream{p_end}
 {synopt:{opt level(#)}}confidence level (10-99); default is {cmd:95}{p_end}
-{synopt:{opt saving(filename)}}save pooled bootstrap draws in wide form ({cmd:att_raw}, {cmd:att_raw_#}, and trimmed counterparts when available){p_end}
+{synopt:{opt saving(filename)}}save pooled bootstrap draws in wide form
+({cmd:att_raw}, {cmd:att_raw_#}, and trimmed counterparts when available){p_end}
 
 {syntab:Replication}
 {synopt:{opt replicate(mode)}}replication mode: {cmd:trlg} or {cmd:cd}{p_end}
 
 {syntab:Parallel execution}
-{synopt:{opt noparallel}}force serial execution (disable parallel detection){p_end}
-{synopt:{opt processors(#)}}number of parallel processors (overrides auto-detection){p_end}
+{synopt:{opt noparallel}}force serial execution (disable parallel
+detection){p_end}
+{synopt:{opt processors(#)}}number of parallel processors (overrides
+auto-detection){p_end}
 
 {syntab:Reporting}
 {synopt:{opt nolog}}suppress progress display{p_end}
@@ -260,24 +274,38 @@ dots and summary tables.
 {p2col 5 30 34 2: Scalars}{p_end}
 {synopt:{cmd:e(nboot)}}number of bootstrap replications{p_end}
 {synopt:{cmd:e(ngroups)}}number of groups{p_end}
-{synopt:{cmd:e(n_success)}}number of complete pooled bootstrap draws used for inference{p_end}
-{synopt:{cmd:e(n_fail)}}number of incomplete pooled draws excluded from inference{p_end}
-{synopt:{cmd:e(n_success_group)}}total complete group-level draws across all groups (ATT/TT/beta payload all present){p_end}
-{synopt:{cmd:e(n_fail_group)}}total failed group-level draws across all groups{p_end}
+{synopt:{cmd:e(n_success)}}number of complete pooled bootstrap draws used for
+inference{p_end}
+{synopt:{cmd:e(n_fail)}}number of incomplete pooled draws excluded from
+inference{p_end}
+{synopt:{cmd:e(n_success_group)}}total complete group-level draws across all
+groups (ATT/TT/beta payload all present){p_end}
+{synopt:{cmd:e(n_fail_group)}}total failed group-level draws across all
+groups{p_end}
 {synopt:{cmd:e(industry_seed)}}group seed used{p_end}
-{synopt:{cmd:e(inner_seed)}}ATT simulation seed override used by the helper; omitted when the grouped worker instead consumes the live grouped RNG stream{p_end}
-{synopt:{cmd:e(seed_inner)}}alias of {cmd:e(inner_seed)} when an explicit grouped ATT simulation seed override is active{p_end}
+{synopt:{cmd:e(inner_seed)}}ATT simulation seed override used by the helper;
+omitted when the grouped worker instead consumes the live grouped RNG
+stream{p_end}
+{synopt:{cmd:e(seed_inner)}}alias of {cmd:e(inner_seed)} when an explicit
+grouped ATT simulation seed override is active{p_end}
 {synopt:{cmd:e(level)}}confidence level{p_end}
 {synopt:{cmd:e(omegapoly)}}evolution polynomial order{p_end}
 {synopt:{cmd:e(attperiods)}}maximum ATT periods{p_end}
-{synopt:{cmd:e(attperiods_max)}}compatibility alias for maximum ATT periods{p_end}
+{synopt:{cmd:e(attperiods_max)}}compatibility alias for maximum ATT
+periods{p_end}
 {synopt:{cmd:e(nsim)}}number of simulation paths{p_end}
-{synopt:{cmd:e(eps0window)}}eps0 innovation window (panel periods, scaled by {cmd:xtset} {cmd:delta()}){p_end}
-{synopt:{cmd:e(poly)}}resolved legacy alias value, equal to {cmd:e(omegapoly)}{p_end}
-{synopt:{cmd:e(parallel_requested_nproc)}}parallel worker count requested after environment gating and user overrides{p_end}
-{synopt:{cmd:e(parallel_nproc)}}parallel processors actually used in the final execution path{p_end}
-{synopt:{cmd:e(parallel_fallback)}}indicator equal to 1 when a requested grouped parallel path fell back to serial, 0 otherwise{p_end}
-{synopt:{cmd:e(parallel_helper_rc)}}helper return code when the grouped parallel helper aborted before returning payload; omitted otherwise{p_end}
+{synopt:{cmd:e(eps0window)}}eps0 innovation window (panel periods, scaled by
+{cmd:xtset} {cmd:delta()}){p_end}
+{synopt:{cmd:e(poly)}}resolved legacy alias value, equal to
+{cmd:e(omegapoly)}{p_end}
+{synopt:{cmd:e(parallel_requested_nproc)}}parallel worker count requested after
+environment gating and user overrides{p_end}
+{synopt:{cmd:e(parallel_nproc)}}parallel processors actually used in the final
+execution path{p_end}
+{synopt:{cmd:e(parallel_fallback)}}indicator equal to 1 when a requested grouped
+parallel path fell back to serial, 0 otherwise{p_end}
+{synopt:{cmd:e(parallel_helper_rc)}}helper return code when the grouped parallel
+helper aborted before returning payload; omitted otherwise{p_end}
 
 {p2col 5 30 34 2: Macros}{p_end}
 {synopt:{cmd:e(cmd)}}{cmd:_pte_bootstrap_bygroup}{p_end}
@@ -292,16 +320,28 @@ dots and summary tables.
 {synopt:{cmd:e(proxy)}}proxy variable{p_end}
 {synopt:{cmd:e(control)}}control variables (if specified){p_end}
 {synopt:{cmd:e(replicate)}}replicate mode (if specified){p_end}
-{synopt:{cmd:e(inner_seed_source)}}{cmd:replicate} on the grouped translog order-1 benchmark path when the official fixed ATT seed {cmd:10000} is active, {cmd:user} for other explicit {opt inner_seed()} overrides, {cmd:inherited} when the grouped worker consumed the live grouped RNG stream{p_end}
-{synopt:{cmd:e(parallel_requested_method)}}parallel method requested after environment gating and user overrides{p_end}
-{synopt:{cmd:e(parallel_method)}}parallel method actually used in the final execution path{p_end}
-{synopt:{cmd:e(parallel_fallback_reason)}}fallback reason: empty if no fallback, otherwise one of {cmd:helper_rc}, {cmd:helper_empty}, or {cmd:payload_mismatch}; the last case also covers helper returns whose TT sidecars cannot support a complete pooled draw set and therefore trigger a serial rerun{p_end}
+{synopt:{cmd:e(inner_seed_source)}}{cmd:replicate} on the grouped translog
+order-1 benchmark path when the official fixed ATT seed {cmd:10000} is active,
+{cmd:user} for other explicit {opt inner_seed()} overrides, {cmd:inherited} when
+the grouped worker consumed the live grouped RNG stream{p_end}
+{synopt:{cmd:e(parallel_requested_method)}}parallel method requested after
+environment gating and user overrides{p_end}
+{synopt:{cmd:e(parallel_method)}}parallel method actually used in the final
+execution path{p_end}
+{synopt:{cmd:e(parallel_fallback_reason)}}fallback reason: empty if no fallback,
+otherwise one of {cmd:helper_rc}, {cmd:helper_empty}, or {cmd:payload_mismatch};
+the last case also covers helper returns whose TT sidecars cannot support a
+complete pooled draw set and therefore trigger a serial rerun{p_end}
 
 {p2col 5 30 34 2: Matrices - Pooled results}{p_end}
-{synopt:{cmd:e(att_boot_all)}}B x (1+T) pooled ATT bootstrap distribution (raw){p_end}
-{synopt:{cmd:e(att_boot_trim)}}B x (1+T) pooled ATT bootstrap distribution (trimmed){p_end}
-{synopt:{cmd:e(att_se_pool)}}1 x (1+T) pooled bootstrap standard errors (raw){p_end}
-{synopt:{cmd:e(att_se_pool_trim)}}1 x (1+T) pooled bootstrap standard errors (trimmed){p_end}
+{synopt:{cmd:e(att_boot_all)}}B x (1+T) pooled ATT bootstrap distribution
+(raw){p_end}
+{synopt:{cmd:e(att_boot_trim)}}B x (1+T) pooled ATT bootstrap distribution
+(trimmed){p_end}
+{synopt:{cmd:e(att_se_pool)}}1 x (1+T) pooled bootstrap standard errors
+(raw){p_end}
+{synopt:{cmd:e(att_se_pool_trim)}}1 x (1+T) pooled bootstrap standard errors
+(trimmed){p_end}
 {synopt:{cmd:e(att_ci_lower_pool)}}1 x (1+T) lower CI bounds (raw){p_end}
 {synopt:{cmd:e(att_ci_upper_pool)}}1 x (1+T) upper CI bounds (raw){p_end}
 {synopt:{cmd:e(att_ci_lower_trim)}}1 x (1+T) lower CI bounds (trimmed){p_end}
@@ -310,11 +350,16 @@ dots and summary tables.
 {synopt:{cmd:e(att_mean_pool_trim)}}1 x (1+T) pooled ATT means (trimmed){p_end}
 
 {p2col 5 30 34 2: Matrices - Per-group results (g = 1, ..., G)}{p_end}
-{synopt:{cmd:e(att_boot_g}{it:g}{cmd:)}}B x (1+T) per-group ATT bootstrap distribution; failed or incomplete grouped draws remain missing{p_end}
-{synopt:{cmd:e(att_trim_boot_g}{it:g}{cmd:)}}B x (1+T) per-group trimmed ATT distribution; failed or incomplete grouped draws remain missing{p_end}
-{synopt:{cmd:e(att_se_g}{it:g}{cmd:)}}1 x (1+T) per-group bootstrap SE computed from complete group-level draws only{p_end}
-{synopt:{cmd:e(beta_boot_g}{it:g}{cmd:)}}B x k per-group beta bootstrap distribution; failed or incomplete draws remain missing{p_end}
-{synopt:{cmd:e(beta_se_g}{it:g}{cmd:)}}1 x k per-group beta bootstrap SE computed from complete group-level draws only{p_end}
+{synopt:{cmd:e(att_boot_g}{it:g}{cmd:)}}B x (1+T) per-group ATT bootstrap
+distribution; failed or incomplete grouped draws remain missing{p_end}
+{synopt:{cmd:e(att_trim_boot_g}{it:g}{cmd:)}}B x (1+T) per-group trimmed ATT
+distribution; failed or incomplete grouped draws remain missing{p_end}
+{synopt:{cmd:e(att_se_g}{it:g}{cmd:)}}1 x (1+T) per-group bootstrap SE computed
+from complete group-level draws only{p_end}
+{synopt:{cmd:e(beta_boot_g}{it:g}{cmd:)}}B x k per-group beta bootstrap
+distribution; failed or incomplete draws remain missing{p_end}
+{synopt:{cmd:e(beta_se_g}{it:g}{cmd:)}}1 x k per-group beta bootstrap SE
+computed from complete group-level draws only{p_end}
 
 {pstd}
 Trimmed-track matrices are only stored when {opt notrimeps} is not specified.

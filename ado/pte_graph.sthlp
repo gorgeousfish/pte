@@ -64,25 +64,39 @@ canonical nine-row bundle without the reference line.
 {synopthdr}
 {synoptline}
 {syntab:Core graph selection}
-{synopt:{opt att}}dynamic ATT graph; default when no graph family is specified; rejects grouped {cmd:e()} states that would otherwise fall back to pooled {cmd:e(att)}{p_end}
+{synopt:{opt att}}dynamic ATT graph; default when no graph family is specified;
+rejects grouped {cmd:e()} states that would otherwise fall back to pooled
+{cmd:e(att)}{p_end}
 {synopt:{opt tt}}treatment-effect-on-treated graph{p_end}
 {synopt:{opt catt}}cohort ATT graph{p_end}
 {synopt:{opt compare}}comparison graph for supported comparison results{p_end}
-{synopt:{opt heterogeneity}}heterogeneity graph wrapper; grouped bootstrap replay requires exact {cmd:e(groups)} metadata and does not guess from current-data group order{p_end}
+{synopt:{opt heterogeneity}}heterogeneity graph wrapper; grouped bootstrap
+replay requires exact {cmd:e(groups)} metadata and does not guess from
+current-data group order{p_end}
 {synopt:{opt scatter}}scatter-style PTE graph{p_end}
 {synopt:{opt evolution}}productivity-evolution graph{p_end}
 {synopt:{opt diagnose}}diagnostic graph wrapper{p_end}
 {synopt:{opt combine}}graph-combination wrapper{p_end}
 
 {syntab:Counterfactual and dynamic variants}
-{synopt:{opt compare_cf}}counterfactual-comparison graph wrapper; rejects grouped {cmd:e()} states that would otherwise drop grouped heterogeneity{p_end}
-{synopt:{opt att_dynamic}}dynamic ATT graph variant worker; rejects grouped {cmd:e()} states that would otherwise fall back to pooled {cmd:e(att)}{p_end}
-{synopt:{opt ate_count_dynamic}}dynamic ATE-count graph variant worker; rejects grouped {cmd:e()} states that would otherwise mix pooled dynamic objects into a grouped result bundle{p_end}
+{synopt:{opt compare_cf}}counterfactual-comparison graph wrapper; rejects
+grouped {cmd:e()} states that would otherwise drop grouped heterogeneity{p_end}
+{synopt:{opt att_dynamic}}dynamic ATT graph variant worker; rejects grouped
+{cmd:e()} states that would otherwise fall back to pooled {cmd:e(att)}{p_end}
+{synopt:{opt ate_count_dynamic}}dynamic ATE-count graph variant worker; rejects
+grouped {cmd:e()} states that would otherwise mix pooled dynamic objects into a
+grouped result bundle{p_end}
 {synopt:{opt tt_distribution}}distribution graph for stored TT objects{p_end}
-{synopt:{opt eps0_diagnostic}}diagnostic graph for stored untreated-shock objects{p_end}
+{synopt:{opt eps0_diagnostic}}diagnostic graph for stored untreated-shock
+objects{p_end}
 
 {syntab:Grouping}
-{synopt:{opt by(varname)}}route {cmd:tt}, {cmd:catt}, {cmd:compare}, {cmd:scatter}, {cmd:evolution}, and {cmd:diagnose} through the by-group wrapper; {cmd:heterogeneity} handles {cmd:by()} directly; {cmd:att by(...)} is rejected because stored {cmd:e(att)} is pooled across groups; other families reject public {cmd:by()}; the grouping variable name must match an existing column exactly{p_end}
+{synopt:{opt by(varname)}}route {cmd:tt}, {cmd:catt}, {cmd:compare},
+{cmd:scatter}, {cmd:evolution}, and {cmd:diagnose} through the by-group wrapper;
+{cmd:heterogeneity} handles {cmd:by()} directly; {cmd:att by(...)} is rejected
+because stored {cmd:e(att)} is pooled across groups; other families reject
+public {cmd:by()}; the grouping variable name must match an existing column
+exactly{p_end}
 {synoptline}
 
 {marker style}{...}
@@ -110,19 +124,23 @@ the selected worker understands them:
 {synopt:{opt subtitle(string)}}graph subtitle{p_end}
 {synopt:{opt note(string)}}graph note{p_end}
 {synopt:{opt legend(string)}}legend options passed as a string payload{p_end}
-{synopt:{opt legendpos(#)}}legend position override; public range is {cmd:0..12}{p_end}
+{synopt:{opt legendpos(#)}}legend position override; public range is
+{cmd:0..12}{p_end}
 {synopt:{opt legendcols(#)}}legend column override{p_end}
 {synopt:{opt legendring(#)}}legend ring override{p_end}
 {synopt:{opt nolegend}}suppress legend when supported by the worker{p_end}
 {synopt:{opt xline(string)}}x-axis reference-line specification{p_end}
 {synopt:{opt yline(string)}}y-axis reference-line specification{p_end}
-{synopt:{opt refline(#)}}numeric reference line forwarded whenever {cmd:refline()} is explicitly supplied{p_end}
-{synopt:{opt norefline}}suppress the forwarded reference line when supported{p_end}
+{synopt:{opt refline(#)}}numeric reference line forwarded whenever
+{cmd:refline()} is explicitly supplied{p_end}
+{synopt:{opt norefline}}suppress the forwarded reference line when
+supported{p_end}
 {synopt:{opt bgcolor(string)}}background color{p_end}
 {synopt:{opt grid}}request grid display when supported{p_end}
 {synopt:{opt nogrid}}request no-grid display when supported{p_end}
 {synopt:{opt gridstyle(string)}}grid style{p_end}
-{synopt:{opt alpha(#)}}alpha level / opacity style parameter; public range is {cmd:0..100}; router default is {cmd:100}{p_end}
+{synopt:{opt alpha(#)}}alpha level / opacity style parameter; public range is
+{cmd:0..100}; router default is {cmd:100}{p_end}
 {synoptline}
 
 {pstd}
@@ -350,7 +368,8 @@ bootstrap confidence intervals are present, the ATT pair
 if the ATT bootstrap alias pair {cmd:e(att_ci_lower)}/{cmd:e(att_ci_upper)}
 is also posted, it must agree with {cmd:e(att_lb)}/{cmd:e(att_ub)} on the
 graphed dynamic support. Those supported CI cells must also remain
-nonmissing on every listed dynamic period. Otherwise the stored ATT interval object is
+nonmissing on every listed dynamic period. Otherwise the stored ATT interval
+object is
 ambiguous and the graph fails closed with {cmd:rc=198}. The worker also
 rejects partial comparison bundles with {cmd:rc=198} instead of
 downgrading to a misleading point-estimate-only graph. When the caller
@@ -433,7 +452,8 @@ non-absorbing ATT worker now reuses those stored bootstrap CI bounds directly
 only when they carry the same canonical {cmd:nt#} support labels as the live
 {cmd:e(att_plus)} / {cmd:e(att_minus)} payload; support-drifting CI bundles
 now fail closed with {cmd:rc=198} instead of being silently consumed by row
-order. Otherwise it falls back to recomputing normal-approximation intervals from
+order. Otherwise it falls back to recomputing normal-approximation intervals
+from
 {cmd:e(att_plus_se)} / {cmd:e(att_minus_se)}.
 When the main non-absorbing ATT payload uses the canonical four-column
 {cmd:[ATT, SD, N, nt]} contract, those side SE matrices must also publish the
@@ -471,7 +491,8 @@ orphan {cmd:nt#} sidecar labels now fail closed instead of being bridged to
 the fallback dense 0..N-1 horizon. If that one-column main payload itself uses
 nt-like rownames, they must equal the same fallback dense route exactly;
 sparse or drifting main-payload rownames now fail closed instead of being
-silently ignored. The attdiff graph renders that difference CI even when side ATT+ /
+silently ignored. The attdiff graph renders that difference CI even when side
+ATT+ /
 ATT- SE or side CI objects are absent, because the difference uncertainty is
 consumed on its own contract.
 
@@ -700,7 +721,8 @@ re-certifies the current panel/treatment law once on the full dataset before
 subgrouping, then reuses that certified axis inside each preserved subgroup.
 This prevents subgroup-local rehashing of the full-sample live
 {cmd:e(treatsig)} from falsely failing current-law calls with {cmd:rc=459}
-while keeping stale live/setup law drift fail-closed at the wrapper entry. A direct
+while keeping stale live/setup law drift fail-closed at the wrapper entry. A
+direct
 {cmd:scatter} call now also requires the exact canonical productivity bridge
 {cmd:_pte_omega}; shadow leftovers such as {cmd:_pte_omega_shadow} no longer
 satisfy that contract through Stata abbreviation binding. Industry
@@ -831,13 +853,19 @@ selected metadata when available:
 
 {synoptset 28 tabbed}{...}
 {p2col 5 28 32 2: Macros}{p_end}
-{synopt:{cmd:r(graph_type)}}graph type reported by the heterogeneity worker{p_end}
+{synopt:{cmd:r(graph_type)}}graph type reported by the heterogeneity
+worker{p_end}
 {synopt:{cmd:r(type)}}type reported by the heterogeneity worker{p_end}
-{synopt:{cmd:r(filename)}}saved filename reported by the heterogeneity worker{p_end}
-{synopt:{cmd:r(by)}}grouping variable reported by the heterogeneity worker{p_end}
-{synopt:{cmd:r(group_labels)}}group-label payload reported by the heterogeneity worker{p_end}
+{synopt:{cmd:r(filename)}}saved filename reported by the heterogeneity
+worker{p_end}
+{synopt:{cmd:r(by)}}grouping variable reported by the heterogeneity
+worker{p_end}
+{synopt:{cmd:r(group_labels)}}group-label payload reported by the heterogeneity
+worker{p_end}
 {p2col 5 28 32 2: Matrices}{p_end}
-{synopt:{cmd:r(att_by)}}heterogeneity result matrix with columns {cmd:ATT SE Contribution N}, matching the live Table 2 contract from {helpb pte_heterogeneity}{p_end}
+{synopt:{cmd:r(att_by)}}heterogeneity result matrix with columns
+{cmd:ATT SE Contribution N}, matching the live Table 2 contract from
+{helpb pte_heterogeneity}{p_end}
 
 {pstd}
 For all other families, inspect {cmd:return list} immediately after the

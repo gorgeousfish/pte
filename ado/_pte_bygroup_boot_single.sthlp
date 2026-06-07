@@ -10,7 +10,8 @@
 {title:Title}
 
 {p2colset 5 34 36 2}{...}
-{p2col:{cmd:_pte_bygroup_boot_single} {hline 2}}Single bootstrap iteration for one group{p_end}
+{p2col:{cmd:_pte_bygroup_boot_single} {hline 2}}Single bootstrap iteration for
+one group{p_end}
 {p2colreset}{...}
 
 
@@ -41,14 +42,21 @@
 {synopt:{opt time(varname)}}time variable{p_end}
 
 {syntab:Estimation}
-{synopt:{opt prodfunc(string)}}production function type; default is {cmd:cd}{p_end}
+{synopt:{opt prodfunc(string)}}production function type; default is
+{cmd:cd}{p_end}
 {synopt:{opt poly(#)}}polynomial order; default is {cmd:3}{p_end}
 {synopt:{opt omegapoly(#)}}evolution polynomial order; default is {cmd:3}{p_end}
-{synopt:{opt eps0window(#)}}untreated innovation window passed to {cmd:_pte_omega}; default is {cmd:0} (all identified untreated pre-treatment support, scaled by the current {cmd:xtset} {cmd:delta()} declaration when windowed){p_end}
+{synopt:{opt eps0window(#)}}untreated innovation window passed to
+{cmd:_pte_omega}; default is {cmd:0} (all identified untreated pre-treatment
+support, scaled by the current {cmd:xtset} {cmd:delta()} declaration when
+windowed){p_end}
 {synopt:{opt control(varlist)}}control variables{p_end}
-{synopt:{opt attperiods(#)}}max post-treatment periods; default is {cmd:4}{p_end}
-{synopt:{opt nsim(#)}}simulation paths; default is auto ({cmd:1} if {cmd:omegapoly(1)}, else {cmd:100}){p_end}
-{synopt:{opt inner_seed(#)}}inner ATT seed; default is {cmd:-1} (no reset){p_end}
+{synopt:{opt attperiods(#)}}max post-treatment periods; default is
+{cmd:4}{p_end}
+{synopt:{opt nsim(#)}}simulation paths; default is auto ({cmd:1} if
+{cmd:omegapoly(1)}, else {cmd:100}){p_end}
+{synopt:{opt inner_seed(#)}}inner ATT seed; default is {cmd:-1} (no
+reset){p_end}
 {synopt:{opt notrimeps}}disable eps0 Winsorize trimming{p_end}
 {synoptline}
 
@@ -114,8 +122,10 @@ is -1 (no reset), meaning the RNG state continues from the resampling step.
 {synopt:{cmd:r(att)}}overall ATT estimate for this iteration{p_end}
 
 {p2col 5 22 26 2: Matrices}{p_end}
-{synopt:{cmd:r(att_raw)}}1 x (1+T) raw ATT vector [overall, nt=0, ..., nt=T]{p_end}
-{synopt:{cmd:r(att_trim)}}1 x (1+T) trimmed ATT vector (if trimming enabled){p_end}
+{synopt:{cmd:r(att_raw)}}1 x (1+T) raw ATT vector [overall, nt=0, ...,
+nt=T]{p_end}
+{synopt:{cmd:r(att_trim)}}1 x (1+T) trimmed ATT vector (if trimming
+enabled){p_end}
 {synopt:{cmd:r(betas)}}1 x k production function coefficients{p_end}
 
 

@@ -34,13 +34,17 @@
 {synopthdr:Options}
 {synoptline}
 {syntab:Format}
-{synopt:{opt for:mat(string)}}output format: {bf:latex} (default), {bf:xlsx} (alias {bf:excel}), or {bf:csv}{p_end}
+{synopt:{opt for:mat(string)}}output format: {bf:latex} (default), {bf:xlsx}
+(alias {bf:excel}), or {bf:csv}{p_end}
 
 {syntab:Content}
 {synopt:{opt se}}include standard errors when available (default){p_end}
 {synopt:{opt nose}}suppress standard errors{p_end}
-{synopt:{opt include(all)}}legacy compatibility alias for the full released table; other values are rejected{p_end}
-{synopt:{opt stars(numlist)}}three ascending significance thresholds strictly inside (0,1); default is {cmd:0.01 0.05 0.10}; only with {cmd:format(latex)}{p_end}
+{synopt:{opt include(all)}}legacy compatibility alias for the full released
+table; other values are rejected{p_end}
+{synopt:{opt stars(numlist)}}three ascending significance thresholds strictly
+inside (0,1); default is {cmd:0.01 0.05 0.10}; only with
+{cmd:format(latex)}{p_end}
 {synopt:{opt dec:imals(#)}}decimal places; default is {cmd:3}{p_end}
 
 {syntab:LaTeX-specific}
@@ -52,12 +56,14 @@
 {synoptline}
 {p 4 6 2}{cmd:pte_export} requires current estimation results with
 {cmd:e(att)} and {cmd:e(attperiods)} available (for example, from a prior
-{cmd:pte} run that estimated ATT). Bootstrap output is optional; when present, it adds standard
+{cmd:pte} run that estimated ATT). Bootstrap output is optional; when present,
+it adds standard
 errors and p-values to all exports; significance stars plus caption/footnote
 formatting are available only on the LaTeX path. Grouped ATT results from
 {cmd:pte, by()} or {cmd:pte, industry()} are not accepted: those runs publish
 group-specific ATT contracts ({cmd:e(att_by)} or {cmd:e(att_by_point)}), and
-{cmd:pte_export} intentionally refuses to collapse them into one pooled table.{p_end}
+{cmd:pte_export} intentionally refuses to collapse them into one pooled
+table.{p_end}
 
 
 {marker description}{...}
@@ -90,7 +96,8 @@ are incomplete.
 Three output formats are supported:
 
 {p 8 8 2}
-{bf:LaTeX} ({cmd:format(latex)}): Generates a complete {cmd:\begin{table}...\end{table}}
+{bf:LaTeX} ({cmd:format(latex)}): Generates a complete
+{cmd:\begin{table}...\end{table}}
 environment with {cmd:\hline} separators, significance stars, standard errors
 in parentheses, and a footnote with star definitions.  The exporter wraps the
 table body in {cmd:threeparttable}, so the output can be directly included in
@@ -238,7 +245,8 @@ The LaTeX output wraps {cmd:tabular} and any {cmd:tablenotes} footnotes inside
 the {cmd:threeparttable} environment.  Documents that {cmd:\input{}} this
 export must therefore load the {cmd:threeparttable} package.  When notes are
 present (for example, default SE / bootstrap / significance-note output or any
-explicit {cmd:note()}), they are emitted through {cmd:tablenotes}.  The table body itself uses standard
+explicit {cmd:note()}), they are emitted through {cmd:tablenotes}.  The table
+body itself uses standard
 {cmd:tabular} with {cmd:\hline\hline} borders.
 
 {pstd}
@@ -256,34 +264,44 @@ stored bootstrap count is positive.
 {phang2}{cmd:. findfile pte_example.dta}{p_end}
 {phang2}{cmd:. use "`r(fn)'", clear}{p_end}
 
-{phang2}. {cmd:. * if you need ATE^count / Delta columns, first build a standardized counterfactual result object that publishes e(ate_count); if e(delta) is absent, pte_export reconstructs Delta from ATT-ATE^count. The current top-level pte command does not create that object}{p_end}
+{phang2}.
+{cmd:. * if you need ATE^count / Delta columns, first build a}
+{cmd:.   standardized counterfactual result object that publishes}
+{cmd:.   e(ate_count); if e(delta) is absent, pte_export}
+{cmd:.   reconstructs Delta from ATT-ATE^count.}{p_end}
 
 {pstd}
 {bf:LaTeX export (default)}
 
-{phang2}. {stata "pte_export results using table1.tex, replace":pte_export results using table1.tex, replace}{p_end}
+{phang2}.
+{stata "pte_export results using table1.tex, replace":pte_export results using table1.tex, replace}{p_end}
 
-{phang2}. {stata `"pte_export results using table1.tex, title("Digitalization Effects") replace"':pte_export results using table1.tex, title("Digitalization Effects") replace}{p_end}
+{phang2}.
+{stata `"pte_export results using table1.tex, title("Digitalization Effects") replace"':pte_export results using table1.tex, title("Digitalization Effects") replace}{p_end}
 
 {pstd}
 {bf:LaTeX with custom stars and 4 decimal places}
 
-{phang2}. {stata "pte_export results using table1.tex, stars(0.01 0.05 0.10) decimals(4) replace":pte_export results using table1.tex, stars(0.01 0.05 0.10) decimals(4) replace}{p_end}
+{phang2}.
+{stata "pte_export results using table1.tex, stars(0.01 0.05 0.10) decimals(4) replace":pte_export results using table1.tex, stars(0.01 0.05 0.10) decimals(4) replace}{p_end}
 
 {pstd}
 {bf:Excel export}
 
-{phang2}. {stata "pte_export results using results.xlsx, format(xlsx) replace":pte_export results using results.xlsx, format(xlsx) replace}{p_end}
+{phang2}.
+{stata "pte_export results using results.xlsx, format(xlsx) replace":pte_export results using results.xlsx, format(xlsx) replace}{p_end}
 
 {pstd}
 {bf:CSV export}
 
-{phang2}. {stata "pte_export results using results.csv, format(csv) replace":pte_export results using results.csv, format(csv) replace}{p_end}
+{phang2}.
+{stata "pte_export results using results.csv, format(csv) replace":pte_export results using results.csv, format(csv) replace}{p_end}
 
 {pstd}
 {bf:Suppress standard errors}
 
-{phang2}. {stata "pte_export results using table_compact.tex, nose replace":pte_export results using table_compact.tex, nose replace}{p_end}
+{phang2}.
+{stata "pte_export results using table_compact.tex, nose replace":pte_export results using table_compact.tex, nose replace}{p_end}
 
 
 {marker results}{...}

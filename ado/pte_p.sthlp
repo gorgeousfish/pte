@@ -38,7 +38,8 @@
 {synopt:{opt exp:onential}}productivity level exp(omega_it){p_end}
 {synopt:{opt tt}}firm-specific treatment effect TT_it{p_end}
 {synopt:{opt att}}average treatment effect ATT by event time{p_end}
-{synopt:{opt par:ameters}}display production-function parameters (no variable created){p_end}
+{synopt:{opt par:ameters}}display production-function parameters (no variable
+created){p_end}
 {synoptline}
 
 {pstd}
@@ -366,13 +367,21 @@ restore it or re-run {cmd:pte} before calling {cmd:predict, att}.
 {synoptset 22 tabbed}{...}
 {synopt:{cmd:e(omegapoly)}}evolution-polynomial order{p_end}
 {synopt:{cmd:e(noatt)}}1 when ATT stage was skipped{p_end}
-{synopt:{cmd:e(eps0window)}}stored untreated-innovation support window used by {cmd:predict, residuals} to guard residual fallback when {cmd:_pte_eps0} / {cmd:_pte_eps0_ind} are absent{p_end}
-{synopt:{cmd:e(xtdelta)}}stored panel time spacing used when residual fallback restores {cmd:xtset}, when available{p_end}
-{synopt:{cmd:e(beta_l)}}free-input coefficient; available on non-grouped results only{p_end}
-{synopt:{cmd:e(beta_k)}}state-input coefficient; available on non-grouped results only{p_end}
-{synopt:{cmd:e(beta_ll)}}translog free-input quadratic coefficient; available on non-grouped translog results only{p_end}
-{synopt:{cmd:e(beta_kk)}}translog state-input quadratic coefficient; available on non-grouped translog results only{p_end}
-{synopt:{cmd:e(beta_lk)}}translog interaction coefficient; available on non-grouped translog results only{p_end}
+{synopt:{cmd:e(eps0window)}}stored untreated-innovation support window used by
+{cmd:predict, residuals} to guard residual fallback when {cmd:_pte_eps0} /
+{cmd:_pte_eps0_ind} are absent{p_end}
+{synopt:{cmd:e(xtdelta)}}stored panel time spacing used when residual fallback
+restores {cmd:xtset}, when available{p_end}
+{synopt:{cmd:e(beta_l)}}free-input coefficient; available on non-grouped results
+only{p_end}
+{synopt:{cmd:e(beta_k)}}state-input coefficient; available on non-grouped
+results only{p_end}
+{synopt:{cmd:e(beta_ll)}}translog free-input quadratic coefficient; available on
+non-grouped translog results only{p_end}
+{synopt:{cmd:e(beta_kk)}}translog state-input quadratic coefficient; available
+on non-grouped translog results only{p_end}
+{synopt:{cmd:e(beta_lk)}}translog interaction coefficient; available on
+non-grouped translog results only{p_end}
 {p2colreset}{...}
 
 {pstd}
@@ -380,14 +389,24 @@ restore it or re-run {cmd:pte} before calling {cmd:predict, att}.
 
 {synoptset 22 tabbed}{...}
 {synopt:{cmd:e(rho_0)}}untreated evolution coefficients{p_end}
-{synopt:{cmd:e(rho_by)}}grouped untreated evolution coefficients used by {cmd:predict, residuals} after grouped estimation, including grouped bootstrap public reposts when retained{p_end}
-{synopt:{cmd:e(attperiods)}}1 x K row vector of exact integer ATT/TT event times used by {cmd:predict, tt} and {cmd:predict, att}{p_end}
+{synopt:{cmd:e(rho_by)}}grouped untreated evolution coefficients used by
+{cmd:predict, residuals} after grouped estimation, including grouped bootstrap
+public reposts when retained{p_end}
+{synopt:{cmd:e(attperiods)}}1 x K row vector of exact integer ATT/TT event times
+used by {cmd:predict, tt} and {cmd:predict, att}{p_end}
 {synopt:{cmd:e(att)}}1 x (K+1) ATT vector; last column is pooled ATT{p_end}
-{synopt:{cmd:e(att_by)}}grouped point-estimate ATT matrix used by {cmd:predict, att} after {cmd:pte, by()/industry()}{p_end}
-{synopt:{cmd:e(att_by_point)}}grouped point-estimate ATT fallback used by {cmd:predict, att} after grouped bootstrap public results{p_end}
-{synopt:{cmd:e(b_by)}}grouped point-estimate coefficient matrix used by {cmd:predict, parameters} after {cmd:pte, by()/industry()}{p_end}
-{synopt:{cmd:e(beta_boot_g#)}}grouped bootstrap coefficient-draw matrix for group #, referenced when {cmd:predict, parameters} rejects grouped bootstrap results{p_end}
-{synopt:{cmd:e(beta_se_g#)}}grouped bootstrap coefficient-summary SE row vector for group #, referenced when {cmd:predict, parameters} rejects grouped bootstrap results{p_end}
+{synopt:{cmd:e(att_by)}}grouped point-estimate ATT matrix used by
+{cmd:predict, att} after {cmd:pte, by()/industry()}{p_end}
+{synopt:{cmd:e(att_by_point)}}grouped point-estimate ATT fallback used by
+{cmd:predict, att} after grouped bootstrap public results{p_end}
+{synopt:{cmd:e(b_by)}}grouped point-estimate coefficient matrix used by
+{cmd:predict, parameters} after {cmd:pte, by()/industry()}{p_end}
+{synopt:{cmd:e(beta_boot_g#)}}grouped bootstrap coefficient-draw matrix for
+group #, referenced when {cmd:predict, parameters} rejects grouped bootstrap
+results{p_end}
+{synopt:{cmd:e(beta_se_g#)}}grouped bootstrap coefficient-summary SE row vector
+for group #, referenced when {cmd:predict, parameters} rejects grouped bootstrap
+results{p_end}
 {p2colreset}{...}
 
 {pstd}
@@ -396,14 +415,29 @@ restore it or re-run {cmd:pte} before calling {cmd:predict, att}.
 {synoptset 22 tabbed}{...}
 {synopt:{cmd:e(cmd)}}{cmd:pte}{p_end}
 {synopt:{cmd:e(PFtype)}}production-function type{p_end}
-{synopt:{cmd:e(idvar)}}exact stored panel id used by residual fallback when available{p_end}
-{synopt:{cmd:e(timevar)}}exact stored time variable used by residual fallback when available{p_end}
-{synopt:{cmd:e(id)}}legacy stored panel id used as fallback by {cmd:predict, residuals}{p_end}
-{synopt:{cmd:e(time)}}legacy stored time variable used as fallback by {cmd:predict, residuals}{p_end}
-{synopt:{cmd:e(treatsig)}}live treatment-law signature used to certify setup-backed {cmd:predict} calls; when present, it can certify the setup-backed law even if {cmd:e(treatment)} is omitted, but pure-live {cmd:predict} now requires the full {cmd:e(idvar)/e(timevar)/e(treatment)/e(treatsig)} bundle before TT/ATT are mapped{p_end}
-{synopt:{cmd:e(treatment)}}live treatment variable name checked against the stored setup contract when present; omitted or dot-sentinel payloads are treated as missing on the law-first certification path{p_end}
-{synopt:{cmd:e(by)}}grouping variable used by grouped {cmd:predict, residuals} and {cmd:predict, att}; grouped {cmd:predict, parameters} reports when grouped labels remain stored in {cmd:e(groups)}{p_end}
-{synopt:{cmd:e(groups)}}stored grouped-estimation labels used by grouped {cmd:predict, residuals} and {cmd:predict, att}; grouped {cmd:predict, parameters} keeps those labels in {cmd:e(groups)} instead of reprinting the raw token list{p_end}
+{synopt:{cmd:e(idvar)}}exact stored panel id used by residual fallback when
+available{p_end}
+{synopt:{cmd:e(timevar)}}exact stored time variable used by residual fallback
+when available{p_end}
+{synopt:{cmd:e(id)}}legacy stored panel id used as fallback by
+{cmd:predict, residuals}{p_end}
+{synopt:{cmd:e(time)}}legacy stored time variable used as fallback by
+{cmd:predict, residuals}{p_end}
+{synopt:{cmd:e(treatsig)}}live treatment-law signature used to certify
+setup-backed {cmd:predict} calls; when present, it can certify the setup-backed
+law even if {cmd:e(treatment)} is omitted, but pure-live {cmd:predict} now
+requires the full {cmd:e(idvar)/e(timevar)/e(treatment)/e(treatsig)} bundle
+before TT/ATT are mapped{p_end}
+{synopt:{cmd:e(treatment)}}live treatment variable name checked against the
+stored setup contract when present; omitted or dot-sentinel payloads are treated
+as missing on the law-first certification path{p_end}
+{synopt:{cmd:e(by)}}grouping variable used by grouped {cmd:predict, residuals}
+and {cmd:predict, att}; grouped {cmd:predict, parameters} reports when grouped
+labels remain stored in {cmd:e(groups)}{p_end}
+{synopt:{cmd:e(groups)}}stored grouped-estimation labels used by grouped
+{cmd:predict, residuals} and {cmd:predict, att}; grouped
+{cmd:predict, parameters} keeps those labels in {cmd:e(groups)} instead of
+reprinting the raw token list{p_end}
 {p2colreset}{...}
 
 {pstd}

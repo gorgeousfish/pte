@@ -34,8 +34,10 @@
 {synopt:{opt nboot(#)}}number of bootstrap replications{p_end}
 {synopt:{opt attperiods(#)}}maximum post-treatment periods{p_end}
 {synopt:{opt tmpdir(string)}}directory containing per-group TT data files{p_end}
-{synopt:{opt ttprefix(string)}}filename prefix before {it:g}{cmd:_b}{it:b}{cmd:.dta}; default {cmd:pte_tt_g}{p_end}
-{synopt:{opt runid(string)}}expected invocation token; if present, all TT files for a bootstrap draw must match it{p_end}
+{synopt:{opt ttprefix(string)}}filename prefix before
+{it:g}{cmd:_b}{it:b}{cmd:.dta}; default {cmd:pte_tt_g}{p_end}
+{synopt:{opt runid(string)}}expected invocation token; if present, all TT files
+for a bootstrap draw must match it{p_end}
 {synopt:{opt notrimeps}}disable trimmed-track aggregation{p_end}
 {synoptline}
 
@@ -125,8 +127,10 @@ same draw, that bootstrap draw is treated as incomplete.
 
 {synoptset 24 tabbed}{...}
 {p2col 5 24 28 2: Matrices}{p_end}
-{synopt:{cmd:r(att_pool)}}B x (1+T) pooled ATT bootstrap distribution (raw){p_end}
-{synopt:{cmd:r(att_pool_trim)}}B x (1+T) pooled ATT bootstrap distribution (trimmed; if trimming enabled){p_end}
+{synopt:{cmd:r(att_pool)}}B x (1+T) pooled ATT bootstrap distribution
+(raw){p_end}
+{synopt:{cmd:r(att_pool_trim)}}B x (1+T) pooled ATT bootstrap distribution
+(trimmed; if trimming enabled){p_end}
 
 {pstd}
 Column layout follows the official industry DO order:

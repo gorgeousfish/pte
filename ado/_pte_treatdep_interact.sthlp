@@ -11,7 +11,8 @@
 {title:Title}
 
 {p2colset 5 36 38 2}{...}
-{p2col:{cmd:_pte_treatdep_interact} {hline 2}}Treatment interaction term generation{p_end}
+{p2col:{cmd:_pte_treatdep_interact} {hline 2}}Treatment interaction term
+generation{p_end}
 {p2colreset}{...}
 
 
@@ -29,14 +30,20 @@
 {synopthdr}
 {synoptline}
 {syntab:Required}
-{synopt:{opt free(name)}}free (flexible) input variable, e.g., log labor; must match an existing variable exactly{p_end}
-{synopt:{opt state(name)}}state variable, e.g., log capital; must match an existing variable exactly{p_end}
-{synopt:{opt treatment(name)}}binary treatment indicator (0/1); must match an existing variable exactly{p_end}
+{synopt:{opt free(name)}}free (flexible) input variable, e.g., log labor; must
+match an existing variable exactly{p_end}
+{synopt:{opt state(name)}}state variable, e.g., log capital; must match an
+existing variable exactly{p_end}
+{synopt:{opt treatment(name)}}binary treatment indicator (0/1); must match an
+existing variable exactly{p_end}
 
 {syntab:Optional}
-{synopt:{opt pfunc(string)}}production function type; {bf:cd} (default) or {bf:translog}{p_end}
-{synopt:{opt suffix(string)}}suffix for generated variable names; default is {bf:tp}{p_end}
-{synopt:{opt noclean}}do not overwrite existing interaction variables; error if they exist{p_end}
+{synopt:{opt pfunc(string)}}production function type; {bf:cd} (default) or
+{bf:translog}{p_end}
+{synopt:{opt suffix(string)}}suffix for generated variable names; default is
+{bf:tp}{p_end}
+{synopt:{opt noclean}}do not overwrite existing interaction variables; error if
+they exist{p_end}
 {synoptline}
 
 
@@ -123,15 +130,19 @@ is raised.
 
 {synoptset 24 tabbed}{...}
 {p2col 5 24 28 2: Scalars}{p_end}
-{synopt:{cmd:r(n_interact)}}number of interaction terms generated (always 2){p_end}
+{synopt:{cmd:r(n_interact)}}number of interaction terms generated (always
+2){p_end}
 {synopt:{cmd:r(n_free)}}number of free variables (original + interaction){p_end}
-{synopt:{cmd:r(n_state)}}number of state variables (original + interaction){p_end}
+{synopt:{cmd:r(n_state)}}number of state variables (original +
+interaction){p_end}
 {synopt:{cmd:r(n_untreated)}}number of untreated observations (D=0){p_end}
 {synopt:{cmd:r(n_treated)}}number of treated observations (D=1){p_end}
 
 {p2col 5 24 28 2: Macros}{p_end}
-{synopt:{cmd:r(free_vars)}}list of free variables including interaction term{p_end}
-{synopt:{cmd:r(state_vars)}}list of state variables including interaction term{p_end}
+{synopt:{cmd:r(free_vars)}}list of free variables including interaction
+term{p_end}
+{synopt:{cmd:r(state_vars)}}list of state variables including interaction
+term{p_end}
 {synopt:{cmd:r(interact_vars)}}list of generated interaction variables{p_end}
 {synopt:{cmd:r(treatment_var)}}name of the treatment variable{p_end}
 {synopt:{cmd:r(pfunc)}}production function type used{p_end}

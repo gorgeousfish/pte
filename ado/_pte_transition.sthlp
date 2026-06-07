@@ -14,25 +14,32 @@
 
 {title:Syntax}
 
-{p 8 28 2}{cmd:_pte_transition}, {opt treat:ment(varname)} {opt id(varname)} {opt time(varname)}
+{p 8 28 2}{cmd:_pte_transition}, {opt treat:ment(varname)} {opt id(varname)}
+{opt time(varname)}
 [{it:options}]
 
 {synoptset 24 tabbed}{...}
 {synopthdr}
 {synoptline}
 {syntab:Required}
-{p2coldent:* {opt treat:ment(varname)}}binary treatment indicator variable (0/1){p_end}
+{p2coldent:* {opt treat:ment(varname)}}binary treatment indicator variable
+(0/1){p_end}
 {p2coldent:* {opt id(varname)}}panel identifier variable{p_end}
 {p2coldent:* {opt time(varname)}}time variable{p_end}
 
 {syntab:Optional}
-{synopt:{opt min:sample(#)}}minimum sample size for warnings; default is {cmd:30}{p_end}
-{synopt:{opt replace}}overwrite existing {cmd:_pte_mid}, {cmd:mid}, {cmd:G}, and {cmd:mid_lag} variables{p_end}
+{synopt:{opt min:sample(#)}}minimum sample size for warnings; default is
+{cmd:30}{p_end}
+{synopt:{opt replace}}overwrite existing {cmd:_pte_mid}, {cmd:mid}, {cmd:G}, and
+{cmd:mid_lag} variables{p_end}
 {synopt:{opt norep:ort}}suppress the statistical report output{p_end}
-{synopt:{opt touse(varname)}}exact numeric sample indicator; marks rows to store/report while transition status still compares actual panel neighbors {it:D_t} and {it:D_{t-1}} on the observed panel{p_end}
+{synopt:{opt touse(varname)}}exact numeric sample indicator; marks rows to
+store/report while transition status still compares actual panel neighbors
+{it:D_t} and {it:D_{t-1}} on the observed panel{p_end}
 {synoptline}
 {p 4 6 2}
-Data must be {helpb xtset} as panel data before using {cmd:_pte_transition}.{p_end}
+Data must be {helpb xtset} as panel data before using
+{cmd:_pte_transition}.{p_end}
 {p 4 6 2}
 {cmd:*} {opt treatment()}, {opt id()}, and {opt time()} are required.{p_end}
 
@@ -59,7 +66,8 @@ The command documents four related outputs.  The helper always generates
 {cmd:mid} as a compatibility alias when that name is available:
 
 {p 8 12 2}
-{cmd:_pte_mid} {hline 2} primary transition period indicator.  {cmd:_pte_mid} = 1
+{cmd:_pte_mid} {hline 2} primary transition period indicator.  {cmd:_pte_mid} =
+1
 if the treatment status changed from the previous period
 ({it:D_t != D_{t-1}}), and {cmd:_pte_mid} = 0 otherwise.  First-period
 observations are set to 0.  Observations outside {opt touse()} are left
@@ -158,15 +166,23 @@ name must match an existing variable exactly; abbreviation fallbacks such as
 
 {synoptset 22 tabbed}{...}
 {p2col 5 22 26 2: Scalars}{p_end}
-{synopt:{cmd:r(n_trans)}}number of transition period observations (excluded from GMM){p_end}
+{synopt:{cmd:r(n_trans)}}number of transition period observations (excluded from
+GMM){p_end}
 {synopt:{cmd:r(n_trans_up)}}number of 0{it:->}1 transitions ({it:G = +1}){p_end}
-{synopt:{cmd:r(n_trans_down)}}number of 1{it:->}0 transitions ({it:G = -1}){p_end}
-{synopt:{cmd:r(n_stable_0)}}number of stable untreated observations ({it:D = D_{-1} = 0}){p_end}
-{synopt:{cmd:r(n_stable_1)}}number of stable treated observations ({it:D = D_{-1} = 1}){p_end}
-{synopt:{cmd:r(n_total)}}total number of active observations within {opt touse()}; without {opt touse()}, this equals the full sample{p_end}
-{synopt:{cmd:r(pct_excluded)}}percent of observations that are transition periods{p_end}
-{synopt:{cmd:r(n_lag_undefined)}}number of non-first observations with undefined {it:D_{t-1}}{p_end}
-{synopt:{cmd:r(n_trans_lag)}}number of lagged transition period observations{p_end}
+{synopt:{cmd:r(n_trans_down)}}number of 1{it:->}0 transitions
+({it:G = -1}){p_end}
+{synopt:{cmd:r(n_stable_0)}}number of stable untreated observations
+({it:D = D_{-1} = 0}){p_end}
+{synopt:{cmd:r(n_stable_1)}}number of stable treated observations
+({it:D = D_{-1} = 1}){p_end}
+{synopt:{cmd:r(n_total)}}total number of active observations within
+{opt touse()}; without {opt touse()}, this equals the full sample{p_end}
+{synopt:{cmd:r(pct_excluded)}}percent of observations that are transition
+periods{p_end}
+{synopt:{cmd:r(n_lag_undefined)}}number of non-first observations with undefined
+{it:D_{t-1}}{p_end}
+{synopt:{cmd:r(n_trans_lag)}}number of lagged transition period
+observations{p_end}
 {p2colreset}{...}
 
 {pstd}
@@ -187,9 +203,12 @@ because the panel has a time gap).
 {title:Generated variables}
 
 {synoptset 14 tabbed}{...}
-{synopt:{cmd:_pte_mid}}byte; primary transition period indicator (1 = transition, 0 = stable, missing outside {opt touse()}){p_end}
-{synopt:{cmd:mid}}byte; compatibility alias for {cmd:_pte_mid} when the name is available{p_end}
-{synopt:{cmd:G}}byte; switch indicator (-1 = exit, 0 = stable, +1 = entry){p_end}
+{synopt:{cmd:_pte_mid}}byte; primary transition period indicator (1 =
+transition, 0 = stable, missing outside {opt touse()}){p_end}
+{synopt:{cmd:mid}}byte; compatibility alias for {cmd:_pte_mid} when the name is
+available{p_end}
+{synopt:{cmd:G}}byte; switch indicator (-1 = exit, 0 = stable, +1 =
+entry){p_end}
 {synopt:{cmd:mid_lag}}byte; lagged transition period indicator{p_end}
 {p2colreset}{...}
 
@@ -197,13 +216,17 @@ because the panel has a time gap).
 {title:Error codes}
 
 {synoptset 10 tabbed}{...}
-{synopt:{cmd:110}}variable {cmd:_pte_mid}, {cmd:G}, or {cmd:mid_lag} already exists; use {opt replace}{p_end}
-{synopt:{cmd:111}}specified treatment, id, time, or touse variable not found; or time/touse is nonnumeric{p_end}
+{synopt:{cmd:110}}variable {cmd:_pte_mid}, {cmd:G}, or {cmd:mid_lag} already
+exists; use {opt replace}{p_end}
+{synopt:{cmd:111}}specified treatment, id, time, or touse variable not found; or
+time/touse is nonnumeric{p_end}
 {synopt:{cmd:198}}invalid option value (e.g., negative {opt minsample()}){p_end}
 {synopt:{cmd:416}}treatment variable has more than 10% missing values{p_end}
 {synopt:{cmd:450}}treatment variable is not binary (0/1){p_end}
-{synopt:{cmd:459}}data not {helpb xtset} as panel, or current {cmd:xtset} does not match {opt id()} and {opt time()}{p_end}
-{synopt:{cmd:498}}Assumption 3.3 violated: insufficient stable observations{p_end}
+{synopt:{cmd:459}}data not {helpb xtset} as panel, or current {cmd:xtset} does
+not match {opt id()} and {opt time()}{p_end}
+{synopt:{cmd:498}}Assumption 3.3 violated: insufficient stable
+observations{p_end}
 {p2colreset}{...}
 
 
@@ -263,10 +286,12 @@ conditions (Equations 8-9 of the paper).
 Specifically, Theorem 3.1 requires:
 
 {p 8 12 2}
-Moment condition (8): {it:E[omega(beta) - h_0(omega_{t-1}(beta)) | Z, D_t = D_{t-1} = 0] = 0}
+Moment condition (8):
+{it:E[omega(beta) - h_0(omega_{t-1}(beta)) | Z, D_t = D_{t-1} = 0] = 0}
 
 {p 8 12 2}
-Moment condition (9): {it:E[omega(beta) - h_1(omega_{t-1}(beta)) | Z, D_t = D_{t-1} = 1] = 0}
+Moment condition (9):
+{it:E[omega(beta) - h_1(omega_{t-1}(beta)) | Z, D_t = D_{t-1} = 1] = 0}
 
 {pstd}
 Both conditions require {it:D_t = D_{t-1}}, i.e., the exclusion of transition

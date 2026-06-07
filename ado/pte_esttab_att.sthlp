@@ -15,7 +15,8 @@
 {title:Title}
 
 {p2colset 5 28 30 2}{...}
-{p2col:{cmd:pte_esttab_att} {hline 2}}Repost PTE ATT results in esttab-compatible form{p_end}
+{p2col:{cmd:pte_esttab_att} {hline 2}}Repost PTE ATT results in
+esttab-compatible form{p_end}
 {p2colreset}{...}
 
 
@@ -26,7 +27,8 @@
 {cmd:pte_esttab_att}
 
 {pstd}
-{cmd:pte_esttab_att} takes no arguments or options. Run {cmd:pte} first, then call
+{cmd:pte_esttab_att} takes no arguments or options. Run {cmd:pte} first, then
+call
 {cmd:pte_esttab_att} on the active estimation results.
 
 
@@ -132,11 +134,13 @@ calling {cmd:pte_esttab_att} or re-run {cmd:pte}.
 
 {synoptset 28 tabbed}{...}
 {p2col 5 28 32 2: Matrices}{p_end}
-{synopt:{cmd:e(b)}}1 x K coefficient vector with ATT-by-period coefficients and {cmd:ATT_avg}{p_end}
+{synopt:{cmd:e(b)}}1 x K coefficient vector with ATT-by-period coefficients and
+{cmd:ATT_avg}{p_end}
 {synopt:{cmd:e(V)}}K x K diagonal variance matrix aligned with {cmd:e(b)}{p_end}
 
 {p2col 5 28 32 2: Scalars}{p_end}
-{synopt:{cmd:e(N)}}observation count copied from the active {cmd:pte} result, when available{p_end}
+{synopt:{cmd:e(N)}}observation count copied from the active {cmd:pte} result,
+when available{p_end}
 
 {p2col 5 28 32 2: Macros}{p_end}
 {synopt:{cmd:e(cmd)}}{cmd:pte_att}{p_end}

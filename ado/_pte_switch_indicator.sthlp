@@ -12,7 +12,8 @@
 {title:Title}
 
 {p2colset 5 38 40 2}{...}
-{p2col:{cmd:_pte_switch_indicator} {hline 2}}Generate treatment switch indicators for non-absorbing treatment{p_end}
+{p2col:{cmd:_pte_switch_indicator} {hline 2}}Generate treatment switch
+indicators for non-absorbing treatment{p_end}
 {p2colreset}{...}
 
 
@@ -30,14 +31,20 @@
 {synoptset 25 tabbed}{...}
 {synopthdr}
 {synoptline}
-{p2coldent:* {opt treat:ment(varname)}}binary treatment variable on observed rows (0/1); missing values are allowed and yield locally undefined switch states; the supplied name must match an existing variable exactly{p_end}
-{p2coldent:* {opt id(varname)}}panel identifier variable; the supplied name must match an existing variable exactly{p_end}
-{p2coldent:* {opt time(varname)}}numeric time variable; the supplied name must match an existing variable exactly{p_end}
+{p2coldent:* {opt treat:ment(varname)}}binary treatment variable on observed
+rows (0/1); missing values are allowed and yield locally undefined switch
+states; the supplied name must match an existing variable exactly{p_end}
+{p2coldent:* {opt id(varname)}}panel identifier variable; the supplied name must
+match an existing variable exactly{p_end}
+{p2coldent:* {opt time(varname)}}numeric time variable; the supplied name must
+match an existing variable exactly{p_end}
 {synopt:{opt replace}}replace existing generated variables{p_end}
 {synopt:{opt noreport}}suppress the statistics report{p_end}
 {synoptline}
 {p 4 6 2}* Required options.{p_end}
-{p 4 6 2}Data must be {cmd:xtset} before calling this command, and the current {cmd:xtset} declaration must match the exact names supplied in {opt id()} and {opt time()}.{p_end}
+{p 4 6 2}Data must be {cmd:xtset} before calling this command, and the current
+{cmd:xtset} declaration must match the exact names supplied in {opt id()} and
+{opt time()}.{p_end}
 
 
 {marker description}{...}
@@ -103,11 +110,20 @@ must match an existing variable exactly.
 {title:Generated variables}
 
 {synoptset 20 tabbed}{...}
-{synopt:{cmd:G}}switch indicator: +1 = entry, -1 = exit, 0 = stay; remains missing when the current row or true adjacent lag D_{t-1} is undefined{p_end}
-{synopt:{cmd:_last_entry_yr}}most recent treatment entry year; remains missing until an observed entry occurs and resets to missing when a later row breaks the observed treated path{p_end}
-{synopt:{cmd:_last_exit_yr}}most recent treatment exit year; remains missing until an observed exit occurs and resets to missing when a later row breaks the observed untreated path{p_end}
-{synopt:{cmd:nt_plus}}relative time since last entry (for ATT+); defined only when D=1 and an observed uninterrupted treated history exists since that entry{p_end}
-{synopt:{cmd:nt_minus}}relative time since last exit (for ATT-); defined only when D=0 and an observed uninterrupted untreated history exists since that exit{p_end}
+{synopt:{cmd:G}}switch indicator: +1 = entry, -1 = exit, 0 = stay; remains
+missing when the current row or true adjacent lag D_{t-1} is undefined{p_end}
+{synopt:{cmd:_last_entry_yr}}most recent treatment entry year; remains missing
+until an observed entry occurs and resets to missing when a later row breaks the
+observed treated path{p_end}
+{synopt:{cmd:_last_exit_yr}}most recent treatment exit year; remains missing
+until an observed exit occurs and resets to missing when a later row breaks the
+observed untreated path{p_end}
+{synopt:{cmd:nt_plus}}relative time since last entry (for ATT+); defined only
+when D=1 and an observed uninterrupted treated history exists since that
+entry{p_end}
+{synopt:{cmd:nt_minus}}relative time since last exit (for ATT-); defined only
+when D=0 and an observed uninterrupted untreated history exists since that
+exit{p_end}
 {synopt:{cmd:n_switch}}cumulative number of treatment switches{p_end}
 
 

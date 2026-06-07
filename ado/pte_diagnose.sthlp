@@ -8,7 +8,8 @@
 {title:Title}
 
 {phang}
-{bf:pte_diagnose} {hline 2} Diagnostic tests for productivity treatment effects assumptions
+{bf:pte_diagnose} {hline 2} Diagnostic tests for productivity treatment effects
+assumptions
 
 
 {marker syntax}{...}
@@ -31,8 +32,10 @@
 {syntab:Parameters}
 {synopt:{opt omega(varname)}}override omega variable name{p_end}
 {synopt:{opt eps0(varname)}}override eps0 variable name{p_end}
-{synopt:{opt pre:periods(#)}}number of pre-treatment periods; default is {cmd:4}{p_end}
-{synopt:{opt bins(#)}}number of bins for conditional test; default is {cmd:3}{p_end}
+{synopt:{opt pre:periods(#)}}number of pre-treatment periods; default is
+{cmd:4}{p_end}
+{synopt:{opt bins(#)}}number of bins for conditional test; default is
+{cmd:3}{p_end}
 {synopt:{opt baseyear(#)}}base year for parallel trends{p_end}
 {synopt:{opt minobs(#)}}minimum observations per bin; default is {cmd:30}{p_end}
 {synopt:{opt alpha(#)}}significance level; default is {cmd:0.05}{p_end}
@@ -53,7 +56,8 @@ untreated-shock objects left in memory after {cmd:pte} estimation.  It tests
 the key assumptions underlying the CLK framework:
 
 {phang2}(1) Parallel trends in pre-treatment productivity evolution{p_end}
-{phang2}(2) Independence of eps0 shocks from treatment assignment (KS test){p_end}
+{phang2}(2) Independence of eps0 shocks from treatment assignment (KS
+test){p_end}
 {phang2}(3) Conditional independence given observables{p_end}
 {phang2}(4) CDF overlap between treated and control eps0 distributions{p_end}
 {phang2}(5) Assumption 3.3 transition-period identification{p_end}
@@ -76,7 +80,8 @@ treatment and control groups.
 between treated and control firms.
 
 {phang}
-{opt conditional} tests for conditional independence of shocks given observables.
+{opt conditional} tests for conditional independence of shocks given
+observables.
 
 {phang}
 {opt cdf} plots the empirical CDF of eps0 for treated vs control groups.
@@ -88,7 +93,8 @@ between treated and control firms.
 parallel trends test.  Default is 4.
 
 {phang}
-{opt saving(filename)} saves the CDF comparison graph.  Only valid with {opt cdf}
+{opt saving(filename)} saves the CDF comparison graph.  Only valid with
+{opt cdf}
 or {opt all}.
 
 
@@ -105,7 +111,8 @@ or {opt all}.
 {synopt:{cmd:r(n_pass)}}number of tests passed{p_end}
 {synopt:{cmd:r(n_fail)}}number of tests failed{p_end}
 {synopt:{cmd:r(n_skip)}}number of tests skipped{p_end}
-{synopt:{cmd:r(overall_pass)}}1 if all passed, 0 if any failed, {cmd:.} if inconclusive{p_end}
+{synopt:{cmd:r(overall_pass)}}1 if all passed, 0 if any failed, {cmd:.} if
+inconclusive{p_end}
 
 {pstd}{ul:Parallel trends}
 

@@ -38,9 +38,14 @@
 {p2coldent:* {opt nt(varname)}}time variable (relative to treatment year){p_end}
 
 {syntab:Optional}
-{synopt:{opt nsim(#)}}number of simulation paths; default determined by {opt omegapoly()}{p_end}
-{synopt:{opt omegapoly(#)}}omega evolution polynomial order; default from {cmd:e(omegapoly)} or 3{p_end}
-{synopt:{opt treatment(varname)}}treatment indicator used to identify ever-treated ATT firms; if omitted, the helper auto-detects {cmd:_pte_treat_group}, {cmd:treat_post}, {cmd:treat}, or {cmd:D} before assuming the current data are already treated-only{p_end}
+{synopt:{opt nsim(#)}}number of simulation paths; default determined by
+{opt omegapoly()}{p_end}
+{synopt:{opt omegapoly(#)}}omega evolution polynomial order; default from
+{cmd:e(omegapoly)} or 3{p_end}
+{synopt:{opt treatment(varname)}}treatment indicator used to identify
+ever-treated ATT firms; if omitted, the helper auto-detects
+{cmd:_pte_treat_group}, {cmd:treat_post}, {cmd:treat}, or {cmd:D} before
+assuming the current data are already treated-only{p_end}
 {synoptline}
 {p 4 6 2}
 {cmd:*} {opt firm()} and {opt nt()} are required.{p_end}
@@ -114,7 +119,8 @@ cell and for constructing {cmd:firm_sim_id}.
 {phang}
 {opt nt(varname)} specifies the time variable, measured relative to the
  treatment year in panel periods (i.e., typically
- {cmd:(time - treat_year) / delta()} under the active {cmd:xtset}). After expansion, the panel is
+ {cmd:(time - treat_year) / delta()} under the active {cmd:xtset}). After
+expansion, the panel is
 re-{cmd:tsset} with {cmd:firm_sim_id} as the panel variable and {it:nt}
 as the time variable.
 
@@ -133,7 +139,8 @@ set by prior estimation.  If {cmd:e(omegapoly)} is not available, the
 default is 3.  This option controls the smart {opt nsim} default.
 
 {phang}
-{opt treatment(varname)} specifies the numeric binary treatment indicator used to
+{opt treatment(varname)} specifies the numeric binary treatment indicator used
+to
 identify the ever-treated ATT firms whose event-time paths should be
 replicated. The helper collapses this indicator to the firm level via the
 firm-wise maximum, so treated firms keep {it:nsim} copies even for their
@@ -175,16 +182,20 @@ macros (via {cmd:c_local}):
 {p2col 5 24 28 2: Scalars}{p_end}
 {synopt:{cmd:_pte_nsim}}number of simulation paths used{p_end}
 {synopt:{cmd:_pte_N_original}}number of observations before expansion{p_end}
-{synopt:{cmd:_pte_N_treated_original}}number of treated ATT observations before expansion{p_end}
-{synopt:{cmd:_pte_N_control_original}}number of untreated/control observations kept single-copy{p_end}
+{synopt:{cmd:_pte_N_treated_original}}number of treated ATT observations before
+expansion{p_end}
+{synopt:{cmd:_pte_N_control_original}}number of untreated/control observations
+kept single-copy{p_end}
 {synopt:{cmd:_pte_N_expanded}}number of observations after expansion{p_end}
 {synopt:{cmd:_pte_omegapoly}}omega evolution polynomial order used{p_end}
 
 {p2col 5 24 28 2: Caller locals (c_local)}{p_end}
 {synopt:{cmd:nsim}}number of simulation paths used{p_end}
 {synopt:{cmd:N_original}}number of observations before expansion{p_end}
-{synopt:{cmd:N_treated_original}}number of treated ATT observations before expansion{p_end}
-{synopt:{cmd:N_control_original}}number of untreated/control observations kept single-copy{p_end}
+{synopt:{cmd:N_treated_original}}number of treated ATT observations before
+expansion{p_end}
+{synopt:{cmd:N_control_original}}number of untreated/control observations kept
+single-copy{p_end}
 {synopt:{cmd:N_expanded}}number of observations after expansion{p_end}
 {synopt:{cmd:omegapoly}}omega evolution polynomial order used{p_end}
 {p2colreset}{...}
@@ -208,7 +219,8 @@ mismatch, copy_id range error, or (firm_sim_id, nt) not unique{p_end}
 {marker examples}{...}
 {title:Examples}
 
-{pstd}Typical ATT workflow setup (lets the helper inherit {cmd:e(omegapoly)}){p_end}
+{pstd}Typical ATT workflow setup (lets the helper inherit
+{cmd:e(omegapoly)}){p_end}
 
 {phang2}{cmd:. use "data/mydata.dta", clear}{p_end}
 {phang2}{cmd:. xtset firm year}{p_end}
@@ -218,7 +230,8 @@ mismatch, copy_id range error, or (firm_sim_id, nt) not unique{p_end}
 {pstd}Basic usage with smart nsim default (omegapoly from e()){p_end}
 {phang2}{cmd:. _pte_path_expand, firm(firm) nt(nt) treatment(treat_post)}{p_end}
 
-{pstd}Standalone usage with explicit {cmd:omegapoly()} (no live EPIC-002 state required){p_end}
+{pstd}Standalone usage with explicit {cmd:omegapoly()} (no live EPIC-002 state
+required){p_end}
 {phang2}{cmd:. _pte_path_expand, firm(firm) nt(nt) treatment(treat_post) omegapoly(2) nsim(100)}{p_end}
 
 {pstd}Specify nsim explicitly{p_end}
@@ -266,5 +279,6 @@ Identification Properties of Recent Production Function Estimators.
 {title:Also see}
 
 {psee}
-Online: {helpb _pte_att}, {helpb _pte_omega_recovery}, {helpb _pte_validate_nt_neg1}
+Online: {helpb _pte_att}, {helpb _pte_omega_recovery},
+{helpb _pte_validate_nt_neg1}
 {p_end}

@@ -20,7 +20,8 @@
 {title:Title}
 
 {p2colset 5 34 36 2}{...}
-{p2col:{hi:Monte Carlo simulation internals} {hline 2}}Internal simulation components used by the PTE package{p_end}
+{p2col:{hi:Monte Carlo simulation internals} {hline 2}}Internal simulation
+components used by the PTE package{p_end}
 {p2colreset}{...}
 
 

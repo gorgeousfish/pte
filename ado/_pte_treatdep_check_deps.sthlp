@@ -13,7 +13,8 @@
 {title:Title}
 
 {p2colset 5 42 44 2}{...}
-{p2col:{cmd:_pte_treatdep_check_deps} {hline 2}}Dependency check for treatment-dependent production function estimation{p_end}
+{p2col:{cmd:_pte_treatdep_check_deps} {hline 2}}Dependency check for
+treatment-dependent production function estimation{p_end}
 {p2colreset}{...}
 
 
@@ -63,7 +64,8 @@ materialized. After the upstream source is prepared and the package-owned
 patch is applied, the live runtime must expose
 {cmd:facf1()}, {cmd:facf2()}, {cmd:facf3()}, and {cmd:opt_mata()}.{p_end}
 {p 8 12 2}
-{it:Check 5}: Stata version is 14.0 or higher. This is a hard requirement.{p_end}
+{it:Check 5}: Stata version is 14.0 or higher. This is a hard
+requirement.{p_end}
 
 {pstd}
 If {cmd:_pte_error} (US-E4-015) is available, errors are reported through
@@ -93,21 +95,33 @@ report shows this as an informational advisory rather than a failure.
 
 {synoptset 35 tabbed}{...}
 {p2col 5 35 39 2: Scalars}{p_end}
-{synopt:{cmd:r(prodest_found)}}1 if {cmd:prodest} is installed, 0 otherwise{p_end}
-{synopt:{cmd:r(endopolyprodest_found)}}1 if {cmd:endopolyprodest} is available, 0 otherwise{p_end}
-{synopt:{cmd:r(treatdep_prepare_rc)}}return code from {cmd:_pte_treatdep_prepare_runtime}{p_end}
-{synopt:{cmd:r(treatdep_patch_ready)}}1 if {cmd:_pte_mata_endopoly_patch.do} loaded successfully, 0 otherwise{p_end}
-{synopt:{cmd:r(treatdep_patch_rc)}}return code from loading {cmd:_pte_mata_endopoly_patch.do}{p_end}
-{synopt:{cmd:r(treatdep_source_loaded)}}1 if the upstream source was loaded during runtime preparation, 0 otherwise{p_end}
-{synopt:{cmd:r(treatdep_source_rc)}}return code from loading the upstream source{p_end}
-{synopt:{cmd:r(treatdep_contract_ready)}}1 if the live companion Mata contract is ready, 0 otherwise{p_end}
+{synopt:{cmd:r(prodest_found)}}1 if {cmd:prodest} is installed, 0
+otherwise{p_end}
+{synopt:{cmd:r(endopolyprodest_found)}}1 if {cmd:endopolyprodest} is available,
+0 otherwise{p_end}
+{synopt:{cmd:r(treatdep_prepare_rc)}}return code from
+{cmd:_pte_treatdep_prepare_runtime}{p_end}
+{synopt:{cmd:r(treatdep_patch_ready)}}1 if {cmd:_pte_mata_endopoly_patch.do}
+loaded successfully, 0 otherwise{p_end}
+{synopt:{cmd:r(treatdep_patch_rc)}}return code from loading
+{cmd:_pte_mata_endopoly_patch.do}{p_end}
+{synopt:{cmd:r(treatdep_source_loaded)}}1 if the upstream source was loaded
+during runtime preparation, 0 otherwise{p_end}
+{synopt:{cmd:r(treatdep_source_rc)}}return code from loading the upstream
+source{p_end}
+{synopt:{cmd:r(treatdep_contract_ready)}}1 if the live companion Mata contract
+is ready, 0 otherwise{p_end}
 {synopt:{cmd:r(stata_version)}}current Stata version number (e.g., 17.0){p_end}
 {synopt:{cmd:r(stata_version_ok)}}1 if Stata version >= 14.0, 0 otherwise{p_end}
-{synopt:{cmd:r(all_checks_passed)}}1 if the hard requirements ({cmd:endopolyprodest}, the treatdependent patch, the live companion contract, and Stata version) are satisfied, 0 otherwise{p_end}
+{synopt:{cmd:r(all_checks_passed)}}1 if the hard requirements
+({cmd:endopolyprodest}, the treatdependent patch, the live companion contract,
+and Stata version) are satisfied, 0 otherwise{p_end}
 
 {p2col 5 35 39 2: Macros}{p_end}
-{synopt:{cmd:r(treatdep_patch_file)}}resolved path to {cmd:_pte_mata_endopoly_patch.do}{p_end}
-{synopt:{cmd:r(treatdep_source_file)}}resolved path to the upstream {cmd:endopolyprodest} source{p_end}
+{synopt:{cmd:r(treatdep_patch_file)}}resolved path to
+{cmd:_pte_mata_endopoly_patch.do}{p_end}
+{synopt:{cmd:r(treatdep_source_file)}}resolved path to the upstream
+{cmd:endopolyprodest} source{p_end}
 
 {pstd}
 When the command exits due to a failed check, partial return values are

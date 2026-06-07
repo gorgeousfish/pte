@@ -12,7 +12,8 @@
 {title:Title}
 
 {p2colset 5 24 26 2}{...}
-{p2col:{cmd:_pte_winsorize} {hline 2}}Winsorize eps0 distribution and estimate sigma for the canonical Gaussian ATT track{p_end}
+{p2col:{cmd:_pte_winsorize} {hline 2}}Winsorize eps0 distribution and estimate
+sigma for the canonical Gaussian ATT track{p_end}
 {p2colreset}{...}
 
 
@@ -29,8 +30,12 @@
 {syntab:Main}
 {synopt:{opt notrimeps}}disable Winsorize trimming (not recommended){p_end}
 {synopt:{opt nodiag:nose}}suppress diagnostic output{p_end}
-{synopt:{opt kstest}}run the Assumption 4.3 treated-vs-control K-S diagnostic on the eps0 sample{p_end}
-{synopt:{opt treatment(name)}}treated-group indicator used by {opt kstest}; when supplied explicitly, the variable name must match an existing numeric column exactly and be coded 0/1 on the live K-S support; in panel data a time-varying indicator is collapsed to firm-level ever-treated status{p_end}
+{synopt:{opt kstest}}run the Assumption 4.3 treated-vs-control K-S diagnostic on
+the eps0 sample{p_end}
+{synopt:{opt treatment(name)}}treated-group indicator used by {opt kstest}; when
+supplied explicitly, the variable name must match an existing numeric column
+exactly and be coded 0/1 on the live K-S support; in panel data a time-varying
+indicator is collapsed to firm-level ever-treated status{p_end}
 {synoptline}
 
 
@@ -38,8 +43,10 @@
 {title:Description}
 
 {pstd}
-{cmd:_pte_winsorize} is an internal module of the {cmd:pte} package that implements
-Step 4 of EPIC-002: Winsorize treatment of the eps0 (innovation shock) distribution
+{cmd:_pte_winsorize} is an internal module of the {cmd:pte} package that
+implements
+Step 4 of EPIC-002: Winsorize treatment of the eps0 (innovation shock)
+distribution
 and the normal approximation used by the canonical Gaussian ATT track.
 
 {pstd}
@@ -47,7 +54,8 @@ This module:
 
 {phang2}1. Computes the original standard deviation of eps0{p_end}
 {phang2}2. Calculates 1% and 99% percentiles{p_end}
-{phang2}3. Trims observations outside [P1, P99] (unless {opt notrimeps} specified){p_end}
+{phang2}3. Trims observations outside [P1, P99] (unless {opt notrimeps}
+specified){p_end}
 {phang2}4. Computes trimmed standard deviation (sigma_eps_trim){p_end}
 {phang2}5. Stores results for use by EPIC-003 ATT estimation{p_end}
 
@@ -55,7 +63,8 @@ This module:
 The trimmed standard deviation {cmd:e(sigma_eps_trim)} is used by the canonical
 Gaussian ATT track to draw innovation shocks from N(0, sigma_eps_trim^2) when
 constructing counterfactual productivity paths. The raw ATT track remains the
-empirical eps0 pool unless a documented official translog Gaussian exception applies.
+empirical eps0 pool unless a documented official translog Gaussian exception
+applies.
 
 {pstd}
 If the live eps0 support contains exactly one finite observation, Stata's
@@ -127,8 +136,10 @@ state.
 {pstd}
 {bf:Prerequisites:} This module requires:
 
-{phang2}- Numeric variable {cmd:_pte_eps0} containing the innovation residuals{p_end}
-{phang2}- Numeric variable {cmd:_pte_eps0_ind} indicating the eps0 sample (=1 for valid observations){p_end}
+{phang2}- Numeric variable {cmd:_pte_eps0} containing the innovation
+residuals{p_end}
+{phang2}- Numeric variable {cmd:_pte_eps0_ind} indicating the eps0 sample (=1
+for valid observations){p_end}
 
 {pstd}
 These variables are created by {cmd:_pte_eps0_sample} (US-E2-003).
@@ -140,9 +151,12 @@ These variables are created by {cmd:_pte_eps0_sample} (US-E2-003).
 {dlgtab:Main}
 
 {phang}
-{opt notrimeps} disables Winsorize trimming. When specified, {cmd:e(sigma_eps_trim)}
-equals {cmd:e(sigma_eps)} (the raw standard deviation). This option is {bf:not recommended}
-per Chen, Liao & Schurter (2026) Section 6.3.3, as the TT estimate may be sensitive
+{opt notrimeps} disables Winsorize trimming. When specified,
+{cmd:e(sigma_eps_trim)}
+equals {cmd:e(sigma_eps)} (the raw standard deviation). This option is
+{bf:not recommended}
+per Chen, Liao & Schurter (2026) Section 6.3.3, as the TT estimate may be
+sensitive
 to outliers in the eps0 distribution.
 
 {phang}
@@ -203,53 +217,89 @@ K-S calculation and sets {cmd:e(ks_result)} to {cmd:"No treatment var"}.
 
 {synoptset 20 tabbed}{...}
 {p2col 5 20 24 2: Scalars}{p_end}
-{synopt:{cmd:e(N)}}observations in the live support marked by {cmd:e(sample)}; trimmed support by default, raw eps0 support under {opt notrimeps}{p_end}
+{synopt:{cmd:e(N)}}observations in the live support marked by {cmd:e(sample)};
+trimmed support by default, raw eps0 support under {opt notrimeps}{p_end}
 {synopt:{cmd:e(sigma_eps)}}raw standard deviation of eps0{p_end}
-{synopt:{cmd:e(sigma_eps_trim)}}trimmed standard deviation used by the canonical Gaussian ATT track; singleton supports are reported as 0 rather than rejected{p_end}
+{synopt:{cmd:e(sigma_eps_trim)}}trimmed standard deviation used by the canonical
+Gaussian ATT track; singleton supports are reported as 0 rather than
+rejected{p_end}
 {synopt:{cmd:e(N_eps0)}}number of observations in eps0 sample{p_end}
 {synopt:{cmd:e(N_eps0_trim)}}number of observations after trimming{p_end}
 {synopt:{cmd:e(eps0_p1)}}1st percentile cutoff{p_end}
 {synopt:{cmd:e(eps0_p99)}}99th percentile cutoff{p_end}
-{synopt:{cmd:e(eps0_skewness)}}skewness of the live eps0 support; trimmed support by default, raw eps0 support under {opt notrimeps}{p_end}
-{synopt:{cmd:e(eps0_kurtosis)}}kurtosis of the live eps0 support; trimmed support by default, raw eps0 support under {opt notrimeps}{p_end}
+{synopt:{cmd:e(eps0_skewness)}}skewness of the live eps0 support; trimmed
+support by default, raw eps0 support under {opt notrimeps}{p_end}
+{synopt:{cmd:e(eps0_kurtosis)}}kurtosis of the live eps0 support; trimmed
+support by default, raw eps0 support under {opt notrimeps}{p_end}
 {synopt:{cmd:e(trimeps)}}1 if Winsorize enabled, 0 if disabled{p_end}
-{synopt:{cmd:e(ks_D)}}K-S statistic for the treated-vs-control eps0 comparison (only with {opt kstest}){p_end}
-{synopt:{cmd:e(ks_p)}}finite-sample corrected K-S p-value (only with {opt kstest}){p_end}
-{synopt:{cmd:e(ks_p_exact)}}exact K-S p-value returned by {cmd:ksmirnov} (only with {opt kstest}){p_end}
-{synopt:{cmd:e(ks_n_treat)}}treated-group observations used by the K-S diagnostic (only with {opt kstest}){p_end}
-{synopt:{cmd:e(ks_n_ctrl)}}control-group observations used by the K-S diagnostic (only with {opt kstest}){p_end}
+{synopt:{cmd:e(ks_D)}}K-S statistic for the treated-vs-control eps0 comparison
+(only with {opt kstest}){p_end}
+{synopt:{cmd:e(ks_p)}}finite-sample corrected K-S p-value (only with
+{opt kstest}){p_end}
+{synopt:{cmd:e(ks_p_exact)}}exact K-S p-value returned by {cmd:ksmirnov} (only
+with {opt kstest}){p_end}
+{synopt:{cmd:e(ks_n_treat)}}treated-group observations used by the K-S
+diagnostic (only with {opt kstest}){p_end}
+{synopt:{cmd:e(ks_n_ctrl)}}control-group observations used by the K-S diagnostic
+(only with {opt kstest}){p_end}
 
 {synoptset 20 tabbed}{...}
 {p2col 5 20 24 2: Macros}{p_end}
 {synopt:{cmd:e(eps0_dist)}}"normal" (distribution assumption){p_end}
-{synopt:{cmd:e(trim_method)}}"manual" by default, or "none" with {opt notrimeps}{p_end}
-{synopt:{cmd:e(ks_result)}}K-S diagnostic conclusion/skip status: {cmd:"Cannot reject H0"}, {cmd:"Reject H0"}, {cmd:"Insufficient obs"}, or {cmd:"No treatment var"} (only with {opt kstest}){p_end}
+{synopt:{cmd:e(trim_method)}}"manual" by default, or "none" with
+{opt notrimeps}{p_end}
+{synopt:{cmd:e(ks_result)}}K-S diagnostic conclusion/skip status:
+{cmd:"Cannot reject H0"}, {cmd:"Reject H0"}, {cmd:"Insufficient obs"}, or
+{cmd:"No treatment var"} (only with {opt kstest}){p_end}
 {synopt:{cmd:e(cmd)}}"_pte_winsorize"{p_end}
 {synopt:{cmd:e(title)}}"PTE eps0 distribution estimation"{p_end}
 
 {synoptset 20 tabbed}{...}
 {p2col 5 20 24 2: Conditionally Preserved Bridge Results}{p_end}
-{synopt:{cmd:e(omegapoly)}}evolution-polynomial order forwarded from the upstream evolution state (only when available on entry){p_end}
-{synopt:{cmd:e(rho_0)}}untreated evolution coefficients forwarded for the downstream ATT bridge (only when available on entry){p_end}
-{synopt:{cmd:e(rho_1)}}treated evolution coefficients forwarded for the downstream ATT bridge (only when available on entry){p_end}
-{synopt:{cmd:e(eps0window)}}untreated innovation-support window forwarded from the upstream EPIC-002 state; trimming does not alter this support definition (only when available on entry){p_end}
-{synopt:{cmd:e(N_evo)}}evolution-regression sample size forwarded from the upstream evolution state (only when available on entry){p_end}
-{synopt:{cmd:e(N_lag_untreated)}}untreated lag-support count forwarded from the upstream evolution state (only when available on entry){p_end}
-{synopt:{cmd:e(N_lag_treated)}}treated lag-support count forwarded from the upstream evolution state (only when available on entry){p_end}
-{synopt:{cmd:e(lag_treated_supported)}}treated-lag support flag forwarded from the upstream evolution state (only when available on entry){p_end}
-{synopt:{cmd:e(r2_evo)}}evolution R-squared forwarded under the standardized EPIC-002 key (only when available on entry){p_end}
-{synopt:{cmd:e(rmse_evo)}}evolution RMSE forwarded under the standardized EPIC-002 key (only when available on entry){p_end}
-{synopt:{cmd:e(r2)}}compatibility alias for the forwarded evolution R-squared (only when available on entry){p_end}
-{synopt:{cmd:e(rmse)}}compatibility alias for the forwarded evolution RMSE (only when available on entry){p_end}
-{synopt:{cmd:e(treatment)}}treatment variable name forwarded from the upstream evolution state (only when available on entry){p_end}
-{synopt:{cmd:e(treatsig)}}current treatment-law signature forwarded/rebuilt from the upstream EPIC-002 state for downstream ATT / graph certification (only when available on entry){p_end}
-{synopt:{cmd:e(pfunc)}}legacy production-function alias forwarded from the upstream evolution state (only when available on entry){p_end}
-{synopt:{cmd:e(prodfunc)}}normalized production-function metadata forwarded from the upstream evolution state (only when available on entry){p_end}
-{synopt:{cmd:e(idvar)}}panel identifier forwarded from the upstream EPIC-002 state (only when available on entry){p_end}
-{synopt:{cmd:e(timevar)}}time variable forwarded from the upstream EPIC-002 state (only when available on entry){p_end}
-{synopt:{cmd:e(id)}}legacy alias of {cmd:e(idvar)} forwarded from the upstream EPIC-002 state (only when available on entry){p_end}
-{synopt:{cmd:e(time)}}legacy alias of {cmd:e(timevar)} forwarded from the upstream EPIC-002 state (only when available on entry){p_end}
-{synopt:{cmd:e(xtdelta)}}panel spacing forwarded from the upstream EPIC-002 state (only when available on entry){p_end}
+{synopt:{cmd:e(omegapoly)}}evolution-polynomial order forwarded from the
+upstream evolution state (only when available on entry){p_end}
+{synopt:{cmd:e(rho_0)}}untreated evolution coefficients forwarded for the
+downstream ATT bridge (only when available on entry){p_end}
+{synopt:{cmd:e(rho_1)}}treated evolution coefficients forwarded for the
+downstream ATT bridge (only when available on entry){p_end}
+{synopt:{cmd:e(eps0window)}}untreated innovation-support window forwarded from
+the upstream EPIC-002 state; trimming does not alter this support definition
+(only when available on entry){p_end}
+{synopt:{cmd:e(N_evo)}}evolution-regression sample size forwarded from the
+upstream evolution state (only when available on entry){p_end}
+{synopt:{cmd:e(N_lag_untreated)}}untreated lag-support count forwarded from the
+upstream evolution state (only when available on entry){p_end}
+{synopt:{cmd:e(N_lag_treated)}}treated lag-support count forwarded from the
+upstream evolution state (only when available on entry){p_end}
+{synopt:{cmd:e(lag_treated_supported)}}treated-lag support flag forwarded from
+the upstream evolution state (only when available on entry){p_end}
+{synopt:{cmd:e(r2_evo)}}evolution R-squared forwarded under the standardized
+EPIC-002 key (only when available on entry){p_end}
+{synopt:{cmd:e(rmse_evo)}}evolution RMSE forwarded under the standardized
+EPIC-002 key (only when available on entry){p_end}
+{synopt:{cmd:e(r2)}}compatibility alias for the forwarded evolution R-squared
+(only when available on entry){p_end}
+{synopt:{cmd:e(rmse)}}compatibility alias for the forwarded evolution RMSE (only
+when available on entry){p_end}
+{synopt:{cmd:e(treatment)}}treatment variable name forwarded from the upstream
+evolution state (only when available on entry){p_end}
+{synopt:{cmd:e(treatsig)}}current treatment-law signature forwarded/rebuilt from
+the upstream EPIC-002 state for downstream ATT / graph certification (only when
+available on entry){p_end}
+{synopt:{cmd:e(pfunc)}}legacy production-function alias forwarded from the
+upstream evolution state (only when available on entry){p_end}
+{synopt:{cmd:e(prodfunc)}}normalized production-function metadata forwarded from
+the upstream evolution state (only when available on entry){p_end}
+{synopt:{cmd:e(idvar)}}panel identifier forwarded from the upstream EPIC-002
+state (only when available on entry){p_end}
+{synopt:{cmd:e(timevar)}}time variable forwarded from the upstream EPIC-002
+state (only when available on entry){p_end}
+{synopt:{cmd:e(id)}}legacy alias of {cmd:e(idvar)} forwarded from the upstream
+EPIC-002 state (only when available on entry){p_end}
+{synopt:{cmd:e(time)}}legacy alias of {cmd:e(timevar)} forwarded from the
+upstream EPIC-002 state (only when available on entry){p_end}
+{synopt:{cmd:e(xtdelta)}}panel spacing forwarded from the upstream EPIC-002
+state (only when available on entry){p_end}
 
 
 {marker examples}{...}
@@ -267,7 +317,8 @@ K-S calculation and sets {cmd:e(ks_result)} to {cmd:"No treatment var"}.
 {pstd}Run a generic live-support K-S diagnostic:{p_end}
 {phang2}{cmd:. _pte_winsorize, kstest treatment(treat)}{p_end}
 
-{pstd}Mirror the paper-style Appendix E.3 K-S workflow inside one industry sample:{p_end}
+{pstd}Mirror the paper-style Appendix E.3 K-S workflow inside one industry
+sample:{p_end}
 {phang2}{cmd:. _pte_eps0_sample, treatment(D) eps0window(3)}{p_end}
 {phang2}{cmd:. _pte_winsorize, kstest treatment(treat)}{p_end}
 

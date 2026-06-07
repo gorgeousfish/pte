@@ -42,19 +42,28 @@
 {syntab:Required}
 {synopt:{opt t0(#)}}reference time (first treatment period){p_end}
 {synopt:{opt s(#)}}delay parameter (expansion time = t0 + s){p_end}
-{synopt:{opt targetvar(varname)}}0/1 variable identifying the target group G{p_end}
+{synopt:{opt targetvar(varname)}}0/1 variable identifying the target group
+G{p_end}
 {synopt:{opt omega(varname)}}productivity variable{p_end}
 
 {syntab:Optional}
-{synopt:{opt omegapoly(#)}}evolution polynomial order; default is {cmd:omegapoly(3)}{p_end}
+{synopt:{opt omegapoly(#)}}evolution polynomial order; default is
+{cmd:omegapoly(3)}{p_end}
 {synopt:{opt panelvar(varname)}}panel identifier; default is {cmd:firm}{p_end}
 {synopt:{opt timevar(varname)}}time variable; default is {cmd:year}{p_end}
-{synopt:{opt treatvar(varname)}}ever-treated indicator; defaults to the exact live {cmd:_pte_treat} bridge when available, else {cmd:treated}{p_end}
-{synopt:{opt midvar(varname)}}transition indicator; defaults to the exact live {cmd:_pte_mid} bridge when available, else {cmd:mid}{p_end}
-{synopt:{opt cohortvar(varname)}}firm-level first treatment period {it:e_i}; defaults to the exact live {cmd:_pte_treat_year} bridge or {cmd:treat_year} when available{p_end}
-{synopt:{opt statusvar(varname)}}time-varying treatment status used only to derive {opt cohortvar()} when no treatment-year variable exists; exact name required when supplied{p_end}
+{synopt:{opt treatvar(varname)}}ever-treated indicator; defaults to the exact
+live {cmd:_pte_treat} bridge when available, else {cmd:treated}{p_end}
+{synopt:{opt midvar(varname)}}transition indicator; defaults to the exact live
+{cmd:_pte_mid} bridge when available, else {cmd:mid}{p_end}
+{synopt:{opt cohortvar(varname)}}firm-level first treatment period {it:e_i};
+defaults to the exact live {cmd:_pte_treat_year} bridge or {cmd:treat_year} when
+available{p_end}
+{synopt:{opt statusvar(varname)}}time-varying treatment status used only to
+derive {opt cohortvar()} when no treatment-year variable exists; exact name
+required when supplied{p_end}
 {synopt:{opt alpha(#)}}significance level; default is {cmd:alpha(0.05)}{p_end}
-{synopt:{opt overlap_threshold(#)}}minimum overlap ratio; default is {cmd:overlap_threshold(0.8)}{p_end}
+{synopt:{opt overlap_threshold(#)}}minimum overlap ratio; default is
+{cmd:overlap_threshold(0.8)}{p_end}
 {synopt:{opt noreport}}suppress diagnostic output{p_end}
 {synoptline}
 
@@ -199,7 +208,8 @@ Based on test results, the command provides method recommendations:{p_end}
 {p 8 12 2}
 D.3 pass, D.4 pass, Overlap OK: Use Proposition D.4 (matching method){p_end}
 {p 8 12 2}
-D.3 pass, D.4 fail or low overlap: Use Proposition D.3 (divergent evolution){p_end}
+D.3 pass, D.4 fail or low overlap: Use Proposition D.3 (divergent
+evolution){p_end}
 {p 8 12 2}
 D.3 fail, D.4 pass: Warning - robustness checks recommended{p_end}
 {p 8 12 2}
@@ -216,17 +226,24 @@ Both fail: Warning - estimates may be unreliable{p_end}
 {p2col 5 32 36 2: Scalars}{p_end}
 {synopt:{cmd:r(assumption_d3_stat)}}D.3 LR test chi-squared statistic{p_end}
 {synopt:{cmd:r(assumption_d3_pval)}}D.3 LR test p-value{p_end}
-{synopt:{cmd:r(assumption_d3_df)}}D.3 LR test degrees of freedom (= omegapoly + 1){p_end}
+{synopt:{cmd:r(assumption_d3_df)}}D.3 LR test degrees of freedom (= omegapoly +
+1){p_end}
 {synopt:{cmd:r(assumption_d4_stat)}}D.4 Kolmogorov-Smirnov D statistic{p_end}
 {synopt:{cmd:r(assumption_d4_pval)}}D.4 Kolmogorov-Smirnov p-value{p_end}
-{synopt:{cmd:r(overlap_ratio)}}fraction of target group within treated support{p_end}
+{synopt:{cmd:r(overlap_ratio)}}fraction of target group within treated
+support{p_end}
 {synopt:{cmd:r(n_target)}}number of target group observations at t0+s-1{p_end}
-{synopt:{cmd:r(n_treated_pre)}}number of treated pre-treatment observations{p_end}
-{synopt:{cmd:r(omega_support_min)}}minimum omega in treated pre-treatment sample{p_end}
-{synopt:{cmd:r(omega_support_max)}}maximum omega in treated pre-treatment sample{p_end}
-{synopt:{cmd:r(d3_pass)}}D.3 pass indicator (1 if p >= alpha, missing if test failed){p_end}
+{synopt:{cmd:r(n_treated_pre)}}number of treated pre-treatment
+observations{p_end}
+{synopt:{cmd:r(omega_support_min)}}minimum omega in treated pre-treatment
+sample{p_end}
+{synopt:{cmd:r(omega_support_max)}}maximum omega in treated pre-treatment
+sample{p_end}
+{synopt:{cmd:r(d3_pass)}}D.3 pass indicator (1 if p >= alpha, missing if test
+failed){p_end}
 {synopt:{cmd:r(d4_pass)}}D.4 pass indicator (1 if p >= alpha){p_end}
-{synopt:{cmd:r(overlap_ok)}}overlap OK indicator (1 if ratio >= threshold){p_end}
+{synopt:{cmd:r(overlap_ok)}}overlap OK indicator (1 if ratio >=
+threshold){p_end}
 
 {pstd}
 Note: D.3 results may be missing ({cmd:.}) if the likelihood ratio test
