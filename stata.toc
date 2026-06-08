@@ -2,6 +2,7 @@ v 3
 d pte: Productivity Treatment Effects estimation in Stata
 d
 d Authors: Xuanyu Cai (xuanyuCAI@outlook.com)
+d          Wenli Xu (wlxu@cityu.edu.mo)
 d          City University of Macau
 d
 d Requires: Stata 14.0+
