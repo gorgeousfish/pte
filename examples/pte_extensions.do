@@ -228,12 +228,12 @@ display _dup(70) "-"
 display ""
 
 * Run pte with bootstrap for SE estimation
-display "Running pte with bootstrap (20 reps) for heterogeneity analysis..."
+display "Running pte with bootstrap (50 reps) for heterogeneity analysis..."
 display ""
 
 capture noisily pte lny, treatment(D) ///
     free(lnl) state(lnk) proxy(lnm) ///
-    omegapoly(3) bootstrap(20) seed(42) nolog
+    omegapoly(3) bootstrap(50) seed(42) nolog
 
 * Analyze heterogeneity by industry
 if _rc == 0 {

@@ -55,7 +55,7 @@ xtset firm year
 // so the full public workflow can be run as a smoke test.
 pte lny, free(lnl) state(lnk) proxy(lnm) treatment(D) ///
     attperiods(4) pfunc(cd) omegapoly(3) ///
-    bootstrap(5) level(95)
+    bootstrap(50) level(95)
 
 // =========================================================================
 // Step 3: Inspect estimation results

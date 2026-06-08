@@ -57,7 +57,7 @@ xtset firm year
 // Run pte with bootstrap for public graph access
 pte lny, free(lnl) state(lnk) proxy(lnm) treatment(D) ///
     attperiods(4) pfunc(cd) omegapoly(3) ///
-    bootstrap(5) level(95)
+    bootstrap(50) level(95)
 
 // =========================================================================
 // A. Standard Graph Types

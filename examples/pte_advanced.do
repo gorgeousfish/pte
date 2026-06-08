@@ -227,7 +227,7 @@ display _dup(70) "-"
 display "  Section 6: Saving Bootstrap Results"
 display _dup(70) "-"
 display ""
-display "Running bootstrap with 20 replications, saving draws to file..."
+display "Running bootstrap with 50 replications, saving draws to file..."
 display ""
 
 local bootstrap_results "`root'/output/bootstrap_results"
@@ -235,7 +235,7 @@ capture erase "`bootstrap_results'.dta"
 
 pte lny, treatment(D) ///
     free(lnl) state(lnk) proxy(lnm) ///
-    omegapoly(3) bootstrap(20) seed(42) ///
+    omegapoly(3) bootstrap(50) seed(42) ///
     saving("`bootstrap_results'") nolog
 
 display ""
