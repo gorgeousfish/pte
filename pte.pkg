@@ -36,7 +36,7 @@ f ado/pte_setup.sthlp
 f ado/pte_simulate.sthlp
 f ado/pte_version.sthlp
 f ado/lpte.mlib
-f data/pte_example.dta
+f ado/pte_example.dta
 f ado/_nonabs_graph_validate.ado
 f ado/_pte_assert_numeric.ado
 f ado/_pte_assert_setup_current_law.ado
