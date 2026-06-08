@@ -148,8 +148,7 @@ The simplest use case estimates a Cobb-Douglas production function with the CLK 
 
 ```stata
 * Load bundled example dataset (installed with the package)
-findfile pte_example.dta
-use "`r(fn)'", clear
+pte_example, clear
 xtset firm year
 
 * Estimate productivity treatment effects (Cobb-Douglas, point estimation)
@@ -157,6 +156,75 @@ pte lny, free(lnl) state(lnk) proxy(lnm) treatment(D) pfunc(cd)
 
 * Display ATT estimates by event-time horizon
 matrix list e(att)
+```
+
+**Expected output (compact mode, default):**
+
+```
+----------------------------------------------------------------------
+ Productivity Treatment Effects (PTE) - Cobb-Douglas
+----------------------------------------------------------------------
+  Step 1/4: Production function estimation... done (fval =  3.3e-07)
+  Step 2/4: Productivity recovery... done
+  Step 3/4: ATT estimation... done
+  Step 4/4: Complete
+----------------------------------------------------------------------
+
+----------------------------------------------------------------------
+Production Function Estimates               Number of obs   =     4,350
+  Method: ACF with CLK correction           GMM sample      =     4,350
+  Trim eps0: 1%-99%                         Firms           =       500
+----------------------------------------------------------------------
+    beta_l         =  0.597035
+    beta_k         =  0.409394
+    GMM obj        =  3.34e-07
+----------------------------------------------------------------------
+ATT Results (event time 0..4)               Sim. paths      =       100
+----------------------------------------------------------------------
+ Period |        ATT   Std.Dev.        N
+ -------+-----------------------------------
+      0 |     0.0004      0.0239       150
+      1 |    -0.0001      0.0190       150
+      2 |    -0.0002      0.0159       150
+      3 |     0.0018      0.0198       150
+      4 |     0.0069      0.0334       116
+ -------+-----------------------------------
+    avg |     0.0015
+----------------------------------------------------------------------
+```
+
+### Interpreting the Output
+
+**Production Function Estimates:**
+
+| Field | Meaning |
+|-------|----------|
+| `beta_l` | Labor output elasticity: a 1% increase in labor raises output by ~0.60% |
+| `beta_k` | Capital output elasticity: a 1% increase in capital raises output by ~0.41% |
+| `GMM obj` | GMM objective value at convergence (smaller = better fit; < 1e-5 is good) |
+| `Number of obs` | Observations in GMM sample (after excluding transition periods) |
+
+**ATT Results (Average Treatment Effect on the Treated):**
+
+| Column | Meaning |
+|--------|----------|
+| `Period` | Event time relative to treatment adoption (0 = year of treatment) |
+| `ATT` | Estimated causal effect of treatment on log productivity at that horizon |
+| `Std.Dev.` | Cross-simulation-path standard deviation (for inference, use `bootstrap()`) |
+| `N` | Number of treated firms observed at that event time |
+| `avg` | Simple average ATT across all event-time periods |
+
+**How to read the results:**
+- ATT > 0 → treatment *raised* productivity; ATT < 0 → treatment *lowered* productivity
+- Values are in log points; multiply by 100 for approximate percentage change
+- For statistical significance testing, add `bootstrap(200)` to obtain standard errors and confidence intervals
+
+**Output verbosity options:**
+
+```stata
+pte ..., pfunc(cd)              * Compact output (~30 lines, default)
+pte ..., pfunc(cd) verbose      * Full diagnostic output (~500 lines)
+pte ..., pfunc(cd) nolog        * Silent mode (no display, for scripting)
 ```
 
 The `e(att)` matrix reports ATT at each post-treatment period (nt0, nt1, ..., nt4) and the average across periods. Positive values indicate that treatment raised productivity.
@@ -184,8 +252,7 @@ pte_graph, evolution
 This example demonstrates the Translog specification with bootstrap inference. The Translog production function allows non-constant returns to scale and input complementarities.
 
 ```stata
-findfile pte_example.dta
-use "`r(fn)'", clear
+pte_example, clear
 xtset firm year
 
 * Translog with 200 bootstrap replications and time-trend control
