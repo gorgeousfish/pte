@@ -496,3 +496,5 @@ When reporting bugs, please include:
 For issues related to the underlying PTE methodology, please refer to the
 paper: Chen, Liao & Schurter (2026) "Identifying Treatment Effects on
 Productivity".
+
+{hline}

@@ -6,6 +6,10 @@
 {vieweralsosee "pte_diagnose" "help pte_diagnose"}{...}
 {vieweralsosee "pte_graph" "help pte_graph"}{...}
 {vieweralsosee "pte_p" "help pte_p"}{...}
+{vieweralsosee "pte_compare" "help pte_compare"}{...}
+{vieweralsosee "pte_heterogeneity" "help pte_heterogeneity"}{...}
+{vieweralsosee "pte_export" "help pte_export"}{...}
+{vieweralsosee "pte_postestimation" "help pte_postestimation"}{...}
 {viewerjumpto "Syntax" "pte##syntax"}{...}
 {viewerjumpto "Description" "pte##description"}{...}
 {viewerjumpto "Options" "pte##options"}{...}
@@ -898,3 +902,15 @@ Chen, Z., Liao, M., and Schurter, K. (2026).
 Identifying Treatment Effects on Productivity.
 {it:Working Paper}.
 {p_end}
+
+{marker alsosee}{...}
+{title:Also see}
+
+{pstd}
+{helpb pte_setup}, {helpb pte_diagnose}, {helpb pte_graph},
+{helpb pte_compare}, {helpb pte_heterogeneity}, {helpb pte_export},
+{helpb pte_esttab_att}, {helpb pte_postestimation}, {helpb pte_p},
+{helpb pte_check_deps}, {helpb pte_version}
+{p_end}
+
+{hline}

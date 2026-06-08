@@ -250,4 +250,6 @@ Identifying Treatment Effects on Productivity: Theory with an Application to
 Production Digitalization.
 {it:Working Paper}.
 {p_end}
+
+{hline}
 {smcl}

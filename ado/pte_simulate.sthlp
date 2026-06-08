@@ -138,3 +138,5 @@ Chen, X., Liao, Z. & Schurter, K. (2026).
 Productivity Treatment Effects.
 {it:Working Paper}. See the simulation discussion in Section 6 and the
 official replication workflows in {cmd:DOs/}. {p_end}
+
+{hline}

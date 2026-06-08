@@ -89,3 +89,5 @@ from the GitHub repository.
 {synopt:{cmd:r(date)}}release date in ISO 8601 format (e.g.,
 {cmd:2026-01-01}){p_end}
 {synopt:{cmd:r(authors)}}author names (e.g., {cmd:Chen, Liao, Schurter}){p_end}
+
+{hline}

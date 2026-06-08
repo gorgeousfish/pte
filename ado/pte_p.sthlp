@@ -4,6 +4,7 @@
 {vieweralsosee "pte" "help pte"}{...}
 {vieweralsosee "pte_graph" "help pte_graph"}{...}
 {vieweralsosee "pte_diagnose" "help pte_diagnose"}{...}
+{vieweralsosee "pte_postestimation" "help pte_postestimation"}{...}
 {viewerjumpto "Syntax" "pte_p##syntax"}{...}
 {viewerjumpto "Description" "pte_p##description"}{...}
 {viewerjumpto "Options" "pte_p##options"}{...}
@@ -48,6 +49,11 @@ At most one statistic option can be specified per call. If omitted,
 
 {marker description}{...}
 {title:Description}
+
+{pstd}
+This is the prediction command called by {cmd:predict} after {cmd:pte}.
+For an overview of all postestimation features, see
+{helpb pte_postestimation}.{p_end}
 
 {pstd}
 {cmd:predict} after {cmd:pte} generates postestimation objects from
@@ -466,5 +472,7 @@ properties of recent production function estimators.
 Manual: {manlink R predict}
 
 {psee}
-{space 2}Help: {helpb pte}, {helpb pte_graph}, {helpb pte_diagnose},
-{helpb xtset}
+{space 2}Help: {helpb pte}, {helpb pte_postestimation}, {helpb pte_graph},
+{helpb pte_diagnose}, {helpb xtset}
+
+{hline}

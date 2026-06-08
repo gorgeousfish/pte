@@ -877,3 +877,5 @@ Chen, Z., Liao, M., and Schurter, K. (2026).
 Identifying Treatment Effects on Productivity.
 {it:Working Paper}.
 {p_end}
+
+{hline}

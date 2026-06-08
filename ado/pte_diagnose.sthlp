@@ -1,5 +1,8 @@
 {smcl}
 {* *! version 1.0.0}{...}
+{vieweralsosee "pte" "help pte"}{...}
+{vieweralsosee "pte_setup" "help pte_setup"}{...}
+{vieweralsosee "pte_graph" "help pte_graph"}{...}
 {viewerjumpto "Syntax" "pte_diagnose##syntax"}{...}
 {viewerjumpto "Description" "pte_diagnose##description"}{...}
 {viewerjumpto "Options" "pte_diagnose##options"}{...}
@@ -194,3 +197,40 @@ inconclusive{p_end}
 {phang}{cmd:. pte_diagnose, kstest}{p_end}
 {phang}{cmd:. pte_diagnose, parallel preperiods(3)}{p_end}
 {phang}{cmd:. pte_diagnose, cdf saving(eps0_cdf.gph)}{p_end}
+
+{marker remarks}{...}
+{title:Remarks}
+
+{pstd}
+The diagnostic suite tests the key identifying assumptions of the CLK
+framework (Chen, Liao & Schurter 2026):{p_end}
+
+{phang}
+(1) {bf:Parallel pre-trends (Assumption 3.1).} In the pre-treatment
+period, treated and control firms should follow the same productivity
+evolution law. Test with the {opt parallel} option.{p_end}
+
+{phang}
+(2) {bf:Independence of innovation shocks (Assumption 3.2).} Untreated
+productivity shocks (eps0) must be independent of treatment assignment.
+Test with the {opt kstest} option.{p_end}
+
+{phang}
+(3) {bf:Conditional independence (Assumption 3.3).} Conditional on
+lagged productivity, innovation shocks are independent of treatment
+status. Test with the {opt conditional} option.{p_end}
+
+{pstd}
+If any diagnostic fails, the ATT estimates may be biased. Consider
+whether the violation is economically meaningful before proceeding.{p_end}
+
+{marker references}{...}
+{title:References}
+
+{phang}
+Chen, Z., Liao, M., & Schurter, K. (2026). Identifying Treatment
+Effects on Productivity: Theory with an Application to Production
+Digitalization. {it:RAND Journal of Economics}. Section 3,
+Assumptions 3.1-3.3.{p_end}
+
+{hline}

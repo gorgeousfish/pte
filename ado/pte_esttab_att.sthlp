@@ -143,3 +143,5 @@ when available{p_end}
 {p2col 5 28 32 2: Macros}{p_end}
 {synopt:{cmd:e(cmd)}}{cmd:pte_att}{p_end}
 {synopt:{cmd:e(title)}}title for the reposted ATT table object{p_end}
+
+{hline}

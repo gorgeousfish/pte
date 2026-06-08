@@ -2,6 +2,7 @@
 {* *! version 1.0.0  01jan2026}{...}
 {vieweralsosee "[R] regress" "help regress"}{...}
 {vieweralsosee "pte" "help pte"}{...}
+{vieweralsosee "pte_diagnose" "help pte_diagnose"}{...}
 {vieweralsosee "pte_graph" "help pte_graph"}{...}
 {vieweralsosee "pte_heterogeneity" "help pte_heterogeneity"}{...}
 {vieweralsosee "reghdfe" "help reghdfe"}{...}
@@ -473,3 +474,5 @@ Productivity Treatment Effects.
 {psee}
 {space 2}Help:  {help pte:pte}, {help reghdfe:reghdfe}
 {p_end}
+
+{hline}

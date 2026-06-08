@@ -4,6 +4,7 @@
 {* *! Chen, Liao & Schurter (2026)}{...}
 
 {vieweralsosee "[PTE] pte" "help pte"}{...}
+{vieweralsosee "[PTE] pte_p" "help pte_p"}{...}
 {vieweralsosee "[R] predict" "help predict"}{...}
 {vieweralsosee "[PTE] pte_graph" "help pte_graph"}{...}
 {viewerjumpto "Syntax" "pte_postestimation##syntax"}{...}
@@ -580,3 +581,5 @@ Ackerberg, D. A., K. Caves, and G. Frazer. 2015.
 Identification properties of recent production function
 estimators. {it:Econometrica} 83(6): 2411-2451.
 {p_end}
+
+{hline}

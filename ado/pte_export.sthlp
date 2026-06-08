@@ -316,3 +316,5 @@ stored bootstrap count is positive.
 {synopt:{cmd:r(filename)}}output filename{p_end}
 {synopt:{cmd:r(format)}}output format (latex, xlsx, or csv){p_end}
 {synoptline}
+
+{hline}
