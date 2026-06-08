@@ -55,3 +55,4 @@ examples/pte_extended_moments.do
 examples/mc_coverage_example.do
 examples/_init_mata.do
 examples/bootstrap_results.dta
+docs/
