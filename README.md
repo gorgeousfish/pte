@@ -11,7 +11,11 @@
        width="100%">
 </p>
 
-## Overview
+---
+
+## 1. Introduction
+
+### Overview
 
 `pte` implements the **Productivity Treatment Effects** framework proposed by
 Chen, Liao & Schurter (2026, *RAND Journal of Economics*) for Stata. The package
@@ -20,82 +24,41 @@ affect productive efficiency — integrating semiparametric production function
 estimation, causal treatment effect analysis, and Monte Carlo inference in a
 single command.
 
-The core innovation is the **CLK correction**: transition-period observations
-(where treatment status changes) are excluded from GMM moment conditions, two
-separate productivity evolution paths are estimated for treated and control
-firms, and counterfactual productivity trajectories are simulated via Monte Carlo
-to compute unbiased Average Treatment Effects on the Treated (ATT).
+### The Productivity Problem
 
-`pte` supports Cobb-Douglas and Translog production functions, clustered
-bootstrap inference, treatment-dependent extensions, cohort and heterogeneity
-analyses, and publication-quality visualization — all accessible through a
-consistent, well-documented interface.
+Estimating how policies affect firm productivity faces two fundamental challenges:
 
----
+**Challenge 1: Productivity is unobservable.** TFP must be *recovered* from a
+production function, but firms observe their own productivity before choosing
+inputs. This creates simultaneity bias that the proxy variable literature
+(Olley-Pakes 1996, Levinsohn-Petrin 2003, ACF 2015) addresses — but ignores
+treatment entirely.
 
-## The Productivity Problem
+**Challenge 2: Treatment contaminates the productivity evolution.** Standard
+approaches (TWFE on recovered omega) fail because: (1) including transition
+observations in GMM biases input elasticities; (2) the Markov assumption is
+violated when treated firms jump to a different law of motion; (3) TWFE conflates
+time-varying effects with structural bias.
 
-### Why Is This Hard?
+### The CLK Correction
 
-Estimating how policies or interventions affect firm productivity is a central
-question in industrial organization, development economics, and trade. But the
-task is far harder than running a regression of output on treatment dummies.
-Two fundamental challenges stand in the way:
+The core innovation is a simple but powerful insight:
 
-**Challenge 1: You cannot directly observe productivity.**
-
-Productivity (TFP) must be *recovered* from a production function, but firms
-observe their own productivity before choosing inputs. This creates simultaneous
-equations bias: OLS overestimates labor elasticity because productive firms hire
-more workers. The proxy variable literature (Olley-Pakes 1996, Levinsohn-Petrin
-2003, Ackerberg-Caves-Frazer 2015) solves this — but ignores treatment entirely.
-
-**Challenge 2: Treatment contaminates the productivity evolution.**
-
-Once you recover firm-level productivity, how do you estimate the treatment
-effect? The standard approach (TWFE on recovered omega) fails because:
-
-1. **Biased production function estimates.** If treatment changes the mapping
-   from inputs to output *during* the transition period, including those
-   observations in GMM moment conditions biases the estimated elasticities —
-   and therefore biases the recovered productivity itself.
-
-2. **Violated Markov assumption.** The ACF approach assumes productivity follows
-   a first-order Markov process. But in the transition year, a treated firm's
-   productivity jumps to a *different* law of motion. Pooling both regimes into
-   a single evolution law introduces systematic bias.
-
-3. **Heterogeneous dynamics confounded.** TWFE imposes a common treatment
-   coefficient across all post-treatment periods, conflating the time-varying
-   treatment effect with the structural bias above.
-
-### The Intuition Behind CLK
-
-The CLK framework addresses these problems with a simple but powerful insight:
-
-> *If transition periods are the source of contamination, exclude them from*
-> *estimation. If treated and control firms follow different evolution laws,*
-> *estimate them separately. If you want the counterfactual, simulate it.*
+> *If transition periods contaminate estimation, exclude them. If treated and*
+> *control firms follow different evolution laws, estimate them separately.*
+> *If you want the counterfactual, simulate it.*
 
 Concretely:
 
-- **Exclude transitions** — When a firm switches treatment status
-  (D_t ≠ D_{t-1}), that observation violates the Markov assumption under either
-  regime. Remove it from the GMM moment conditions so production function
-  parameters are estimated without contamination.
+- **Exclude transitions** — Remove observations where D_t ≠ D_{t-1} from GMM
+  moment conditions so production function parameters are uncontaminated.
+- **Separate evolution paths** — Estimate h̄₀ (control) and h̄₁ (treated)
+  separately, allowing treatment to shift the entire Markov process.
+- **Simulate the counterfactual** — For each treated firm, draw innovation
+  shocks from the control-group distribution and propagate forward under h̄₀.
+  The difference is the ATT.
 
-- **Separate evolution paths** — Estimate one productivity law of motion for
-  never-treated/not-yet-treated periods (h̄₀), and another for stably-treated
-  periods (h̄₁). This allows treatment to *shift the entire Markov process*.
-
-- **Simulate the counterfactual** — For each treated firm, ask: "What would its
-  productivity have been if it had remained under h̄₀?" Draw innovation shocks
-  from the estimated control-group distribution and propagate forward. The
-  difference between the observed and simulated path is the ATT.
-
----
-
-## Why CLK Matters: A Comparison
+### Why CLK Matters
 
 | Method | Endogeneity Corrected | Dynamic Treatment Effect | No Structural Model | Heterogeneous Timing |
 |--------|:---------------------:|:------------------------:|:-------------------:|:--------------------:|
@@ -105,111 +68,55 @@ Concretely:
 | prodest + DiD | ✓ | ✗ | ✓ | ✗ |
 | **CLK (`pte`)** | **✓** | **✓** | **✓** | **✓** |
 
-**Key advantages of `pte`:**
-
-- No need to specify a structural model of firm behavior
-- Correctly handles staggered treatment adoption
-- Produces event-study-style dynamic effects (ATT at each post-treatment horizon)
-- Production function and treatment effect estimated jointly — not in two
-  disconnected steps
-- Bootstrap inference accounts for the full estimation uncertainty
-
----
-
-## How It Works
-
-The `pte` estimation proceeds in four stages, each building on the previous:
-
-### Stage 1: Production Function Estimation (CLK-Corrected GMM)
-
-```
-All firms → First-stage polynomial regression → φ̂ (gross productivity proxy)
-         → Subtract control variables → φ = φ̂ - X'β_c
-         → Exclude transition observations (D_t ≠ D_{t-1})
-         → GMM on remaining sample → β (unbiased input elasticities)
-```
-
-**Why exclude transitions?** In the year a firm adopts treatment, its input
-choices reflect the *new* regime, but its lagged productivity was determined
-under the *old* regime. Including this observation creates a moment condition
-that mixes two different data-generating processes. Excluding it is conservative
-and ensures consistency.
-
-### Stage 2: Productivity Recovery and Evolution Estimation
-
-```
-ω_it = φ_it − f(k_it, l_it; β̂)        (recover firm-level productivity)
-
-Control evolution (h̄₀):  ω_t = ρ₀ + ρ₁ω_{t-1} + ρ₂ω²_{t-1} + ρ₃ω³_{t-1} + ε⁰_t
-Treated evolution (h̄₁):  ω_t = ρ₀ + ρ₁ω_{t-1} + ... + γD + δ(D×ω_{t-1}) + ε¹_t
-```
-
-The innovation shocks ε⁰ are Winsorized at the 1st and 99th percentiles
-(following Section 6.3 of the paper) to limit the influence of outliers on the
-Monte Carlo simulation.
-
-### Stage 3: ATT via Monte Carlo Counterfactual Simulation
-
-For each treated firm at event-time s: take its last pre-treatment productivity
-ω₀, draw N simulation paths (default N = 100) using innovation shocks from the
-control-group distribution, propagate forward under h̄₀, and compute:
-
-```
-ATT_i(s) = ω_observed(s) − mean(ω⁰_simulated(s))
-ATT(s)   = mean over all treated firms at event-time s
-```
-
-**Key insight:** The counterfactual uses *only* h̄₀ — the control group's law of
-motion. This answers: "What would this firm's productivity have been if it had
-never been treated?"
-
-### Stage 4: Bootstrap Inference
-
-For b = 1,...,B: set outer seed = b, resample firms (stratified by treatment
-status), repeat Stages 1–3 on resampled data, store ATT(b). Standard errors
-and percentile CIs are computed from the bootstrap distribution.
-
-The dual-layer seed design ensures reproducibility: the outer seed governs
-resampling; a fixed inner seed (123456) governs Monte Carlo paths within each
-bootstrap draw.
-
----
-
-## Key Features
+### Key Features
 
 - **Semiparametric GMM** with CLK correction (Cobb-Douglas and Translog)
-- **Firm-level TFP recovery** from estimated production function parameters
 - **Dynamic ATT** at each post-treatment horizon via Monte Carlo simulation
 - **Clustered bootstrap** with stratified resampling for valid inference
 - **Treatment-dependent production function** extensions (Appendix C.1)
 - **Cohort analysis** and **heterogeneity analysis** (CATT by subgroup)
 - **Method comparison** (CLK vs TWFE vs endogenous) via `pte_compare`
 - **Parallel computing** support for bootstrap acceleration
-- **Publication-quality visualization** for treatment effects and diagnostics
-- **Full `eclass` integration** with `predict` postestimation support
+- **Publication-quality visualization** and full `eclass` integration
 
 ---
 
-## Requirements
+## 2. Theoretical Framework
 
-- **Stata 14.0** or later
-- No additional dependencies for baseline estimation
+> The full theoretical framework is developed in Chen, Liao & Schurter (2026).
+> Here we summarize the key estimation stages.
 
-**Optional workflow packages:**
+The `pte` estimation proceeds in four stages:
 
-| Package | Required For | Install |
-|---------|-------------|---------|
-| `reghdfe` | `pte_compare` (TWFE comparison) | `ssc install reghdfe` |
-| `prodest` / `endopolyprodest` | Treatment-dependent workflows | `ssc install prodest` |
-| `parallel` | Parallel bootstrap acceleration | `ssc install parallel` |
+1. **Production Function Estimation** — First-stage polynomial regression yields
+   gross productivity proxy φ̂; control variables are subtracted; transition
+   observations (D_t ≠ D_{t-1}) are excluded; GMM on remaining sample recovers
+   unbiased input elasticities β.
 
-Run `pte_check_deps` to verify all dependencies before advanced workflows.
+2. **Productivity Recovery and Evolution** — Firm-level productivity
+   ω = φ − f(k, l; β̂) is recovered. Separate evolution laws h̄₀ (control) and
+   h̄₁ (treated) are estimated as flexible polynomials in lagged ω. Innovation
+   shocks ε⁰ are Winsorized at the 1st and 99th percentiles.
+
+3. **ATT via Monte Carlo Simulation** — For each treated firm, N counterfactual
+   paths are simulated using h̄₀ and draws from the ε⁰ distribution. The ATT at
+   each event-time horizon is the average gap between observed and simulated
+   productivity.
+
+4. **Bootstrap Inference** — Stratified cluster resampling repeats Stages 1–3
+   to construct confidence intervals. A dual-layer seed design (outer seed for
+   resampling, fixed inner seed for simulation) ensures reproducibility.
+
+See Chen, Liao & Schurter (2026) for formal assumptions, identification proofs,
+and asymptotic properties.
 
 ---
 
-## Installation
+## 3. Stata Commands
 
-### Method 1: GitHub via `github` Command (Recommended)
+### 3.1 Installation
+
+#### Method 1: GitHub via `github` Command (Recommended)
 
 ```stata
 * Install the github command first (one-time setup)
@@ -219,10 +126,9 @@ net install github, from("https://haghish.github.io/github/")
 github install gorgeousfish/pte
 ```
 
-### Method 2: GitHub via `net install`
+#### Method 2: GitHub via `net install`
 
-Due to Stata's per-package file limit, `pte` is distributed as three packages
-that must all be installed:
+Due to Stata's per-package file limit, `pte` is distributed as three packages:
 
 ```stata
 net install pte, from("https://raw.githubusercontent.com/gorgeousfish/pte/main") replace
@@ -245,17 +151,90 @@ net install pte_more, from("https://ghfast.top/https://raw.githubusercontent.com
 net install pte_more2, from("https://ghfast.top/https://raw.githubusercontent.com/gorgeousfish/pte/main") replace
 ```
 
-### Verifying Installation
+#### Verifying Installation
 
 ```stata
 pte_version
 ```
 
----
+### 3.2 Command Reference
 
-## Quick Start
+#### Core Estimation
 
-### Example 1: Basic Estimation (Cobb-Douglas)
+| Command | Description | When to Use |
+|---------|-------------|-------------|
+| `pte` | Main estimation: production function + ATT + bootstrap | Primary analysis |
+| `pte_setup` | Panel validation and treatment-path diagnostics | Before estimation |
+| `pte_diagnose` | Assumption tests (parallel trends, KS, CDF) | After estimation |
+
+#### Post-Estimation and Reporting
+
+| Command | Description | When to Use |
+|---------|-------------|-------------|
+| `pte_graph` | Visualization (ATT, evolution, diagnostics) | Visual inspection |
+| `pte_compare` | Method comparison (CLK vs TWFE vs endogenous) | Robustness checks |
+| `pte_heterogeneity` | Heterogeneity analysis (CATT by subgroup) | Effect variation |
+| `pte_export` | Export to LaTeX/CSV/Excel | Publication tables |
+| `pte_esttab_att` | Formatted ATT table output | Standardized reporting |
+| `pte_p` | Postestimation predictions (ω, fitted, residuals) | Predict interface |
+
+#### Utilities
+
+| Command | Description | When to Use |
+|---------|-------------|-------------|
+| `pte_check_deps` | Verify optional package dependencies | Before advanced workflows |
+| `pte_version` | Display version information | Check installed version |
+| `pte_example` | Load bundled example dataset | Quick start, testing |
+
+### 3.3 Main Syntax
+
+```stata
+pte depvar, free(varname) state(varname) proxy(varname) treatment(varname) [options]
+```
+
+**Required options:**
+
+| Option | Description |
+|--------|-------------|
+| `free(varname)` | Free input variable (e.g., log labor) |
+| `state(varname)` | State variable (e.g., log capital) |
+| `proxy(varname)` | Proxy variable (e.g., log materials) |
+| `treatment(varname)` | Binary treatment indicator (0/1, absorbing) |
+
+**Key estimation options:**
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `pfunc(string)` | `translog` | Production function: `cd` or `translog` |
+| `omegapoly(#)` | 3 | Productivity evolution polynomial order (1–4) |
+| `attperiods(#)` | 4 | Maximum post-treatment event-time horizon |
+| `nsim(#)` | 100 | Number of Monte Carlo simulation paths |
+| `bootstrap(#)` | 0 | Bootstrap replications (0 = point only) |
+| `by(varname)` | — | Group-by variable (e.g., industry) |
+| `control(varlist)` | — | Controls for first-stage regression |
+| `seed(#)` | 123456 | Seed for reproducibility |
+| `level(#)` | `c(level)` | Confidence level for bootstrap CIs |
+| `treatdependent` | — | Treatment-dependent production function |
+| `verbose` | — | Full diagnostic output |
+| `nolog` | — | Suppress all progress output |
+
+For complete syntax including all advanced options, see `help pte` after
+installation.
+
+**Requirements:**
+
+- **Stata 14.0** or later
+- No additional dependencies for baseline estimation
+
+| Optional Package | Required For | Install |
+|-----------------|-------------|---------|
+| `reghdfe` | `pte_compare` (TWFE comparison) | `ssc install reghdfe` |
+| `prodest` / `endopolyprodest` | Treatment-dependent workflows | `ssc install prodest` |
+| `parallel` | Parallel bootstrap acceleration | `ssc install parallel` |
+
+Run `pte_check_deps` to verify all dependencies before advanced workflows.
+
+### 3.4 Quick Start
 
 The simplest use case estimates a Cobb-Douglas production function with the CLK
 correction and computes the ATT over a default 4-period horizon.
@@ -304,269 +283,23 @@ ATT Results (event time 0..4)               Sim. paths      =       100
 ----------------------------------------------------------------------
 ```
 
-### Interpreting the Output
-
-**Production function estimates:**
+**Interpreting the output:**
 
 | Field | Meaning |
 |-------|---------|
 | `beta_l` | Labor output elasticity: 1% more labor → ~0.60% more output |
 | `beta_k` | Capital output elasticity: 1% more capital → ~0.41% more output |
 | `GMM obj` | Objective value at convergence (< 1e-5 indicates good fit) |
-| `Number of obs` | Observations in GMM sample (after excluding transitions) |
-
-**ATT results (Average Treatment Effect on the Treated):**
-
-| Column | Meaning |
-|--------|---------|
 | `Period` | Event time relative to treatment adoption (0 = year of treatment) |
 | `ATT` | Estimated causal effect on log productivity at that horizon |
-| `Std.Dev.` | Cross-simulation standard deviation (for formal inference, use bootstrap) |
 | `N` | Number of treated firms observed at that event time |
 | `avg` | Simple average ATT across all post-treatment periods |
-
-**Reading the results:**
 
 - ATT > 0 means treatment *raised* productivity; ATT < 0 means it *lowered* it
 - Values are in log points; multiply by 100 for approximate percentage change
 - For statistical significance, add `bootstrap(200)` to obtain SEs and CIs
 
-**Controlling output verbosity:**
-
-```stata
-pte ..., pfunc(cd)              * Compact output (default, ~30 lines)
-pte ..., pfunc(cd) verbose      * Full diagnostic output (~500 lines)
-pte ..., pfunc(cd) nolog        * Silent mode (for scripting)
-```
-
-### Example 2: Diagnostics and Visualization
-
-Verify identifying assumptions before reporting results:
-
-```stata
-* Run estimation first
-pte lny, free(lnl) state(lnk) proxy(lnm) treatment(D) pfunc(cd)
-
-* Test identifying assumptions
-pte_diagnose, all
-
-* Visualize ATT trajectory with confidence intervals
-pte_graph, att ci
-
-* Visualize productivity evolution paths (treated vs control)
-pte_graph, evolution
-```
-
-`pte_diagnose` tests parallel pre-trends and distributional assumptions;
-`pte_graph` provides publication-ready plots.
-
-### Example 3: Bootstrap Inference (Translog)
-
-The Translog specification allows non-constant returns to scale and input
-complementarities:
-
-```stata
-pte_example, clear
-xtset firm year
-
-* Generate time trend for control
-gen trend = year
-
-* Translog with 200 bootstrap replications
-pte lny, free(lnl) state(lnk) proxy(lnm) treatment(D) ///
-    pfunc(translog) bootstrap(200) control(trend) level(95)
-
-* View inference results
-matrix list e(att_se)
-matrix list e(att_ci_lower)
-matrix list e(att_ci_upper)
-
-* Publication-ready graph with confidence bands
-pte_graph, att ci saving(att_results.gph)
-```
-
-Bootstrap standard errors are computed via stratified cluster resampling at the
-firm level. With 200 replications, expect 5–15 minutes depending on sample size.
-
-### Example 4: Method Comparison
-
-Compare the CLK approach with standard alternatives to demonstrate the
-improvement:
-
-```stata
-* Requires: reghdfe (ssc install reghdfe)
-pte_check_deps
-
-* Run baseline estimation
-pte lny, free(lnl) state(lnk) proxy(lnm) treatment(D) pfunc(cd)
-
-* Compare CLK vs TWFE vs endogenous-proxy methods
-pte_compare, method(all) diagnose
-```
-
-### Example 5: Heterogeneity Analysis
-
-Examine how treatment effects vary across subgroups:
-
-```stata
-* After main estimation
-pte lny, free(lnl) state(lnk) proxy(lnm) treatment(D) pfunc(cd) bootstrap(200)
-
-* Heterogeneity by industry
-pte_heterogeneity, by(industry) test
-
-* Visualize subgroup ATTs
-pte_graph, heterogeneity
-```
-
----
-
-## Recommended Workflow
-
-For a complete analysis, follow this four-step workflow:
-
-| Step | Command | Purpose |
-|------|---------|---------|
-| 1. Setup | `pte_setup` | Validate panel, generate treatment indicators, diagnose data |
-| 2. Estimate | `pte` | Production function + productivity recovery + ATT |
-| 3. Diagnose | `pte_diagnose` | Test identifying assumptions |
-| 4. Report | `pte_graph`, `pte_export` | Visualize and export results |
-
-**Full workflow script:**
-
-```stata
-* --- Step 1: Data preparation ---
-pte_example, clear
-xtset firm year
-pte_setup, treatment(D) report
-
-* --- Step 2: Main estimation with bootstrap ---
-gen trend = year
-pte lny, free(lnl) state(lnk) proxy(lnm) treatment(D) ///
-    pfunc(translog) bootstrap(200) control(trend)
-
-* --- Step 3: Diagnostics ---
-pte_diagnose, all
-
-* --- Step 4: Visualization and export ---
-pte_graph, att ci
-pte_export results using "my_table.tex", format(latex) stars(0.01 0.05 0.10)
-
-* --- Optional extensions ---
-pte_compare, method(all) diagnose              // Method comparison
-pte_heterogeneity, by(industry) test           // Heterogeneity analysis
-```
-
-### When to Use Which Command
-
-| Question | Command | Typical Scenario |
-|----------|---------|-----------------|
-| "Does my data satisfy the assumptions?" | `pte_setup` | First step with any new dataset |
-| "What is the treatment effect?" | `pte` | Core estimation |
-| "Are the identifying assumptions credible?" | `pte_diagnose` | After estimation, before reporting |
-| "Is CLK better than TWFE here?" | `pte_compare` | Referee response, robustness |
-| "Does the effect vary by group?" | `pte_heterogeneity` | Heterogeneity analysis |
-| "Can I get a publication table?" | `pte_export` | Manuscript preparation |
-
----
-
-## Data Requirements
-
-Your dataset must satisfy the following before calling `pte`:
-
-| Requirement | Description | Example |
-|-------------|-------------|---------|
-| Panel structure | Long format, one row per firm-period | Balanced or unbalanced |
-| ID variable | Unique firm/unit identifier | `firm`, `plant_id` |
-| Time variable | Numeric, `xtset`-compatible | `year`, `quarter` |
-| Output (depvar) | Log output, continuous | `lny = log(revenue)` |
-| Free input | Log freely-adjustable input | `lnl = log(labor)` |
-| State variable | Log state/predetermined input | `lnk = log(capital)` |
-| Proxy variable | Log proxy for unobserved productivity | `lnm = log(materials)` |
-| Treatment | Binary (0/1), absorbing | `D = 1` after policy |
-| No missing values | In estimation variables | `drop if missing(...)` |
-| Temporal depth | ≥ 2 pre-treatment periods recommended | For evolution estimation |
-
-**Important notes:**
-
-- All continuous variables should be in **logarithms** (log-linear production
-  function).
-- Treatment must be **absorbing** (once treated, always treated) for the
-  baseline. Non-absorbing support is available as an extension.
-- Declare the panel with `xtset id time` before estimation.
-- Transition indicators are generated automatically by `pte`.
-
----
-
-## Command Reference
-
-### Core Estimation
-
-| Command | Description | When to Use |
-|---------|-------------|-------------|
-| `pte` | Main estimation: production function + ATT + bootstrap | Primary analysis |
-| `pte_setup` | Panel validation and treatment-path diagnostics | Before estimation |
-| `pte_diagnose` | Assumption tests (parallel trends, KS, CDF) | After estimation |
-
-### Post-Estimation and Reporting
-
-| Command | Description | When to Use |
-|---------|-------------|-------------|
-| `pte_graph` | Visualization (ATT, evolution, diagnostics) | Visual inspection |
-| `pte_compare` | Method comparison (CLK vs TWFE vs endogenous) | Robustness checks |
-| `pte_heterogeneity` | Heterogeneity analysis (CATT by subgroup) | Effect variation |
-| `pte_export` | Export to LaTeX/CSV/Excel | Publication tables |
-| `pte_esttab_att` | Formatted ATT table output | Standardized reporting |
-| `pte_p` | Postestimation predictions (ω, fitted, residuals) | Predict interface |
-
-### Utilities
-
-| Command | Description | When to Use |
-|---------|-------------|-------------|
-| `pte_check_deps` | Verify optional package dependencies | Before advanced workflows |
-| `pte_version` | Display version information | Check installed version |
-| `pte_example` | Load bundled example dataset | Quick start, testing |
-
----
-
-## Syntax Reference
-
-```stata
-pte depvar, free(varname) state(varname) proxy(varname) treatment(varname) [options]
-```
-
-**Required options:**
-
-| Option | Description |
-|--------|-------------|
-| `free(varname)` | Free input variable (e.g., log labor) |
-| `state(varname)` | State variable (e.g., log capital) |
-| `proxy(varname)` | Proxy variable (e.g., log materials) |
-| `treatment(varname)` | Binary treatment indicator (0/1, absorbing) |
-
-**Key estimation options:**
-
-| Option | Default | Description |
-|--------|---------|-------------|
-| `pfunc(string)` | `translog` | Production function: `cd` or `translog` |
-| `omegapoly(#)` | 3 | Productivity evolution polynomial order (1–4) |
-| `attperiods(#)` | 4 | Maximum post-treatment event-time horizon |
-| `nsim(#)` | 100 | Number of Monte Carlo simulation paths |
-| `bootstrap(#)` | 0 | Bootstrap replications (0 = point only) |
-| `by(varname)` | — | Group-by variable (e.g., industry) |
-| `control(varlist)` | — | Controls for first-stage regression |
-| `seed(#)` | 123456 | Seed for reproducibility |
-| `level(#)` | `c(level)` | Confidence level for bootstrap CIs |
-| `treatdependent` | — | Treatment-dependent production function |
-| `verbose` | — | Full diagnostic output |
-| `nolog` | — | Suppress all progress output |
-
-For complete syntax including all advanced options, see `help pte` after
-installation.
-
----
-
-## Stored Results
+### 3.5 Stored Results
 
 After estimation, `pte` stores results in `e()`. Key entries:
 
@@ -587,11 +320,9 @@ After estimation, `pte` stores results in `e()`. Key entries:
 
 For the complete list, type `ereturn list` after estimation or see `help pte`.
 
----
+### 3.6 Troubleshooting
 
-## Troubleshooting
-
-### GMM Convergence Failure
+#### GMM Convergence Failure
 
 **Symptom:** `GMM did not converge` or very large objective function value.
 
@@ -601,7 +332,7 @@ For the complete list, type `ereturn list` after estimation or see `help pte`.
    samples.
 4. Ensure sufficient time-series depth (≥ 5 periods recommended for Translog).
 
-### Sample Too Small for Bootstrap
+#### Sample Too Small for Bootstrap
 
 **Symptom:** Bootstrap produces `missing` standard errors or unstable CIs.
 
@@ -609,7 +340,7 @@ For the complete list, type `ereturn list` after estimation or see `help pte`.
 2. Reduce `attperiods()` if later horizons have very few observations.
 3. Consider pooled estimation if industry groups are too small.
 
-### ATT Results Seem Implausible
+#### ATT Results Seem Implausible
 
 **Symptom:** ATT values are unreasonably large (|ATT| > 1 in logs).
 
@@ -618,7 +349,7 @@ For the complete list, type `ereturn list` after estimation or see `help pte`.
 3. Ensure sufficient pre-treatment periods for evolution estimation.
 4. If firms switch back, use the non-absorbing extension.
 
-### Installation Issues
+#### Installation Issues
 
 **`r(640)` error:** Install all three sub-packages (`pte`, `pte_more`,
 `pte_more2`). Stata limits each package to 100 files.
@@ -630,73 +361,7 @@ Installation section).
 
 ---
 
-## Advanced Topics
-
-### Grouped Estimation by Industry
-
-When treatment effects may vary systematically across industries or sectors,
-estimate separate production functions for each group:
-
-```stata
-pte lny, free(lnl) state(lnk) proxy(lnm) treatment(D) ///
-    pfunc(cd) by(industry) bootstrap(200)
-```
-
-This estimates separate β_l, β_k, evolution parameters, and ATT for each
-industry, then reports group-specific and aggregated results.
-
-### Treatment-Dependent Production Function
-
-If treatment changes not only productivity levels but also the *input
-elasticities themselves* (e.g., digitalization changes how labor maps to
-output), use the treatment-dependent extension:
-
-```stata
-pte lny, free(lnl) state(lnk) proxy(lnm) treatment(D) ///
-    pfunc(cd) treatdependent bootstrap(200)
-```
-
-This allows β_l and β_k to differ between treated and control regimes,
-corresponding to Appendix C.1 of the paper.
-
-### Replicating Paper Results
-
-See the full [Paper Replication Example](#paper-replication-example) section
-below for a complete walkthrough using the bundled AI treatment dataset.
-
-### Parallel Bootstrap
-
-For large datasets or many bootstrap replications, parallel computing can
-substantially reduce computation time:
-
-```stata
-* Requires: parallel (ssc install parallel)
-pte_check_deps
-
-pte lny, free(lnl) state(lnk) proxy(lnm) treatment(D) ///
-    pfunc(translog) bootstrap(500) parallel(4)
-```
-
-This distributes bootstrap iterations across 4 Stata instances.
-
-### Postestimation Predictions
-
-After estimation, use `predict` (via `pte_p`) to generate new variables:
-
-```stata
-* Recover firm-level productivity
-predict omega_hat, omega
-
-* Get individual treatment effects (TT)
-predict tt_hat, tt
-
-* Summarize treatment effects among the treated
-summarize tt_hat if D == 1, detail
-```
-
----
-
-## Paper Replication Example
+## 4. Empirical Application
 
 This section demonstrates how to replicate the industry-level Translog results
 from Chen, Liao & Schurter (2026) using the bundled **AI treatment dataset**
@@ -708,7 +373,16 @@ manufacturing firms with an AI adoption treatment indicator.
 > a publicly distributable version that produces qualitatively comparable
 > results. Results match the authors' DO replication code to within < 1e-4.
 
-### Step 1: Data Preparation
+### 4.1 Background
+
+Chen, Liao & Schurter (2026) study how AI technology adoption affects firm-level
+productivity in the Chinese manufacturing sector. Using a panel of manufacturing
+firms over 2007–2019, the paper exploits staggered AI adoption timing across
+firms to identify dynamic treatment effects on total factor productivity. The
+`pte` package implements their CLK framework, enabling researchers to replicate
+and extend these findings.
+
+### 4.2 Data Preparation
 
 The data preparation follows the authors' original DO code exactly:
 
@@ -743,7 +417,7 @@ egen indid_adj = group(Ind1_num)
 After preparation, the estimation sample contains **16,396 firm-year
 observations** across **7 industry groups**.
 
-### Step 2: Run PTE Estimation
+### 4.3 Estimation
 
 ```stata
 pte lny, treatment(treat_post) free(lnl) state(lnk) proxy(lnm) control(t) ///
@@ -752,14 +426,14 @@ pte lny, treatment(treat_post) free(lnl) state(lnk) proxy(lnm) control(t) ///
 ```
 
 Key options:
-- `pfunc(translog)`: Translog production function (allows non-constant returns
-  to scale and input complementarities)
+- `pfunc(translog)`: Translog production function (non-constant returns to scale
+  and input complementarities)
 - `omegapoly(3)`: Third-order polynomial for productivity evolution
 - `nsim(100)`: 100 Monte Carlo simulation paths per treated firm
 - `attperiods(3)`: Compute ATT at event times 0, 1, 2, 3
 - `industry(indid_adj)`: Separate estimation for each industry group
 
-### Step 3: Results
+### 4.4 Results
 
 **Estimation summary:**
 
@@ -814,7 +488,7 @@ Pooled      0.0248      0.0436      0.0350      0.0871      0.0361
 ------------------------------------------------------------------------------
 ```
 
-### Step 4: Interpretation
+### 4.5 Interpretation
 
 **Production function:**
 
@@ -825,8 +499,7 @@ Pooled      0.0248      0.0436      0.0350      0.0871      0.0361
 **Treatment effects:**
 
 - **Pooled ATT_avg = 0.036**: AI adoption raises firm productivity by
-  approximately 3.6 log points (~3.7%) on average across post-treatment
-  periods.
+  approximately 3.6 log points (~3.7%) on average across post-treatment periods.
 - **Growing dynamic effect**: The ATT increases from 2.5% at event time 0
   to 8.7% at event time 3, suggesting that AI treatment effects accumulate
   over time as firms learn to exploit the technology.
@@ -849,9 +522,9 @@ ordering in Mata's matrix operations and do not affect economic conclusions.
 
 ---
 
----
+## 5. Conclusion
 
-## Citation
+### Citation
 
 If you use `pte` in your research, please cite both the methodology paper and
 the software:
@@ -888,9 +561,7 @@ the software:
 }
 ```
 
----
-
-## Authors
+### Authors
 
 - **Xuanyu Cai**, City University of Macau
   — [xuanyuCAI@outlook.com](mailto:xuanyuCAI@outlook.com)
@@ -899,8 +570,6 @@ the software:
 - **Zhiyuan Chen**, University of Zurich
 - **Moyu Liao**, City University of Macau
 
----
-
-## License
+### License
 
 AGPL-3.0. See [LICENSE](LICENSE) for details.
