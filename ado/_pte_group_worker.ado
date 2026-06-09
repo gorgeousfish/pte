@@ -57,6 +57,7 @@ program define _pte_group_worker
     local panelvar     "${PTE_PAR_PANELVAR}"
     local timevar_cfg  "${PTE_PAR_TIMEVAR}"
     local xtdelta      "${PTE_PAR_XTDELTA}"
+    local engine       "${PTE_PAR_ENGINE}"
     
     // Build notrimeps option string
     local notrimeps_opt ""
@@ -247,6 +248,9 @@ program define _pte_group_worker
             local _pf_opts "`_pf_opts' noreport replace"
             if "`control'" != "" {
                 local _pf_opts "`_pf_opts' control(`control')"
+            }
+            if "`engine'" != "" {
+                local _pf_opts "`_pf_opts' engine(`engine')"
             }
             
             _pte_prodfunc, `_pf_opts'

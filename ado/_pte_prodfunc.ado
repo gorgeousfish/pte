@@ -63,6 +63,7 @@ program define _pte_prodfunc, eclass
 				 DOPOOLEDZ ///
 			 LEGACYFLOATPHI ///
 			 TREATDEPENDENT ///
+			 ENGine(string) ///
 			 TOUSE(name)]
 	if _rc {
 		local _pte_syntax_rc = _rc
@@ -561,6 +562,38 @@ program define _pte_prodfunc, eclass
 		
 		// _pte_treatdep_call_endopoly owns e(); skip the baseline GMM path below.
 	}
+	else if "`engine'" == "endopoly" {
+		// engine(endopoly) standard path: delegate to endopolyprodest without
+		// treatment interactions, faithful to paper DO industry estimation.
+		if "`report'" == "" {
+			di as text ""
+			di as text "Calling endopolyprodest (standard engine, no treatment interactions)..."
+		}
+		local _ep_pfunc = cond("`pfunc'" != "", "`pfunc'", "translog")
+		local _ep_controls "_pte_t"
+		if "`control'" != "" {
+			local _ep_controls "`_ep_controls' `control'"
+			local _ep_controls : list uniq _ep_controls
+		}
+		local _ep_call_opts "depvar(`lny') free(`free') state(`state')"
+		local _ep_call_opts "`_ep_call_opts' proxy(`proxy') control(`_ep_controls')"
+		local _ep_call_opts "`_ep_call_opts' endo(`treatment')"
+		local _ep_call_opts "`_ep_call_opts' pfunc(`_ep_pfunc') omegapoly(`omegapoly') mid(`_pte_midvar')"
+		local _ep_call_opts "`_ep_call_opts' touse(`touse')"
+		if "`report'" == "" {
+			local _ep_call_opts "`_ep_call_opts' verbose"
+		}
+		
+		capture noisily _pte_call_endopoly_standard, `_ep_call_opts'
+		if _rc {
+			local _pte_endopoly_call_rc = _rc
+			`_pte_clear_eclass'
+			`_pte_clear_estimates'
+			exit `_pte_endopoly_call_rc'
+		}
+		
+		// _pte_call_endopoly_standard owns e(); skip the baseline GMM path below.
+	}
 	else {
 	// Generate the fixed stage-1 proxy basis used by the paper and DO code.
 	
@@ -904,6 +937,10 @@ program define _pte_prodfunc, eclass
 	}
 	} // end else (standard GMM pipeline)
 	
+	// Flag paths that bypassed the baseline GMM solver. These delegate
+	// estimation to an external command and own e() upon return.
+	local _pte_delegated = ("`treatdependent'" != "" | "`engine'" == "endopoly")
+
 	// ================================================================
 	// Rebuild the final GMM estimation sample for e(sample)
 	// ================================================================
@@ -912,7 +949,7 @@ program define _pte_prodfunc, eclass
 	// consumed by _pte_gmm_matrices and the Mata GMM criterion.
 	tempvar _pte_pf_esample
 	local _N_post = `N_touse'
-	if "`treatdependent'" == "" & "`lny'" != "" & "`free'" != "" & "`state'" != "" {
+	if !`_pte_delegated' & "`lny'" != "" & "`free'" != "" & "`state'" != "" {
 		tempvar _pte_pf_sort _pte_pf_has_gap _pte_pf_delta_probe
 		qui gen long `_pte_pf_sort' = _n
 		
@@ -963,7 +1000,7 @@ program define _pte_prodfunc, eclass
 	// Publish estimation results in e(). ereturn post must come first because
 	// it clears any previous e() payload.
 	tempname b_post V_post
-	if "`treatdependent'" != "" {
+	if "`treatdependent'" != "" | "`engine'" == "endopoly" {
 		ereturn scalar N_gmm = `N_gmm'
 		ereturn scalar omegapoly = `omegapoly'
 		ereturn local  prodfunc "`e(pfunc)'"
@@ -996,7 +1033,7 @@ program define _pte_prodfunc, eclass
 	ereturn scalar n_trans      = `_n_trans'
 	ereturn scalar n_trans_up   = `_n_trans_up'
 	ereturn scalar n_trans_down = `_n_trans_down'
-	if "`treatdependent'" == "" & "`lny'" != "" & "`free'" != "" & "`state'" != "" {
+	if !`_pte_delegated' & "`lny'" != "" & "`free'" != "" & "`state'" != "" {
 		// Publish stable-count metadata on the true GMM support, matching
 		// e(sample) and the sample consumed by the moment-condition helper.
 		ereturn scalar n_stable_0 = `_n_stable_0_gmm'
@@ -1013,7 +1050,7 @@ program define _pte_prodfunc, eclass
 	ereturn scalar n_trans_lag  = `_n_trans_lag'
 	
 	// Stage-1 diagnostics document the proxy-regression fit that produced phi.
-	if "`lny'" != "" & "`free'" != "" & "`state'" != "" & "`treatdependent'" == "" {
+	if "`lny'" != "" & "`free'" != "" & "`state'" != "" & !`_pte_delegated' {
 		local _pte_n_beta_controls = colsof(_pte_beta_controls)
 		if `_pte_n_beta_controls' == 1 {
 			local _pte_beta_t_scalar = _pte_beta_controls[1, 1]
@@ -1036,7 +1073,7 @@ program define _pte_prodfunc, eclass
 	}
 	
 	// Matrix metadata helps diagnose rank and conditioning problems in the moment stack.
-	if "`lny'" != "" & "`free'" != "" & "`state'" != "" & "`treatdependent'" == "" {
+	if "`lny'" != "" & "`free'" != "" & "`state'" != "" & !`_pte_delegated' {
 		ereturn scalar N_gmm        = `_N_gmm'
 		ereturn scalar N_original   = `_N_original'
 		ereturn scalar N_excluded   = `_N_excluded'
@@ -1051,7 +1088,7 @@ program define _pte_prodfunc, eclass
 	}
 	
 	// Optimization metadata describes the converged production-function fit.
-	if "`lny'" != "" & "`free'" != "" & "`state'" != "" & "`treatdependent'" == "" {
+	if "`lny'" != "" & "`free'" != "" & "`state'" != "" & !`_pte_delegated' {
 		ereturn scalar fval      = `_fval'
 		ereturn scalar converged = `_converged'
 		ereturn scalar iterations = `_iterations'
